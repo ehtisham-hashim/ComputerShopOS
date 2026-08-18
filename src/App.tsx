@@ -1,50 +1,82 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
+import { useState, useEffect, useCallback } from "react";
+import { Sidebar, NavTab } from "./components/Sidebar";
+import { InventoryPage } from "./pages/Inventory";
+import { DashboardPage } from "./pages/Dashboard";
+import { InventoryItem } from "./db/schema";
+import { getInventoryItems } from "./db/inventoryService";
+import { initDb } from "./db/client";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [activeTab, setActiveTab] = useState<NavTab>("inventory");
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const fetchItems = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await initDb();
+      const records = await getInventoryItems();
+      setItems(records);
+    } catch (err) {
+      console.error("Failed to load inventory:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
 
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <div className="app-shell">
+      <Sidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        inventoryCount={items.length}
+      />
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+      <main className="content-area">
+        {activeTab === "inventory" && (
+          <InventoryPage
+            items={items}
+            isLoading={isLoading}
+            onRefresh={fetchItems}
+          />
+        )}
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+        {activeTab === "dashboard" && (
+          <DashboardPage
+            items={items}
+            onNavigateToInventory={() => setActiveTab("inventory")}
+          />
+        )}
+
+        {activeTab === "settings" && (
+          <div className="page-container">
+            <header className="page-header">
+              <div>
+                <h1 className="page-title">Settings & System Info</h1>
+                <p className="page-subtitle">Database configuration and engine status</p>
+              </div>
+            </header>
+            <div className="dashboard-content-box">
+              <h2 className="section-title">Database Info</h2>
+              <p className="text-muted mb-2">
+                Engine: <strong>SQLite (Local Embedded via @tauri-apps/plugin-sql)</strong>
+              </p>
+              <p className="text-muted mb-2">
+                ORM: <strong>Drizzle ORM (Proxy Driver & Schema Builder)</strong>
+              </p>
+              <p className="text-muted">
+                Database file: <code>pc_shop.db</code> in application data directory.
+              </p>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 
