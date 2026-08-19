@@ -75,7 +75,7 @@ export const db = drizzle<typeof schema>(
           return { rows: rows.map((r) => Object.values(r)) };
         } else if (method === "get") {
           const rows = await sqlDb.select<any[]>(sql, params);
-          return { rows: rows.length > 0 ? Object.values(rows[0]) : undefined };
+          return { rows: rows.length > 0 ? Object.values(rows[0]) : [] };
         } else {
           await sqlDb.execute(sql, params);
           return { rows: [] };
