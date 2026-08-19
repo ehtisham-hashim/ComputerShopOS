@@ -135,9 +135,46 @@ const memorySales: schema.SaleRecord[] = [
     discount: 0,
     tax: 55.95,
     totalAmount: 1174.94,
+    paidAmount: 1174.94,
+    paymentStatus: "PAID",
+    balanceDue: 0,
     paymentMethod: "CARD",
     notes: "RTX 4080S + RAM purchase",
     createdAt: Math.floor(Date.now() / 1000) - 7200,
+  },
+  {
+    id: 2,
+    invoiceNo: "INV-2026-002",
+    customerId: 2,
+    customerName: "David Miller",
+    customerPhone: "+1 (555) 234-5678",
+    subtotal: 1499.99,
+    discount: 50.0,
+    tax: 72.50,
+    totalAmount: 1522.49,
+    paidAmount: 1000.00,
+    paymentStatus: "PARTIAL",
+    balanceDue: 522.49,
+    paymentMethod: "SPLIT",
+    notes: "ThinkPad X1 purchase - Partial deposit",
+    createdAt: Math.floor(Date.now() / 1000) - 86400 * 2,
+  },
+  {
+    id: 3,
+    invoiceNo: "INV-2026-003",
+    customerId: 3,
+    customerName: "Sarah Jenkins",
+    customerPhone: "+1 (555) 987-6543",
+    subtotal: 449.00,
+    discount: 0,
+    tax: 22.45,
+    totalAmount: 471.45,
+    paidAmount: 0.0,
+    paymentStatus: "UNPAID",
+    balanceDue: 471.45,
+    paymentMethod: "CASH",
+    notes: "Ryzen 7800X3D reserved invoice",
+    createdAt: Math.floor(Date.now() / 1000) - 86400 * 4,
   },
 ];
 
@@ -149,10 +186,15 @@ const memoryRepairs: schema.RepairTicketRecord[] = [
     customerName: "David Miller",
     customerPhone: "+1 (555) 234-5678",
     device: "ASUS ROG Zephyrus G14",
-    reportedIssue: "GPU artifacting under gaming load, thermal throttling",
-    status: "IN_PROGRESS",
+    reportedIssue: "GPU thermal throttling and fan noise",
+    partsUsed: JSON.stringify([
+      { name: "Liquid Metal Repaste + Thermal Pads", cost: 35.0, isHardware: true },
+      { name: "BIOS & Thermal Profile Update", cost: 25.0, isHardware: false },
+    ]),
+    laborCost: 60.0,
     estimatedCost: 120.0,
-    finalCost: 0,
+    finalCost: 120.0,
+    status: "IN_PROGRESS",
     createdAt: Math.floor(Date.now() / 1000) - 86400,
   },
   {
@@ -162,11 +204,37 @@ const memoryRepairs: schema.RepairTicketRecord[] = [
     customerName: "Sarah Jenkins",
     customerPhone: "+1 (555) 987-6543",
     device: "Custom Desktop PC (i7-13700K / RTX 4070)",
-    reportedIssue: "No display on boot, motherboard DRAM LED red",
-    status: "WAITING_PARTS",
-    estimatedCost: 85.0,
-    finalCost: 0,
+    reportedIssue: "Corrupted NVMe boot partition & driver BSOD",
+    partsUsed: JSON.stringify([
+      { name: "Samsung 990 PRO 2TB PCIe 4.0 NVMe SSD", cost: 179.99, isHardware: true, inventoryId: 5 },
+      { name: "Windows 11 OS Reinstallation & Drivers", cost: 40.0, isHardware: false },
+    ]),
+    laborCost: 50.0,
+    estimatedCost: 269.99,
+    finalCost: 269.99,
+    status: "READY",
     createdAt: Math.floor(Date.now() / 1000) - 172800,
+  },
+];
+
+const memoryAdjustments: schema.AdjustmentRecord[] = [
+  {
+    id: 1,
+    adjustmentNo: "ADJ-501",
+    customerId: 1,
+    customerName: "Alex Chen",
+    customerPhone: "+1 (555) 321-7654",
+    itemTakenName: "Old GTX 1070 8GB Rig",
+    itemTakenValue: 200.0,
+    itemGivenInventoryId: 2,
+    itemGivenName: "NVIDIA GeForce RTX 4080 Super 16GB",
+    itemGivenPrice: 999.0,
+    netDifference: 799.0,
+    paidAmount: 799.0,
+    balanceDue: 0.0,
+    paymentStatus: "PAID",
+    notes: "Customer traded in old GTX 1070 rig towards RTX 4080 Super",
+    createdAt: Math.floor(Date.now() / 1000) - 86400 * 3,
   },
 ];
 
@@ -175,7 +243,7 @@ const memorySettings: Record<string, string> = {
   store_address: "Shop #12, Computer Plaza, Main Boulevard",
   store_phone: "+92 300 1234567",
   currency_symbol: "$",
-  tax_rate: "5.0",
+  tax_rate: "0.0",
 };
 
 export async function initDb(): Promise<void> {
@@ -233,6 +301,9 @@ export async function initDb(): Promise<void> {
           discount REAL NOT NULL DEFAULT 0.0,
           tax REAL NOT NULL DEFAULT 0.0,
           total_amount REAL NOT NULL DEFAULT 0.0,
+          paid_amount REAL NOT NULL DEFAULT 0.0,
+          payment_status TEXT NOT NULL DEFAULT 'PAID',
+          balance_due REAL NOT NULL DEFAULT 0.0,
           payment_method TEXT NOT NULL DEFAULT 'CASH',
           notes TEXT NOT NULL DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
@@ -257,9 +328,30 @@ export async function initDb(): Promise<void> {
           customer_phone TEXT NOT NULL,
           device TEXT NOT NULL,
           reported_issue TEXT NOT NULL,
-          status TEXT NOT NULL DEFAULT 'RECEIVED',
+          parts_used TEXT DEFAULT '[]',
+          labor_cost REAL NOT NULL DEFAULT 0.0,
           estimated_cost REAL NOT NULL DEFAULT 0.0,
           final_cost REAL NOT NULL DEFAULT 0.0,
+          status TEXT NOT NULL DEFAULT 'RECEIVED',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        );
+
+        CREATE TABLE IF NOT EXISTS adjustments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          adjustment_no TEXT NOT NULL UNIQUE,
+          customer_id INTEGER REFERENCES customers(id),
+          customer_name TEXT NOT NULL,
+          customer_phone TEXT NOT NULL,
+          item_taken_name TEXT NOT NULL,
+          item_taken_value REAL NOT NULL DEFAULT 0.0,
+          item_given_inventory_id INTEGER REFERENCES inventory(id),
+          item_given_name TEXT NOT NULL,
+          item_given_price REAL NOT NULL DEFAULT 0.0,
+          net_difference REAL NOT NULL DEFAULT 0.0,
+          paid_amount REAL NOT NULL DEFAULT 0.0,
+          balance_due REAL NOT NULL DEFAULT 0.0,
+          payment_status TEXT NOT NULL DEFAULT 'PAID',
+          notes TEXT DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         );
 
@@ -276,32 +368,20 @@ export async function initDb(): Promise<void> {
         CREATE INDEX IF NOT EXISTS idx_inventory_title ON inventory(title);
         CREATE INDEX IF NOT EXISTS idx_serials_number ON inventory_serials(serial_number);
         CREATE INDEX IF NOT EXISTS idx_sales_invoice ON sales(invoice_no);
+        CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(payment_status);
         CREATE INDEX IF NOT EXISTS idx_repairs_ticket ON repairs(ticket_no);
+        CREATE INDEX IF NOT EXISTS idx_adjustments_no ON adjustments(adjustment_no);
+        CREATE INDEX IF NOT EXISTS idx_adjustments_customer ON adjustments(customer_name);
+        CREATE INDEX IF NOT EXISTS idx_adjustments_status ON adjustments(payment_status);
       `);
 
-      // 3. Seed Sample Customers if empty
-      const existingCust = await sqlDb.select<any[]>("SELECT COUNT(*) as count FROM customers");
-      if (existingCust && existingCust[0] && existingCust[0].count === 0) {
-        for (const cust of memoryCustomers) {
-          await sqlDb.execute(
-            `INSERT INTO customers (name, phone, email, address, notes, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [cust.name, cust.phone, cust.email, cust.address, cust.notes, cust.createdAt]
-          );
-        }
-      }
-
-      // 4. Seed Sample Inventory if empty
-      const existingItems = await sqlDb.select<any[]>("SELECT COUNT(*) as count FROM inventory");
-      if (existingItems && existingItems[0] && existingItems[0].count === 0) {
-        for (const item of memoryInventory) {
-          await sqlDb.execute(
-            `INSERT INTO inventory (title, name, sku, quantity, price, cost_price, is_serialized, created_at)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-            [item.title, item.name, item.sku, item.quantity, item.price, item.costPrice, item.isSerialized, item.createdAt]
-          );
-        }
-      }
+      // Safe schema migrations for existing databases
+      try {
+        await sqlDb.execute("ALTER TABLE adjustments ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0");
+      } catch {}
+      try {
+        await sqlDb.execute("ALTER TABLE adjustments ADD COLUMN balance_due REAL NOT NULL DEFAULT 0.0");
+      } catch {}
 
       isInitialized = true;
       return;
@@ -356,5 +436,6 @@ export const memoryStore = {
   serials: memorySerials,
   sales: memorySales,
   repairs: memoryRepairs,
+  adjustments: memoryAdjustments,
   settings: memorySettings,
 };

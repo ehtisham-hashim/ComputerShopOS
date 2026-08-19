@@ -16,8 +16,8 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     storeName: "Tasnim PC Hardware & Systems",
     storeAddress: "Shop #12, Computer Plaza, Main Boulevard",
     storePhone: "+92 300 1234567",
-    currencySymbol: "$",
-    taxRate: "5.0",
+    currencySymbol: "PKR ",
+    taxRate: "0.0",
   };
 
   if (isTauri && sqlDb) {
@@ -32,8 +32,8 @@ export async function getStoreSettings(): Promise<StoreSettings> {
         storeName: settingsMap["store_name"] || defaultSettings.storeName,
         storeAddress: settingsMap["store_address"] || defaultSettings.storeAddress,
         storePhone: settingsMap["store_phone"] || defaultSettings.storePhone,
-        currencySymbol: settingsMap["currency_symbol"] || defaultSettings.currencySymbol,
-        taxRate: settingsMap["tax_rate"] || defaultSettings.taxRate,
+        currencySymbol: "PKR ",
+        taxRate: "0.0",
       };
     } catch (err) {
       console.warn("Failed to read settings from SQLite, using defaults:", err);
@@ -44,8 +44,8 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     storeName: memoryStore.settings["store_name"] || defaultSettings.storeName,
     storeAddress: memoryStore.settings["store_address"] || defaultSettings.storeAddress,
     storePhone: memoryStore.settings["store_phone"] || defaultSettings.storePhone,
-    currencySymbol: memoryStore.settings["currency_symbol"] || defaultSettings.currencySymbol,
-    taxRate: memoryStore.settings["tax_rate"] || defaultSettings.taxRate,
+    currencySymbol: "PKR ",
+    taxRate: "0.0",
   };
 }
 

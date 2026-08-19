@@ -100,7 +100,7 @@ export const SettingsPage: React.FC = () => {
               <Moon className="size-6 text-brand-400" />
             </div>
             <span className="font-bold text-sm text-gray-900 dark:text-white">Dark Mode</span>
-            <p className="text-xs text-gray-500 mt-1">TailAdmin high-contrast dark theme</p>
+            <p className="text-xs text-gray-500 mt-1">Deep neutral dark theme (shadcn style)</p>
           </div>
         </div>
       </div>
@@ -166,14 +166,13 @@ export const SettingsPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Currency Symbol
+                Global Currency (Locked)
               </label>
               <input
                 type="text"
-                value={currencySymbol}
-                onChange={(e) => setCurrencySymbol(e.target.value)}
-                className="tail-input"
-                required
+                value="PKR (Pakistani Rupee)"
+                disabled
+                className="tail-input bg-gray-100 dark:bg-gray-800 text-gray-500 cursor-not-allowed font-bold"
               />
             </div>
 

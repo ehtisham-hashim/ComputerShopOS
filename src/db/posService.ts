@@ -1,5 +1,5 @@
 import { isTauriEnvironment, memoryStore, getSqlDb } from "./client";
-import { SaleRecord, SaleLineItem, PaymentMethod } from "./schema";
+import { SaleRecord, SaleLineItem, PaymentMethod, PaymentStatus } from "./schema";
 import { findOrCreateCustomer } from "./customerService";
 
 export interface CreateSaleInput {
@@ -18,6 +18,7 @@ export interface CreateSaleInput {
   discount?: number;
   tax?: number;
   totalAmount: number;
+  paidAmount?: number;
   paymentMethod: PaymentMethod;
   notes?: string;
 }
@@ -27,6 +28,15 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
   const sqlDb = await getSqlDb();
   const invoiceNo = `INV-${Date.now().toString().slice(-6)}`;
   const now = Math.floor(Date.now() / 1000);
+
+  const paid = input.paidAmount !== undefined ? Number(input.paidAmount) : input.totalAmount;
+  const balanceDue = Math.max(0, input.totalAmount - paid);
+  let paymentStatus: PaymentStatus = "PAID";
+  if (paid <= 0) {
+    paymentStatus = "UNPAID";
+  } else if (paid < input.totalAmount) {
+    paymentStatus = "PARTIAL";
+  }
 
   let custId = input.customerId;
   if (!custId && input.customerPhone) {
@@ -40,8 +50,11 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
   if (isTauri && sqlDb) {
     // 1. Insert Sales Header
     const saleRes = await sqlDb.execute(
-      `INSERT INTO sales (invoice_no, customer_id, customer_name, customer_phone, subtotal, discount, tax, total_amount, payment_method, notes, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `INSERT INTO sales (
+        invoice_no, customer_id, customer_name, customer_phone,
+        subtotal, discount, tax, total_amount, paid_amount,
+        payment_status, balance_due, payment_method, notes, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
         invoiceNo,
         custId || null,
@@ -51,6 +64,9 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
         input.discount || 0.0,
         input.tax || 0.0,
         input.totalAmount,
+        paid,
+        paymentStatus,
+        balanceDue,
         input.paymentMethod,
         input.notes || "",
         now,
@@ -97,6 +113,9 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
     discount: input.discount || 0.0,
     tax: input.tax || 0.0,
     totalAmount: input.totalAmount,
+    paidAmount: paid,
+    paymentStatus,
+    balanceDue,
     paymentMethod: input.paymentMethod,
     notes: input.notes || "",
     createdAt: now,
@@ -114,7 +133,7 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
   return invoiceNo;
 }
 
-export async function getRecentSales(limit = 10): Promise<SaleRecord[]> {
+export async function getRecentSales(limit = 100): Promise<SaleRecord[]> {
   const isTauri = isTauriEnvironment();
   const sqlDb = await getSqlDb();
 

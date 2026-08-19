@@ -11,6 +11,7 @@ import {
   DollarSign,
   Tag,
   Barcode,
+  Eye,
 } from "lucide-react";
 import { ItemTitles, ItemTitle, InventoryItem, InventorySerial } from "../db/schema";
 import {
@@ -22,6 +23,7 @@ import {
 import { Modal } from "../components/ui/Modal";
 import { StatCard } from "../components/ui/StatCard";
 import { SearchInput } from "../components/ui/SearchInput";
+import { CustomSelect } from "../components/ui/Select";
 
 interface InventoryPageProps {
   items: InventoryItem[];
@@ -37,6 +39,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTitleFilter, setSelectedTitleFilter] = useState<string>("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [inspectItem, setInspectItem] = useState<InventoryItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -292,19 +295,19 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         </div>
       </div>
 
-      {/* Main Inventory Table */}
+      {/* Main Inventory Table Card */}
       <div className="tail-card overflow-hidden p-0">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full min-w-[950px] text-left text-sm whitespace-nowrap">
             <thead className="border-b border-gray-200 bg-gray-50/60 text-xs font-semibold uppercase text-gray-500 dark:border-gray-800 dark:bg-gray-900/50 dark:text-gray-400">
               <tr>
-                <th className="py-3.5 px-4">Category</th>
-                <th className="py-3.5 px-4">Product Name</th>
-                <th className="py-3.5 px-4">SKU / Code</th>
-                <th className="py-3.5 px-4">Unit Price</th>
-                <th className="py-3.5 px-4 text-center">Stock Units</th>
-                <th className="py-3.5 px-4">Total Value</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-5">Category</th>
+                <th className="py-3.5 px-5">Product Name</th>
+                <th className="py-3.5 px-5">SKU / Code</th>
+                <th className="py-3.5 px-5">Unit Price</th>
+                <th className="py-3.5 px-5 text-center">Stock Units</th>
+                <th className="py-3.5 px-5">Total Value</th>
+                <th className="py-3.5 px-5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
@@ -339,75 +342,93 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
                         {item.title}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 dark:text-white">{item.name}</span>
-                        {item.isSerialized === 1 && (
-                          <button
-                            onClick={() => handleViewSerials(item)}
-                            className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-brand-500/20 dark:text-brand-400 hover:bg-brand-500/20"
-                            title="View Serial Numbers"
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="font-semibold text-gray-900 dark:text-white max-w-[200px] truncate block"
+                            title={item.name}
                           >
-                            SN
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-xs text-gray-500 dark:text-gray-400">
-                      {item.sku}
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-gray-900 dark:text-white">
-                      ${item.price.toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleAdjustQuantity(item.id, item.quantity, -1)}
-                          disabled={item.quantity <= 0}
-                          className="flex size-7 items-center justify-center rounded-lg border border-gray-200 bg-white font-bold text-gray-600 shadow-theme-xs hover:bg-gray-100 disabled:opacity-30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        >
-                          -
-                        </button>
-                        <span
-                          className={`min-w-8 text-center text-xs font-bold ${
-                            item.quantity <= 5
-                              ? "text-warning-600 dark:text-warning-400"
-                              : "text-gray-900 dark:text-white"
-                          }`}
-                        >
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => handleAdjustQuantity(item.id, item.quantity, 1)}
-                          className="flex size-7 items-center justify-center rounded-lg border border-gray-200 bg-white font-bold text-gray-600 shadow-theme-xs hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-gray-900 dark:text-white">
-                      ${(item.price * item.quantity).toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {item.isSerialized === 1 && (
+                            {item.name}
+                          </span>
+                          {item.isSerialized === 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleViewSerials(item)}
+                              className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-brand-500/20 dark:text-brand-400 hover:bg-brand-500/20 shrink-0"
+                              title="View Serial Numbers"
+                            >
+                              SN
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-5 font-mono text-xs text-gray-500 dark:text-gray-400">
+                        {item.sku}
+                      </td>
+                      <td className="py-3.5 px-5 font-medium text-gray-900 dark:text-white">
+                        PKR {item.price.toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-5">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
-                            onClick={() => handleViewSerials(item)}
+                            type="button"
+                            onClick={() => handleAdjustQuantity(item.id, item.quantity, -1)}
+                            disabled={item.quantity <= 0}
+                            className="flex size-7 items-center justify-center rounded-lg border border-gray-200 bg-white font-bold text-gray-600 shadow-theme-xs hover:bg-gray-100 disabled:opacity-30 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                          >
+                            -
+                          </button>
+                          <span
+                            className={`min-w-8 text-center text-xs font-bold ${
+                              item.quantity <= 5
+                                ? "text-warning-600 dark:text-warning-400"
+                                : "text-gray-900 dark:text-white"
+                            }`}
+                          >
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleAdjustQuantity(item.id, item.quantity, 1)}
+                            className="flex size-7 items-center justify-center rounded-lg border border-gray-200 bg-white font-bold text-gray-600 shadow-theme-xs hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-5 font-semibold text-gray-900 dark:text-white">
+                        PKR {(item.price * item.quantity).toFixed(2)}
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setInspectItem(item)}
                             className="inline-flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/15 dark:hover:text-brand-400 transition-colors"
-                            title="Manage Serials"
+                            title="View Full Details"
                           >
-                            <Barcode className="size-4" />
+                            <Eye className="size-4" />
                           </button>
-                        )}
-                        <button
-                          onClick={() => handleDelete(item.id)}
-                          className="inline-flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-500/15 dark:hover:text-error-400 transition-colors"
-                          title="Delete product"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
-                    </td>
+                          {item.isSerialized === 1 && (
+                            <button
+                              type="button"
+                              onClick={() => handleViewSerials(item)}
+                              className="inline-flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/15 dark:hover:text-brand-400 transition-colors"
+                              title="Manage Serials"
+                            >
+                              <Barcode className="size-4" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(item.id)}
+                            className="inline-flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-error-50 hover:text-error-600 dark:hover:bg-error-500/15 dark:hover:text-error-400 transition-colors"
+                            title="Delete product"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        </div>
+                      </td>
                   </tr>
                 ))
               )}
@@ -468,7 +489,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         title="Add Hardware Product"
         subtitle="Record new item in local SQLite inventory database"
         icon={<PackagePlus className="size-5 text-brand-500" />}
-        maxWidth="lg"
+        maxWidth="xl"
       >
         {formError && (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-error-200 bg-error-50 p-3 text-xs font-semibold text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">
@@ -478,25 +499,17 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         )}
 
         <form onSubmit={handleCreateItem} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-              Hardware Category
-            </label>
-            <select
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value as ItemTitle })
-              }
-              className="tail-select"
-              required
-            >
-              {ItemTitles.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            label="Hardware Category"
+            value={formData.title}
+            onChange={(val: string) =>
+              setFormData({ ...formData, title: val as ItemTitle })
+            }
+            options={ItemTitles.map((t) => ({
+              value: t,
+              label: t,
+            }))}
+          />
 
           <div>
             <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
@@ -635,6 +648,81 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Product Details Inspector Modal */}
+      <Modal
+        isOpen={Boolean(inspectItem)}
+        onClose={() => setInspectItem(null)}
+        title={inspectItem?.name || "Product Details"}
+        subtitle={`SKU: ${inspectItem?.sku} • Category: ${inspectItem?.title}`}
+        icon={<Package className="size-5 text-brand-500" />}
+        maxWidth="lg"
+      >
+        <div className="space-y-4 text-xs">
+          {/* Main Info Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="p-3 rounded-xl border border-gray-200 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-900/60">
+              <span className="text-[10px] font-bold uppercase text-gray-400">Retail Unit Price</span>
+              <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5">
+                PKR {inspectItem?.price.toFixed(2)}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl border border-gray-200 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-900/60">
+              <span className="text-[10px] font-bold uppercase text-gray-400">Stock on Shelf</span>
+              <p className={`text-sm font-bold mt-0.5 ${(inspectItem?.quantity || 0) <= 5 ? "text-warning-500" : "text-gray-900 dark:text-white"}`}>
+                {inspectItem?.quantity} Units
+              </p>
+            </div>
+            <div className="p-3 rounded-xl border border-gray-200 bg-gray-50/50 dark:border-gray-800 dark:bg-gray-900/60">
+              <span className="text-[10px] font-bold uppercase text-gray-400">Total Stock Value</span>
+              <p className="text-sm font-bold text-success-600 dark:text-success-400 mt-0.5">
+                PKR {((inspectItem?.price || 0) * (inspectItem?.quantity || 0)).toFixed(2)}
+              </p>
+            </div>
+          </div>
+
+          {/* Product Specifications & Details */}
+          <div className="p-3.5 rounded-xl border border-gray-100 bg-gray-50/70 dark:border-gray-800 dark:bg-gray-800/40 space-y-2">
+            <div className="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-gray-500">Hardware Category:</span>
+              <span className="font-semibold text-gray-900 dark:text-white">{inspectItem?.title}</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-gray-500">Catalog SKU / Barcode:</span>
+              <span className="font-mono font-semibold text-gray-900 dark:text-white">{inspectItem?.sku}</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-gray-200 dark:border-gray-700">
+              <span className="text-gray-500">Serialized Unit Tracking:</span>
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {inspectItem?.isSerialized === 1 ? "Enabled (Individual Serial Numbers)" : "Disabled"}
+              </span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span className="text-gray-500">Cost Price:</span>
+              <span className="font-semibold text-gray-900 dark:text-white">
+                PKR {(inspectItem?.costPrice || 0).toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          {inspectItem?.isSerialized === 1 && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const it = inspectItem;
+                  setInspectItem(null);
+                  handleViewSerials(it);
+                }}
+                className="tail-btn-secondary w-full text-xs justify-center"
+              >
+                <Barcode className="size-4" />
+                <span>View & Manage Serial Numbers</span>
+              </button>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

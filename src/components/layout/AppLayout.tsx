@@ -12,6 +12,7 @@ interface AppLayoutProps {
   customersCount?: number;
   children: React.ReactNode;
   onQuickSale?: () => void;
+  onLockSession?: () => void;
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({
@@ -23,11 +24,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   customersCount,
   children,
   onQuickSale,
+  onLockSession,
 }) => {
   const { isExpanded } = useSidebar();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-outfit text-gray-800 dark:text-gray-100 transition-colors">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 font-outfit text-gray-900 dark:text-gray-100 transition-colors">
       <AppSidebar
         activeTab={activeTab}
         onSelectTab={onSelectTab}
@@ -42,7 +44,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           isExpanded ? "lg:pl-[280px]" : "lg:pl-[88px]"
         }`}
       >
-        <AppHeader onOpenQuickSale={onQuickSale} />
+        <AppHeader onOpenQuickSale={onQuickSale} onLockSession={onLockSession} />
 
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
           {children}

@@ -13,7 +13,7 @@ import { StatCard } from "../components/ui/StatCard";
 
 interface PCBuilderPageProps {
   items: InventoryItem[];
-  onTransferToPOS?: (selectedParts: InventoryItem[]) => void;
+  onTransferToSales?: (selectedParts: InventoryItem[]) => void;
 }
 
 interface BuildSlot {
@@ -23,7 +23,7 @@ interface BuildSlot {
   item: InventoryItem | null;
 }
 
-export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferToPOS }) => {
+export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferToSales }) => {
   const [slots, setSlots] = useState<BuildSlot[]>([
     { category: "CPU", label: "Processor (CPU)", estimatedWatts: 105, item: null },
     { category: "MOTHERBOARD", label: "Motherboard", estimatedWatts: 50, item: null },
@@ -59,8 +59,8 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
 
   const handleCheckoutBuild = () => {
     const parts = slots.map((s) => s.item).filter(Boolean) as InventoryItem[];
-    if (parts.length > 0 && onTransferToPOS) {
-      onTransferToPOS(parts);
+    if (parts.length > 0 && onTransferToSales) {
+      onTransferToSales(parts);
     }
   };
 
@@ -93,7 +93,7 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
             className="tail-btn-primary text-xs"
           >
             <ShoppingCart className="size-4" />
-            <span>Send to POS Checkout</span>
+            <span>Send to Sales Checkout</span>
           </button>
         </div>
       </div>
@@ -114,7 +114,7 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
         />
         <StatCard
           title="Total Build Cost"
-          value={`$${totalPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={`PKR ${totalPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           valueColor="success"
         />
       </div>
@@ -141,10 +141,10 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
                   {slot.item ? <CheckCircle2 className="size-5" /> : slot.category.slice(0, 3)}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white">
                     {slot.label}
                   </h4>
-                  <span className="text-[11px] text-gray-400">
+                  <span className="text-xs text-gray-400">
                     Est. {slot.estimatedWatts}W TDP
                   </span>
                 </div>
@@ -165,7 +165,7 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
 
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-sm text-gray-900 dark:text-white">
-                        ${slot.item.price.toFixed(2)}
+                        PKR {slot.item.price.toFixed(2)}
                       </span>
                       <button
                         onClick={() => handleRemovePart(slot.category)}
@@ -191,7 +191,7 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
                       </option>
                       {matchingItems.map((it) => (
                         <option key={it.id} value={it.id}>
-                          {it.name} — ${it.price.toFixed(2)} ({it.quantity} avail)
+                          {it.name} — PKR {it.price.toFixed(2)} ({it.quantity} avail)
                         </option>
                       ))}
                     </select>
@@ -233,12 +233,12 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
                 <span className="font-medium text-gray-700 dark:text-gray-300">
                   {s.label}: {s.item?.name}
                 </span>
-                <span className="font-bold">${s.item?.price.toFixed(2)}</span>
+                <span className="font-bold">PKR {s.item?.price.toFixed(2)}</span>
               </div>
             ))}
           <div className="flex justify-between pt-2 font-bold text-sm text-brand-500">
             <span>Total Quotation Estimate:</span>
-            <span>${totalPrice.toFixed(2)}</span>
+            <span>PKR {totalPrice.toFixed(2)}</span>
           </div>
         </div>
 
