@@ -1,4 +1,4 @@
-import { sqliteTable, integer, text, real } from "drizzle-orm/sqlite-core";
+import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
 
 export const ItemTitles = [
   "LAPTOP",
@@ -35,7 +35,7 @@ export const RepairStatuses = [
 ] as const;
 export type RepairStatus = (typeof RepairStatuses)[number];
 
-// 1. Customers Table (Entity)
+// 1. Customers Table
 export const customers = sqliteTable("customers", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
@@ -49,15 +49,15 @@ export const customers = sqliteTable("customers", {
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 
-// 2. Inventory Table
+// 2. Inventory Table (Integer Currency)
 export const inventory = sqliteTable("inventory", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title", { enum: ItemTitles }).notNull(),
   name: text("name").notNull(),
   sku: text("sku").notNull().unique(),
   quantity: integer("quantity").notNull().default(0),
-  price: real("price").notNull().default(0.0),
-  costPrice: real("cost_price").notNull().default(0.0),
+  price: integer("price").notNull().default(0),
+  costPrice: integer("cost_price").notNull().default(0),
   isSerialized: integer("is_serialized").notNull().default(0),
   createdAt: integer("created_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
 });
@@ -79,20 +79,20 @@ export const inventorySerials = sqliteTable("inventory_serials", {
 export type InventorySerial = typeof inventorySerials.$inferSelect;
 export type NewInventorySerial = typeof inventorySerials.$inferInsert;
 
-// 4. Sales Invoices Table
+// 4. Sales Invoices Table (Integer Currency)
 export const sales = sqliteTable("sales", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   invoiceNo: text("invoice_no").notNull().unique(),
   customerId: integer("customer_id").references(() => customers.id),
   customerName: text("customer_name").notNull().default("Walk-in Customer"),
   customerPhone: text("customer_phone").notNull().default(""),
-  subtotal: real("subtotal").notNull().default(0.0),
-  discount: real("discount").notNull().default(0.0),
-  tax: real("tax").notNull().default(0.0),
-  totalAmount: real("total_amount").notNull().default(0.0),
-  paidAmount: real("paid_amount").notNull().default(0.0),
+  subtotal: integer("subtotal").notNull().default(0),
+  discount: integer("discount").notNull().default(0),
+  tax: integer("tax").notNull().default(0),
+  totalAmount: integer("total_amount").notNull().default(0),
+  paidAmount: integer("paid_amount").notNull().default(0),
   paymentStatus: text("payment_status", { enum: PaymentStatuses }).notNull().default("PAID"),
-  balanceDue: real("balance_due").notNull().default(0.0),
+  balanceDue: integer("balance_due").notNull().default(0),
   paymentMethod: text("payment_method", { enum: PaymentMethods }).notNull().default("CASH"),
   notes: text("notes").notNull().default(""),
   createdAt: integer("created_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
@@ -101,7 +101,7 @@ export const sales = sqliteTable("sales", {
 export type SaleRecord = typeof sales.$inferSelect;
 export type NewSaleRecord = typeof sales.$inferInsert;
 
-// 5. Sale Line Items Table
+// 5. Sale Line Items Table (Integer Currency)
 export const saleItems = sqliteTable("sale_items", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   saleId: integer("sale_id")
@@ -113,14 +113,14 @@ export const saleItems = sqliteTable("sale_items", {
   itemName: text("item_name").notNull(),
   serialNumber: text("serial_number"),
   quantity: integer("quantity").notNull().default(1),
-  unitPrice: real("unit_price").notNull().default(0.0),
-  totalPrice: real("total_price").notNull().default(0.0),
+  unitPrice: integer("unit_price").notNull().default(0),
+  totalPrice: integer("total_price").notNull().default(0),
 });
 
 export type SaleLineItem = typeof saleItems.$inferSelect;
 export type NewSaleLineItem = typeof saleItems.$inferInsert;
 
-// 6. Repairs & Service Tickets Table
+// 6. Repairs & Service Tickets Table (Integer Currency)
 export const repairs = sqliteTable("repairs", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   ticketNo: text("ticket_no").notNull().unique(),
@@ -129,10 +129,10 @@ export const repairs = sqliteTable("repairs", {
   customerPhone: text("customer_phone").notNull(),
   device: text("device").notNull(),
   reportedIssue: text("reported_issue").notNull(),
-  partsUsed: text("parts_used").default("[]"), // JSON string of [{ name, cost, isHardware, inventoryId? }]
-  laborCost: real("labor_cost").notNull().default(0.0),
-  estimatedCost: real("estimated_cost").notNull().default(0.0),
-  finalCost: real("final_cost").notNull().default(0.0),
+  partsUsed: text("parts_used").default("[]"),
+  laborCost: integer("labor_cost").notNull().default(0),
+  estimatedCost: integer("estimated_cost").notNull().default(0),
+  finalCost: integer("final_cost").notNull().default(0),
   status: text("status", { enum: RepairStatuses }).notNull().default("RECEIVED"),
   createdAt: integer("created_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
 });
@@ -140,21 +140,21 @@ export const repairs = sqliteTable("repairs", {
 export type RepairTicketRecord = typeof repairs.$inferSelect;
 export type NewRepairTicketRecord = typeof repairs.$inferInsert;
 
-// 7. Adjustments / PC Swap & Trade-In Table
+// 7. Adjustments / PC Swap & Trade-In Table (Integer Currency)
 export const adjustments = sqliteTable("adjustments", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   adjustmentNo: text("adjustment_no").notNull().unique(),
   customerId: integer("customer_id").references(() => customers.id),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
-  itemTakenName: text("item_taken_name").notNull(), // Trade-in PC / Part
-  itemTakenValue: real("item_taken_value").notNull().default(0.0), // Valuation given
+  itemTakenName: text("item_taken_name").notNull(),
+  itemTakenValue: integer("item_taken_value").notNull().default(0),
   itemGivenInventoryId: integer("item_given_inventory_id").references(() => inventory.id),
-  itemGivenName: text("item_given_name").notNull(), // New PC / Part given
-  itemGivenPrice: real("item_given_price").notNull().default(0.0), // Store retail price
-  netDifference: real("net_difference").notNull().default(0.0), // Positive = Customer pays, Negative = Store refunds
-  paidAmount: real("paid_amount").notNull().default(0.0),
-  balanceDue: real("balance_due").notNull().default(0.0),
+  itemGivenName: text("item_given_name").notNull(),
+  itemGivenPrice: integer("item_given_price").notNull().default(0),
+  netDifference: integer("net_difference").notNull().default(0),
+  paidAmount: integer("paid_amount").notNull().default(0),
+  balanceDue: integer("balance_due").notNull().default(0),
   paymentStatus: text("payment_status", { enum: PaymentStatuses }).notNull().default("PAID"),
   notes: text("notes").default(""),
   createdAt: integer("created_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
@@ -173,14 +173,14 @@ export const settings = sqliteTable("settings", {
 export type SettingRecord = typeof settings.$inferSelect;
 export type NewSettingRecord = typeof settings.$inferInsert;
 
-// --- Input Types & Domain Interfaces ---
+// --- Domain Interfaces ---
 
 export interface RepairPartUsed {
   name: string;
   cost: number;
   isHardware: boolean;
   inventoryId?: number;
-  quantity?: number; // how many units consumed — defaults to 1
+  quantity?: number;
 }
 
 export interface CreateSaleInput {

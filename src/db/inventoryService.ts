@@ -15,9 +15,9 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
         title: r.title,
         name: String(r.name || ""),
         sku: String(r.sku || ""),
-        quantity: Number(r.quantity) || 0,
-        price: Number(r.price) || 0,
-        costPrice: Number(r.cost_price ?? r.costPrice ?? 0),
+        quantity: Math.round(Number(r.quantity) || 0),
+        price: Math.round(Number(r.price) || 0),
+        costPrice: Math.round(Number(r.cost_price ?? r.costPrice ?? 0)),
         isSerialized: Number(r.is_serialized ?? r.isSerialized ?? 0),
         createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
       }));
@@ -31,6 +31,9 @@ export async function getInventoryItems(): Promise<InventoryItem[]> {
 export async function addInventoryItem(item: NewInventoryItem, serialNumbers?: string[]): Promise<number> {
   const isTauri = isTauriEnvironment();
   const sqlDb = await getSqlDb();
+  const priceInt = Math.round(Number(item.price) || 0);
+  const costPriceInt = Math.round(Number(item.costPrice) || 0);
+  const qtyInt = Math.round(Number(item.quantity) || 0);
 
   if (isTauri && sqlDb) {
     const res = await sqlDb.execute(
@@ -40,9 +43,9 @@ export async function addInventoryItem(item: NewInventoryItem, serialNumbers?: s
         item.title,
         item.name,
         item.sku,
-        item.quantity || 0,
-        item.price || 0.0,
-        item.costPrice || 0.0,
+        qtyInt,
+        priceInt,
+        costPriceInt,
         item.isSerialized || 0,
         Math.floor(Date.now() / 1000),
       ]
@@ -70,9 +73,9 @@ export async function addInventoryItem(item: NewInventoryItem, serialNumbers?: s
     title: item.title,
     name: item.name,
     sku: item.sku,
-    quantity: item.quantity ?? 0,
-    price: item.price ?? 0.0,
-    costPrice: item.costPrice ?? 0.0,
+    quantity: qtyInt,
+    price: priceInt,
+    costPrice: costPriceInt,
     isSerialized: item.isSerialized ?? 0,
     createdAt: Math.floor(Date.now() / 1000),
   };
@@ -98,15 +101,16 @@ export async function addInventoryItem(item: NewInventoryItem, serialNumbers?: s
 export async function updateItemQuantity(id: number, quantity: number): Promise<void> {
   const isTauri = isTauriEnvironment();
   const sqlDb = await getSqlDb();
+  const qty = Math.round(quantity);
 
   if (isTauri && sqlDb) {
-    await sqlDb.execute("UPDATE inventory SET quantity = $1 WHERE id = $2", [quantity, id]);
+    await sqlDb.execute("UPDATE inventory SET quantity = $1 WHERE id = $2", [qty, id]);
     return;
   }
 
   const found = memoryStore.inventory.find((i) => i.id === id);
   if (found) {
-    found.quantity = quantity;
+    found.quantity = qty;
   }
 }
 

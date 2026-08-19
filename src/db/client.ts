@@ -5,7 +5,6 @@ import * as schema from "./schema";
 let sqlDb: Database | null = null;
 let isInitialized = false;
 
-// Mock memory stores for browser preview mode
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 const memoryCustomers: schema.Customer[] = [
@@ -45,8 +44,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)",
     sku: "TP-X1C-G11-001",
     quantity: 8,
-    price: 1499.99,
-    costPrice: 1250.0,
+    price: 150000,
+    costPrice: 125000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 5,
   },
@@ -56,8 +55,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "NVIDIA GeForce RTX 4080 Super 16GB",
     sku: "NV-RTX4080S-16G",
     quantity: 4,
-    price: 999.0,
-    costPrice: 850.0,
+    price: 285000,
+    costPrice: 250000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 3,
   },
@@ -67,8 +66,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "AMD Ryzen 7 7800X3D 8-Core Processor",
     sku: "AMD-R7-7800X3D",
     quantity: 12,
-    price: 449.0,
-    costPrice: 380.0,
+    price: 120000,
+    costPrice: 105000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 2,
   },
@@ -78,8 +77,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz",
     sku: "COR-DDR5-32G-6000",
     quantity: 20,
-    price: 119.99,
-    costPrice: 90.0,
+    price: 32000,
+    costPrice: 26000,
     isSerialized: 0,
     createdAt: Math.floor(Date.now() / 1000) - 86400,
   },
@@ -89,8 +88,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "Samsung 990 PRO 2TB PCIe 4.0 NVMe SSD",
     sku: "SAM-990PRO-2TB",
     quantity: 15,
-    price: 179.99,
-    costPrice: 135.0,
+    price: 48000,
+    costPrice: 38000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 36000,
   },
@@ -100,8 +99,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "ASUS ROG STRIX B650-A GAMING WIFI",
     sku: "ASUS-ROG-B650A",
     quantity: 6,
-    price: 239.99,
-    costPrice: 195.0,
+    price: 68000,
+    costPrice: 55000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 20000,
   },
@@ -111,8 +110,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "Corsair RM850x 850W 80+ Gold Fully Modular",
     sku: "COR-RM850X-GOLD",
     quantity: 10,
-    price: 139.99,
-    costPrice: 105.0,
+    price: 38000,
+    costPrice: 30000,
     isSerialized: 0,
     createdAt: Math.floor(Date.now() / 1000) - 10000,
   },
@@ -131,11 +130,11 @@ const memorySales: schema.SaleRecord[] = [
     customerId: 1,
     customerName: "Alex Chen",
     customerPhone: "+1 (555) 321-7654",
-    subtotal: 1118.99,
-    discount: 0,
-    tax: 55.95,
-    totalAmount: 1174.94,
-    paidAmount: 1174.94,
+    subtotal: 317000,
+    discount: 5000,
+    tax: 0,
+    totalAmount: 312000,
+    paidAmount: 312000,
     paymentStatus: "PAID",
     balanceDue: 0,
     paymentMethod: "CARD",
@@ -148,13 +147,13 @@ const memorySales: schema.SaleRecord[] = [
     customerId: 2,
     customerName: "David Miller",
     customerPhone: "+1 (555) 234-5678",
-    subtotal: 1499.99,
-    discount: 50.0,
-    tax: 72.50,
-    totalAmount: 1522.49,
-    paidAmount: 1000.00,
+    subtotal: 150000,
+    discount: 5000,
+    tax: 0,
+    totalAmount: 145000,
+    paidAmount: 100000,
     paymentStatus: "PARTIAL",
-    balanceDue: 522.49,
+    balanceDue: 45000,
     paymentMethod: "SPLIT",
     notes: "ThinkPad X1 purchase - Partial deposit",
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 2,
@@ -165,13 +164,13 @@ const memorySales: schema.SaleRecord[] = [
     customerId: 3,
     customerName: "Sarah Jenkins",
     customerPhone: "+1 (555) 987-6543",
-    subtotal: 449.00,
+    subtotal: 120000,
     discount: 0,
-    tax: 22.45,
-    totalAmount: 471.45,
-    paidAmount: 0.0,
+    tax: 0,
+    totalAmount: 120000,
+    paidAmount: 0,
     paymentStatus: "UNPAID",
-    balanceDue: 471.45,
+    balanceDue: 120000,
     paymentMethod: "CASH",
     notes: "Ryzen 7800X3D reserved invoice",
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 4,
@@ -179,10 +178,10 @@ const memorySales: schema.SaleRecord[] = [
 ];
 
 const memorySaleItems: schema.SaleLineItem[] = [
-  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 999.0, totalPrice: 999.0 },
-  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 119.99, totalPrice: 119.99 },
-  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 1499.99, totalPrice: 1499.99 },
-  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 449.0, totalPrice: 449.0 },
+  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 285000, totalPrice: 285000 },
+  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 32000, totalPrice: 32000 },
+  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 150000, totalPrice: 150000 },
+  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 120000, totalPrice: 120000 },
 ];
 
 const memoryRepairs: schema.RepairTicketRecord[] = [
@@ -195,12 +194,12 @@ const memoryRepairs: schema.RepairTicketRecord[] = [
     device: "ASUS ROG Zephyrus G14",
     reportedIssue: "GPU thermal throttling and fan noise",
     partsUsed: JSON.stringify([
-      { name: "Liquid Metal Repaste + Thermal Pads", cost: 35.0, isHardware: true },
-      { name: "BIOS & Thermal Profile Update", cost: 25.0, isHardware: false },
+      { name: "Liquid Metal Repaste + Thermal Pads", cost: 4500, isHardware: true },
+      { name: "BIOS & Thermal Profile Update", cost: 2500, isHardware: false },
     ]),
-    laborCost: 60.0,
-    estimatedCost: 120.0,
-    finalCost: 120.0,
+    laborCost: 5000,
+    estimatedCost: 12000,
+    finalCost: 12000,
     status: "IN_PROGRESS",
     createdAt: Math.floor(Date.now() / 1000) - 86400,
   },
@@ -213,12 +212,12 @@ const memoryRepairs: schema.RepairTicketRecord[] = [
     device: "Custom Desktop PC (i7-13700K / RTX 4070)",
     reportedIssue: "Corrupted NVMe boot partition & driver BSOD",
     partsUsed: JSON.stringify([
-      { name: "Samsung 990 PRO 2TB PCIe 4.0 NVMe SSD", cost: 179.99, isHardware: true, inventoryId: 5 },
-      { name: "Windows 11 OS Reinstallation & Drivers", cost: 40.0, isHardware: false },
+      { name: "Samsung 990 PRO 2TB PCIe 4.0 NVMe SSD", cost: 48000, isHardware: true, inventoryId: 5 },
+      { name: "Windows 11 OS Reinstallation & Drivers", cost: 3500, isHardware: false },
     ]),
-    laborCost: 50.0,
-    estimatedCost: 269.99,
-    finalCost: 269.99,
+    laborCost: 4500,
+    estimatedCost: 56000,
+    finalCost: 56000,
     status: "READY",
     createdAt: Math.floor(Date.now() / 1000) - 172800,
   },
@@ -232,13 +231,13 @@ const memoryAdjustments: schema.AdjustmentRecord[] = [
     customerName: "Alex Chen",
     customerPhone: "+1 (555) 321-7654",
     itemTakenName: "Old GTX 1070 8GB Rig",
-    itemTakenValue: 200.0,
+    itemTakenValue: 45000,
     itemGivenInventoryId: 2,
     itemGivenName: "NVIDIA GeForce RTX 4080 Super 16GB",
-    itemGivenPrice: 999.0,
-    netDifference: 799.0,
-    paidAmount: 799.0,
-    balanceDue: 0.0,
+    itemGivenPrice: 285000,
+    netDifference: 240000,
+    paidAmount: 240000,
+    balanceDue: 0,
     paymentStatus: "PAID",
     notes: "Customer traded in old GTX 1070 rig towards RTX 4080 Super",
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 3,
@@ -250,7 +249,7 @@ const memorySettings: Record<string, string> = {
   store_address: "Shop #12, Computer Plaza, Main Boulevard",
   store_phone: "+92 300 1234567",
   currency_symbol: "PKR ",
-  tax_rate: "0.0",
+  tax_rate: "0",
 };
 
 export async function initDb(): Promise<void> {
@@ -260,13 +259,11 @@ export async function initDb(): Promise<void> {
     try {
       sqlDb = await Database.load("sqlite:pc_shop.db");
 
-      // 1. Performance & Security PRAGMAs
       try { await sqlDb.execute("PRAGMA journal_mode = WAL;"); } catch {}
       try { await sqlDb.execute("PRAGMA synchronous = NORMAL;"); } catch {}
       try { await sqlDb.execute("PRAGMA foreign_keys = ON;"); } catch {}
       try { await sqlDb.execute("PRAGMA busy_timeout = 5000;"); } catch {}
 
-      // 2. Create Relational Tables Individually (SQLite requires single statements per execute)
       const tableQueries = [
         `CREATE TABLE IF NOT EXISTS customers (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -283,8 +280,8 @@ export async function initDb(): Promise<void> {
           name TEXT NOT NULL,
           sku TEXT NOT NULL UNIQUE,
           quantity INTEGER NOT NULL DEFAULT 0,
-          price REAL NOT NULL DEFAULT 0.0,
-          cost_price REAL NOT NULL DEFAULT 0.0,
+          price INTEGER NOT NULL DEFAULT 0,
+          cost_price INTEGER NOT NULL DEFAULT 0,
           is_serialized INTEGER NOT NULL DEFAULT 0,
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )`,
@@ -301,13 +298,13 @@ export async function initDb(): Promise<void> {
           customer_id INTEGER REFERENCES customers(id),
           customer_name TEXT NOT NULL DEFAULT 'Walk-in Customer',
           customer_phone TEXT NOT NULL DEFAULT '',
-          subtotal REAL NOT NULL DEFAULT 0.0,
-          discount REAL NOT NULL DEFAULT 0.0,
-          tax REAL NOT NULL DEFAULT 0.0,
-          total_amount REAL NOT NULL DEFAULT 0.0,
-          paid_amount REAL NOT NULL DEFAULT 0.0,
+          subtotal INTEGER NOT NULL DEFAULT 0,
+          discount INTEGER NOT NULL DEFAULT 0,
+          tax INTEGER NOT NULL DEFAULT 0,
+          total_amount INTEGER NOT NULL DEFAULT 0,
+          paid_amount INTEGER NOT NULL DEFAULT 0,
           payment_status TEXT NOT NULL DEFAULT 'PAID',
-          balance_due REAL NOT NULL DEFAULT 0.0,
+          balance_due INTEGER NOT NULL DEFAULT 0,
           payment_method TEXT NOT NULL DEFAULT 'CASH',
           notes TEXT NOT NULL DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
@@ -319,8 +316,8 @@ export async function initDb(): Promise<void> {
           item_name TEXT NOT NULL,
           serial_number TEXT,
           quantity INTEGER NOT NULL DEFAULT 1,
-          unit_price REAL NOT NULL DEFAULT 0.0,
-          total_price REAL NOT NULL DEFAULT 0.0
+          unit_price INTEGER NOT NULL DEFAULT 0,
+          total_price INTEGER NOT NULL DEFAULT 0
         )`,
         `CREATE TABLE IF NOT EXISTS repairs (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -331,9 +328,9 @@ export async function initDb(): Promise<void> {
           device TEXT NOT NULL,
           reported_issue TEXT NOT NULL,
           parts_used TEXT DEFAULT '[]',
-          labor_cost REAL NOT NULL DEFAULT 0.0,
-          estimated_cost REAL NOT NULL DEFAULT 0.0,
-          final_cost REAL NOT NULL DEFAULT 0.0,
+          labor_cost INTEGER NOT NULL DEFAULT 0,
+          estimated_cost INTEGER NOT NULL DEFAULT 0,
+          final_cost INTEGER NOT NULL DEFAULT 0,
           status TEXT NOT NULL DEFAULT 'RECEIVED',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )`,
@@ -344,13 +341,13 @@ export async function initDb(): Promise<void> {
           customer_name TEXT NOT NULL,
           customer_phone TEXT NOT NULL,
           item_taken_name TEXT NOT NULL,
-          item_taken_value REAL NOT NULL DEFAULT 0.0,
+          item_taken_value INTEGER NOT NULL DEFAULT 0,
           item_given_inventory_id INTEGER REFERENCES inventory(id),
           item_given_name TEXT NOT NULL,
-          item_given_price REAL NOT NULL DEFAULT 0.0,
-          net_difference REAL NOT NULL DEFAULT 0.0,
-          paid_amount REAL NOT NULL DEFAULT 0.0,
-          balance_due REAL NOT NULL DEFAULT 0.0,
+          item_given_price INTEGER NOT NULL DEFAULT 0,
+          net_difference INTEGER NOT NULL DEFAULT 0,
+          paid_amount INTEGER NOT NULL DEFAULT 0,
+          balance_due INTEGER NOT NULL DEFAULT 0,
           payment_status TEXT NOT NULL DEFAULT 'PAID',
           notes TEXT DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
@@ -363,14 +360,9 @@ export async function initDb(): Promise<void> {
       ];
 
       for (const q of tableQueries) {
-        try {
-          await sqlDb.execute(q);
-        } catch (err) {
-          console.warn("Table init:", err);
-        }
+        try { await sqlDb.execute(q); } catch (err) { console.warn("Table init:", err); }
       }
 
-      // 3. Performance Indexes
       const indexQueries = [
         "CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)",
         "CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)",
@@ -386,35 +378,7 @@ export async function initDb(): Promise<void> {
       ];
 
       for (const idx of indexQueries) {
-        try {
-          await sqlDb.execute(idx);
-        } catch {}
-      }
-
-      // 4. Safe Schema Migrations for Existing SQLite DBs (each column migration runs individually)
-      const migrations = [
-        "ALTER TABLE sales ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE sales ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'PAID'",
-        "ALTER TABLE sales ADD COLUMN balance_due REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE sales ADD COLUMN discount REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE sales ADD COLUMN tax REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE sales ADD COLUMN notes TEXT NOT NULL DEFAULT ''",
-        "ALTER TABLE sales ADD COLUMN customer_name TEXT NOT NULL DEFAULT 'Walk-in Customer'",
-        "ALTER TABLE sales ADD COLUMN customer_phone TEXT NOT NULL DEFAULT ''",
-        "ALTER TABLE adjustments ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE adjustments ADD COLUMN balance_due REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE adjustments ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'PAID'",
-        "ALTER TABLE inventory ADD COLUMN cost_price REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE inventory ADD COLUMN is_serialized INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE repairs ADD COLUMN parts_used TEXT DEFAULT '[]'",
-        "ALTER TABLE repairs ADD COLUMN labor_cost REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE repairs ADD COLUMN final_cost REAL NOT NULL DEFAULT 0.0",
-      ];
-
-      for (const m of migrations) {
-        try {
-          await sqlDb.execute(m);
-        } catch {}
+        try { await sqlDb.execute(idx); } catch {}
       }
 
       isInitialized = true;
@@ -430,7 +394,6 @@ export async function initDb(): Promise<void> {
 export const db = drizzle<typeof schema>(
   async (sql, params, method) => {
     await initDb();
-
     if (isTauri && sqlDb) {
       try {
         if (method === "all" || method === "values") {
@@ -448,7 +411,6 @@ export const db = drizzle<typeof schema>(
         throw err;
       }
     }
-
     return { rows: [] };
   },
   { schema }
@@ -463,7 +425,6 @@ export function isTauriEnvironment(): boolean {
   return isTauri && sqlDb !== null;
 }
 
-// Memory Store Accessors for browser fallback
 export const memoryStore = {
   customers: memoryCustomers,
   inventory: memoryInventory,

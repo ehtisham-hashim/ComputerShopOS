@@ -19,13 +19,13 @@ export async function getAdjustments(): Promise<AdjustmentRecord[]> {
       customerName: String(r.customer_name || r.customerName || ""),
       customerPhone: String(r.customer_phone || r.customerPhone || ""),
       itemTakenName: String(r.item_taken_name || r.itemTakenName || ""),
-      itemTakenValue: Number(r.item_taken_value ?? r.itemTakenValue ?? 0),
+      itemTakenValue: Math.round(Number(r.item_taken_value ?? r.itemTakenValue ?? 0)),
       itemGivenInventoryId: r.item_given_inventory_id != null ? Number(r.item_given_inventory_id) : r.itemGivenInventoryId != null ? Number(r.itemGivenInventoryId) : null,
       itemGivenName: String(r.item_given_name || r.itemGivenName || ""),
-      itemGivenPrice: Number(r.item_given_price ?? r.itemGivenPrice ?? 0),
-      netDifference: Number(r.net_difference ?? r.netDifference ?? 0),
-      paidAmount: Number(r.paid_amount ?? r.paidAmount ?? 0),
-      balanceDue: Number(r.balance_due ?? r.balanceDue ?? 0),
+      itemGivenPrice: Math.round(Number(r.item_given_price ?? r.itemGivenPrice ?? 0)),
+      netDifference: Math.round(Number(r.net_difference ?? r.netDifference ?? 0)),
+      paidAmount: Math.round(Number(r.paid_amount ?? r.paidAmount ?? 0)),
+      balanceDue: Math.round(Number(r.balance_due ?? r.balanceDue ?? 0)),
       paymentStatus: (r.payment_status || r.paymentStatus || "PAID") as PaymentStatus,
       notes: String(r.notes || ""),
       createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
@@ -41,16 +41,18 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
   const adjustmentNo = `ADJ-${Date.now().toString().slice(-7)}`;
   const now = Math.floor(Date.now() / 1000);
 
-  const netDiff = input.netDifference || 0.0;
-  const targetDue = Math.abs(netDiff);
-  const paid = input.paidAmount !== undefined ? input.paidAmount : targetDue;
-  const balance = Math.max(0, targetDue - paid);
+  const itemTakenValInt = Math.round(Number(input.itemTakenValue) || 0);
+  const itemGivenPriceInt = Math.round(Number(input.itemGivenPrice) || 0);
+  const netDiffInt = Math.round(input.netDifference !== undefined ? Number(input.netDifference) : itemGivenPriceInt - itemTakenValInt);
+  const targetDue = Math.abs(netDiffInt);
+  const paidInt = Math.round(input.paidAmount !== undefined ? Number(input.paidAmount) : targetDue);
+  const balanceInt = Math.max(0, targetDue - paidInt);
 
   let status: PaymentStatus = input.paymentStatus || "PAID";
   if (!input.paymentStatus) {
-    if (netDiff === 0 || paid >= targetDue) {
+    if (netDiffInt === 0 || paidInt >= targetDue) {
       status = "PAID";
-    } else if (paid > 0) {
+    } else if (paidInt > 0) {
       status = "PARTIAL";
     } else {
       status = "UNPAID";
@@ -76,20 +78,19 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
         input.customerName,
         input.customerPhone,
         input.itemTakenName,
-        input.itemTakenValue || 0.0,
+        itemTakenValInt,
         input.itemGivenInventoryId || null,
         input.itemGivenName,
-        input.itemGivenPrice || 0.0,
-        netDiff,
-        paid,
-        balance,
+        itemGivenPriceInt,
+        netDiffInt,
+        paidInt,
+        balanceInt,
         status,
         input.notes || "",
         now,
       ]
     );
 
-    // Decrement store inventory item stock if given out
     if (input.itemGivenInventoryId) {
       await sqlDb.execute(
         "UPDATE inventory SET quantity = MAX(0, quantity - 1) WHERE id = $1",
@@ -97,7 +98,6 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
       );
     }
 
-    // Mark serial SOLD if serialized item is given out
     if (input.serialNumber) {
       await sqlDb.execute(
         "UPDATE inventory_serials SET status = 'SOLD' WHERE serial_number = $1",
@@ -127,13 +127,13 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
     customerName: input.customerName,
     customerPhone: input.customerPhone,
     itemTakenName: input.itemTakenName,
-    itemTakenValue: input.itemTakenValue || 0.0,
+    itemTakenValue: itemTakenValInt,
     itemGivenInventoryId: input.itemGivenInventoryId || null,
     itemGivenName: input.itemGivenName,
-    itemGivenPrice: input.itemGivenPrice || 0.0,
-    netDifference: netDiff,
-    paidAmount: paid,
-    balanceDue: balance,
+    itemGivenPrice: itemGivenPriceInt,
+    netDifference: netDiffInt,
+    paidAmount: paidInt,
+    balanceDue: balanceInt,
     paymentStatus: status,
     notes: input.notes || "",
     createdAt: now,
@@ -179,7 +179,6 @@ export async function deleteAdjustment(id: number): Promise<void> {
         "UPDATE inventory SET quantity = quantity + 1 WHERE id = $1",
         [invId]
       );
-      // Restore serial to AVAILABLE if one was marked SOLD
       const soldSerials = await sqlDb.select<{ id: number }[]>(
         "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'SOLD' ORDER BY id DESC LIMIT 1",
         [invId]
