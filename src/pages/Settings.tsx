@@ -15,8 +15,8 @@ export const SettingsPage: React.FC = () => {
   const [storeName, setStoreName] = useState("Tasnim PC Hardware & Systems");
   const [storeAddress, setStoreAddress] = useState("Shop #12, Computer Plaza, Main Boulevard");
   const [storePhone, setStorePhone] = useState("+92 300 1234567");
-  const [currencySymbol, setCurrencySymbol] = useState("$");
-  const [taxRate, setTaxRate] = useState("5.0");
+  const [currencySymbol, setCurrencySymbol] = useState("PKR ");
+  const [taxRate, setTaxRate] = useState("0.0");
   const [isSaved, setIsSaved] = useState(false);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
 

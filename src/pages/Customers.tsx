@@ -10,7 +10,7 @@ import {
   UserPlus,
   ShoppingCart,
   Wrench,
-  DollarSign,
+  Coins,
   ShieldCheck,
   Eye,
 } from "lucide-react";
@@ -380,10 +380,10 @@ export const CustomersPage: React.FC = () => {
             {/* Total Valuation Chip */}
             <div className="flex items-center justify-between rounded-xl bg-brand-50/60 p-3 dark:bg-brand-500/10">
               <div className="flex items-center gap-2 text-xs font-bold text-brand-700 dark:text-brand-300">
-                <DollarSign className="size-4" /> Lifetime Store Spend
+                <Coins className="size-4" /> Lifetime Store Spend
               </div>
               <span className="font-bold text-sm text-brand-700 dark:text-brand-300">
-                PKR {totalSpent.toFixed(2)}
+                PKR {Number(totalSpent || 0).toFixed(2)}
               </span>
             </div>
 
@@ -404,10 +404,10 @@ export const CustomersPage: React.FC = () => {
                     >
                       <div>
                         <span className="font-mono font-bold text-gray-900 dark:text-white">{s.invoiceNo}</span>
-                        <span className="text-gray-400 ml-2">{new Date(s.createdAt * 1000).toLocaleDateString()}</span>
+                        <span className="text-gray-400 ml-2">{new Date((s.createdAt || 0) * 1000).toLocaleDateString()}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-900 dark:text-white">PKR {s.totalAmount.toFixed(2)}</span>
+                        <span className="font-bold text-gray-900 dark:text-white">PKR {Number(s.totalAmount || 0).toFixed(2)}</span>
                         <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-gray-800">{s.paymentMethod}</span>
                       </div>
                     </div>
@@ -437,7 +437,7 @@ export const CustomersPage: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-brand-500/15">{r.status}</span>
-                        <span className="font-bold text-gray-900 dark:text-white">PKR {r.estimatedCost.toFixed(2)}</span>
+                        <span className="font-bold text-gray-900 dark:text-white">PKR {Number(r.finalCost || r.estimatedCost || 0).toFixed(2)}</span>
                       </div>
                     </div>
                   ))}

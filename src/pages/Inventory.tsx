@@ -8,7 +8,7 @@ import {
   AlertCircle,
   Package,
   Layers,
-  DollarSign,
+  Coins,
   Tag,
   Barcode,
   Eye,
@@ -230,9 +230,9 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
         />
         <StatCard
           title="Total Stock Valuation"
-          value={`$${totalValuation.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          value={`PKR ${totalValuation.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           valueColor="success"
-          icon={<DollarSign className="size-5" />}
+          icon={<Coins className="size-5" />}
         />
       </div>
 
@@ -563,7 +563,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Retail Price ($ USD)
+                Retail Price (PKR)
               </label>
               <input
                 type="number"
@@ -584,7 +584,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                Cost Price ($ USD)
+                Cost Price (PKR)
               </label>
               <input
                 type="number"

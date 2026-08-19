@@ -26,9 +26,24 @@ export async function getRepairTickets(): Promise<RepairTicketRecord[]> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    return await sqlDb.select<RepairTicketRecord[]>(
+    const rows = await sqlDb.select<any[]>(
       "SELECT * FROM repairs ORDER BY created_at DESC"
     );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      ticketNo: String(r.ticket_no || r.ticketNo || ""),
+      customerId: r.customer_id != null ? Number(r.customer_id) : r.customerId != null ? Number(r.customerId) : null,
+      customerName: String(r.customer_name || r.customerName || ""),
+      customerPhone: String(r.customer_phone || r.customerPhone || ""),
+      device: String(r.device || ""),
+      reportedIssue: String(r.reported_issue || r.reportedIssue || ""),
+      partsUsed: String(r.parts_used || r.partsUsed || "[]"),
+      laborCost: Number(r.labor_cost ?? r.laborCost ?? 0),
+      estimatedCost: Number(r.estimated_cost ?? r.estimatedCost ?? 0),
+      finalCost: Number(r.final_cost ?? r.finalCost ?? 0),
+      status: (r.status || "RECEIVED") as RepairStatus,
+      createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
+    }));
   }
 
   return [...memoryStore.repairs].sort((a, b) => b.createdAt - a.createdAt);

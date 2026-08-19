@@ -325,7 +325,7 @@ export const RepairsPage: React.FC<RepairsPageProps> = ({ items = [] }) => {
                           className="inline-flex items-center gap-1 text-xs font-semibold text-brand-500 hover:text-brand-600 dark:text-brand-400 hover:underline"
                         >
                           <Package className="size-3.5 shrink-0" />
-                          {parsedParts.length} Parts (PKR {(ticket.finalCost || ticket.estimatedCost).toFixed(2)})
+                          {parsedParts.length} Parts (PKR {Number(ticket.finalCost || ticket.estimatedCost || 0).toFixed(2)})
                         </button>
                       </td>
                       <td className="py-3.5 px-5">

@@ -5,7 +5,7 @@ import {
   Minus,
   Trash2,
   Receipt,
-  DollarSign,
+  Coins,
   Printer,
   AlertCircle,
   Eye,
@@ -56,6 +56,14 @@ export const SalesPage: React.FC<SalesPageProps> = ({
   // View Invoice Modal State
   const [viewInvoice, setViewInvoice] = useState<SaleRecord | null>(null);
   const [lastInvoiceNumber, setLastInvoiceNumber] = useState<string>("");
+  const [completedSale, setCompletedSale] = useState<{
+    invoiceNo: string;
+    customerName: string;
+    totalAmount: number;
+    paidAmount: number;
+    balanceDue: number;
+    paymentStatus: PaymentStatus;
+  } | null>(null);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [storeSettings, setStoreSettings] = useState<StoreSettings | null>(null);
 
@@ -185,21 +193,29 @@ export const SalesPage: React.FC<SalesPageProps> = ({
         paymentMethod,
       });
 
+      setCompletedSale({
+        invoiceNo: invNum,
+        customerName: customerName || "Walk-in Customer",
+        totalAmount: grandTotal,
+        paidAmount: effectivePaidAmount,
+        balanceDue,
+        paymentStatus: calculatedPaymentStatus,
+      });
       setLastInvoiceNumber(invNum);
       setIsSaleModalOpen(false);
       setIsReceiptOpen(true);
       await fetchSalesData();
       if (onSaleComplete) await onSaleComplete();
       clearCart();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to checkout sale:", err);
-      alert("Failed to process transaction in SQLite database.");
+      alert(`Failed to process transaction in SQLite database: ${err?.message || err}`);
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const currency = storeSettings?.currencySymbol || "$";
+  const currency = storeSettings?.currencySymbol || "PKR ";
 
   const filteredCatalog = items.filter(
     (i) =>
@@ -262,7 +278,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({
           title="Total Collected Revenue"
           value={`${currency}${totalSalesRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           valueColor="success"
-          icon={<DollarSign className="size-5" />}
+          icon={<Coins className="size-5" />}
         />
         <StatCard
           title="Total Invoices Recorded"
@@ -360,13 +376,13 @@ export const SalesPage: React.FC<SalesPageProps> = ({
                       </span>
                     </td>
                     <td className="py-3.5 px-5 font-semibold text-gray-900 dark:text-white">
-                      {currency}{s.totalAmount.toFixed(2)}
+                      {currency}{Number(s.totalAmount || 0).toFixed(2)}
                     </td>
                     <td className="py-3.5 px-5 font-medium text-success-600 dark:text-success-400">
-                      {currency}{(s.paidAmount || s.totalAmount).toFixed(2)}
+                      {currency}{Number(s.paidAmount || s.totalAmount || 0).toFixed(2)}
                     </td>
                     <td className="py-3.5 px-5 font-mono text-xs font-bold text-error-600 dark:text-error-400">
-                      {(s.balanceDue || 0) > 0 ? `${currency}${(s.balanceDue || 0).toFixed(2)}` : "—"}
+                      {Number(s.balanceDue || 0) > 0 ? `${currency}${Number(s.balanceDue || 0).toFixed(2)}` : "—"}
                     </td>
                     <td className="py-3.5 px-5">
                       <span
@@ -595,7 +611,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold text-gray-500 mb-1">
-                  Amount Paid / Tendered ($)
+                  Amount Paid / Tendered (PKR)
                 </label>
                 <input
                   type="number"
@@ -665,9 +681,10 @@ export const SalesPage: React.FC<SalesPageProps> = ({
         onClose={() => {
           setViewInvoice(null);
           setIsReceiptOpen(false);
+          setCompletedSale(null);
         }}
         title="Sale Invoice"
-        subtitle={`Invoice #${viewInvoice?.invoiceNo || lastInvoiceNumber}`}
+        subtitle={`Invoice #${viewInvoice?.invoiceNo || completedSale?.invoiceNo || lastInvoiceNumber}`}
         icon={<Receipt className="size-5 text-brand-500" />}
       >
         <div className="my-2 p-4 rounded-xl border border-gray-200 bg-gray-50 font-mono text-xs text-gray-800 dark:border-gray-800 dark:bg-gray-800/60 dark:text-gray-200">
@@ -675,28 +692,28 @@ export const SalesPage: React.FC<SalesPageProps> = ({
             <p className="font-bold text-sm">{storeSettings?.storeName || "ComputerShopOS Store"}</p>
             <p className="text-[10px] text-gray-500">{storeSettings?.storeAddress}</p>
             <p className="text-[10px] text-gray-500">Tel: {storeSettings?.storePhone}</p>
-            <p className="text-[10px] text-gray-500 font-bold mt-1">Invoice #{viewInvoice?.invoiceNo || lastInvoiceNumber}</p>
-            <p className="text-[10px] text-gray-500">Customer: {viewInvoice?.customerName || customerName}</p>
+            <p className="text-[10px] text-gray-500 font-bold mt-1">Invoice #{viewInvoice?.invoiceNo || completedSale?.invoiceNo || lastInvoiceNumber}</p>
+            <p className="text-[10px] text-gray-500">Customer: {viewInvoice?.customerName || completedSale?.customerName || customerName}</p>
           </div>
 
           <div className="py-3 space-y-1.5 border-b border-dashed border-gray-300 dark:border-gray-700">
             <div className="flex justify-between font-bold text-sm">
               <span>TOTAL INVOICE</span>
-              <span>{currency}{(viewInvoice?.totalAmount || grandTotal).toFixed(2)}</span>
+              <span>{currency}{Number(viewInvoice?.totalAmount ?? completedSale?.totalAmount ?? 0).toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-xs text-success-600 dark:text-success-400">
               <span>Amount Paid</span>
-              <span>{currency}{(viewInvoice?.paidAmount || effectivePaidAmount).toFixed(2)}</span>
+              <span>{currency}{Number(viewInvoice?.paidAmount ?? completedSale?.paidAmount ?? 0).toFixed(2)}</span>
             </div>
-            {(viewInvoice?.balanceDue || balanceDue) > 0 && (
+            {Number(viewInvoice?.balanceDue ?? completedSale?.balanceDue ?? 0) > 0 && (
               <div className="flex justify-between text-xs text-error-600 dark:text-error-400 font-bold">
                 <span>Balance Due</span>
-                <span>{currency}{(viewInvoice?.balanceDue || balanceDue).toFixed(2)}</span>
+                <span>{currency}{Number(viewInvoice?.balanceDue ?? completedSale?.balanceDue ?? 0).toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between text-[11px] pt-1">
               <span>Status</span>
-              <span className="font-bold">{viewInvoice?.paymentStatus || calculatedPaymentStatus}</span>
+              <span className="font-bold">{viewInvoice?.paymentStatus || completedSale?.paymentStatus || calculatedPaymentStatus}</span>
             </div>
           </div>
         </div>
@@ -710,6 +727,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({
             onClick={() => {
               setViewInvoice(null);
               setIsReceiptOpen(false);
+              setCompletedSale(null);
             }}
             className="tail-btn-secondary"
           >

@@ -242,7 +242,7 @@ const memorySettings: Record<string, string> = {
   store_name: "Tasnim PC Hardware & Systems",
   store_address: "Shop #12, Computer Plaza, Main Boulevard",
   store_phone: "+92 300 1234567",
-  currency_symbol: "$",
+  currency_symbol: "PKR ",
   tax_rate: "0.0",
 };
 
@@ -254,14 +254,14 @@ export async function initDb(): Promise<void> {
       sqlDb = await Database.load("sqlite:pc_shop.db");
 
       // 1. Performance & Security PRAGMAs
-      await sqlDb.execute("PRAGMA journal_mode = WAL;");
-      await sqlDb.execute("PRAGMA synchronous = NORMAL;");
-      await sqlDb.execute("PRAGMA foreign_keys = ON;");
-      await sqlDb.execute("PRAGMA busy_timeout = 5000;");
+      try { await sqlDb.execute("PRAGMA journal_mode = WAL;"); } catch {}
+      try { await sqlDb.execute("PRAGMA synchronous = NORMAL;"); } catch {}
+      try { await sqlDb.execute("PRAGMA foreign_keys = ON;"); } catch {}
+      try { await sqlDb.execute("PRAGMA busy_timeout = 5000;"); } catch {}
 
-      // 2. Create Relational Tables
-      await sqlDb.execute(`
-        CREATE TABLE IF NOT EXISTS customers (
+      // 2. Create Relational Tables Individually (SQLite requires single statements per execute)
+      const tableQueries = [
+        `CREATE TABLE IF NOT EXISTS customers (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
           phone TEXT NOT NULL UNIQUE,
@@ -269,9 +269,8 @@ export async function initDb(): Promise<void> {
           address TEXT DEFAULT '',
           notes TEXT DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS inventory (
+        )`,
+        `CREATE TABLE IF NOT EXISTS inventory (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           title TEXT NOT NULL,
           name TEXT NOT NULL,
@@ -281,17 +280,15 @@ export async function initDb(): Promise<void> {
           cost_price REAL NOT NULL DEFAULT 0.0,
           is_serialized INTEGER NOT NULL DEFAULT 0,
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS inventory_serials (
+        )`,
+        `CREATE TABLE IF NOT EXISTS inventory_serials (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           inventory_id INTEGER NOT NULL REFERENCES inventory(id) ON DELETE CASCADE,
           serial_number TEXT NOT NULL,
           status TEXT NOT NULL DEFAULT 'AVAILABLE',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS sales (
+        )`,
+        `CREATE TABLE IF NOT EXISTS sales (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           invoice_no TEXT NOT NULL UNIQUE,
           customer_id INTEGER REFERENCES customers(id),
@@ -307,9 +304,8 @@ export async function initDb(): Promise<void> {
           payment_method TEXT NOT NULL DEFAULT 'CASH',
           notes TEXT NOT NULL DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS sale_items (
+        )`,
+        `CREATE TABLE IF NOT EXISTS sale_items (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
           inventory_id INTEGER NOT NULL REFERENCES inventory(id),
@@ -318,9 +314,8 @@ export async function initDb(): Promise<void> {
           quantity INTEGER NOT NULL DEFAULT 1,
           unit_price REAL NOT NULL DEFAULT 0.0,
           total_price REAL NOT NULL DEFAULT 0.0
-        );
-
-        CREATE TABLE IF NOT EXISTS repairs (
+        )`,
+        `CREATE TABLE IF NOT EXISTS repairs (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           ticket_no TEXT NOT NULL UNIQUE,
           customer_id INTEGER REFERENCES customers(id),
@@ -334,9 +329,8 @@ export async function initDb(): Promise<void> {
           final_cost REAL NOT NULL DEFAULT 0.0,
           status TEXT NOT NULL DEFAULT 'RECEIVED',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS adjustments (
+        )`,
+        `CREATE TABLE IF NOT EXISTS adjustments (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           adjustment_no TEXT NOT NULL UNIQUE,
           customer_id INTEGER REFERENCES customers(id),
@@ -353,35 +347,68 @@ export async function initDb(): Promise<void> {
           payment_status TEXT NOT NULL DEFAULT 'PAID',
           notes TEXT DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-        );
-
-        CREATE TABLE IF NOT EXISTS settings (
+        )`,
+        `CREATE TABLE IF NOT EXISTS settings (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           key TEXT NOT NULL UNIQUE,
           value TEXT NOT NULL
-        );
+        )`,
+      ];
 
-        -- Performance Indexes
-        CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
-        CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name);
-        CREATE INDEX IF NOT EXISTS idx_inventory_sku ON inventory(sku);
-        CREATE INDEX IF NOT EXISTS idx_inventory_title ON inventory(title);
-        CREATE INDEX IF NOT EXISTS idx_serials_number ON inventory_serials(serial_number);
-        CREATE INDEX IF NOT EXISTS idx_sales_invoice ON sales(invoice_no);
-        CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(payment_status);
-        CREATE INDEX IF NOT EXISTS idx_repairs_ticket ON repairs(ticket_no);
-        CREATE INDEX IF NOT EXISTS idx_adjustments_no ON adjustments(adjustment_no);
-        CREATE INDEX IF NOT EXISTS idx_adjustments_customer ON adjustments(customer_name);
-        CREATE INDEX IF NOT EXISTS idx_adjustments_status ON adjustments(payment_status);
-      `);
+      for (const q of tableQueries) {
+        try {
+          await sqlDb.execute(q);
+        } catch (err) {
+          console.warn("Table init:", err);
+        }
+      }
 
-      // Safe schema migrations for existing databases
-      try {
-        await sqlDb.execute("ALTER TABLE adjustments ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0");
-      } catch {}
-      try {
-        await sqlDb.execute("ALTER TABLE adjustments ADD COLUMN balance_due REAL NOT NULL DEFAULT 0.0");
-      } catch {}
+      // 3. Performance Indexes
+      const indexQueries = [
+        "CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)",
+        "CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)",
+        "CREATE INDEX IF NOT EXISTS idx_inventory_sku ON inventory(sku)",
+        "CREATE INDEX IF NOT EXISTS idx_inventory_title ON inventory(title)",
+        "CREATE INDEX IF NOT EXISTS idx_serials_number ON inventory_serials(serial_number)",
+        "CREATE INDEX IF NOT EXISTS idx_sales_invoice ON sales(invoice_no)",
+        "CREATE INDEX IF NOT EXISTS idx_sales_status ON sales(payment_status)",
+        "CREATE INDEX IF NOT EXISTS idx_repairs_ticket ON repairs(ticket_no)",
+        "CREATE INDEX IF NOT EXISTS idx_adjustments_no ON adjustments(adjustment_no)",
+        "CREATE INDEX IF NOT EXISTS idx_adjustments_customer ON adjustments(customer_name)",
+        "CREATE INDEX IF NOT EXISTS idx_adjustments_status ON adjustments(payment_status)",
+      ];
+
+      for (const idx of indexQueries) {
+        try {
+          await sqlDb.execute(idx);
+        } catch {}
+      }
+
+      // 4. Safe Schema Migrations for Existing SQLite DBs (each column migration runs individually)
+      const migrations = [
+        "ALTER TABLE sales ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0",
+        "ALTER TABLE sales ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'PAID'",
+        "ALTER TABLE sales ADD COLUMN balance_due REAL NOT NULL DEFAULT 0.0",
+        "ALTER TABLE sales ADD COLUMN discount REAL NOT NULL DEFAULT 0.0",
+        "ALTER TABLE sales ADD COLUMN tax REAL NOT NULL DEFAULT 0.0",
+        "ALTER TABLE sales ADD COLUMN notes TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE sales ADD COLUMN customer_name TEXT NOT NULL DEFAULT 'Walk-in Customer'",
+        "ALTER TABLE sales ADD COLUMN customer_phone TEXT NOT NULL DEFAULT ''",
+        "ALTER TABLE adjustments ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0",
+        "ALTER TABLE adjustments ADD COLUMN balance_due REAL NOT NULL DEFAULT 0.0",
+        "ALTER TABLE adjustments ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'PAID'",
+        "ALTER TABLE inventory ADD COLUMN cost_price REAL NOT NULL DEFAULT 0.0",
+        "ALTER TABLE inventory ADD COLUMN is_serialized INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE repairs ADD COLUMN parts_used TEXT DEFAULT '[]'",
+        "ALTER TABLE repairs ADD COLUMN labor_cost REAL NOT NULL DEFAULT 0.0",
+        "ALTER TABLE repairs ADD COLUMN final_cost REAL NOT NULL DEFAULT 0.0",
+      ];
+
+      for (const m of migrations) {
+        try {
+          await sqlDb.execute(m);
+        } catch {}
+      }
 
       isInitialized = true;
       return;

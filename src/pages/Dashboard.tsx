@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import {
-  DollarSign,
+  Coins,
   Package,
   AlertTriangle,
   TrendingUp,
@@ -71,11 +71,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       }
 
       sales.forEach((s) => {
-        const sDate = new Date(s.createdAt * 1000);
+        const sDate = new Date((s.createdAt || 0) * 1000);
         const diffDays = Math.floor((now.getTime() - sDate.getTime()) / (1000 * 3600 * 24));
         if (diffDays <= 7) {
           const dayKey = days[sDate.getDay()];
-          dataMap[dayKey] = (dataMap[dayKey] || 0) + s.totalAmount;
+          dataMap[dayKey] = (dataMap[dayKey] || 0) + Number(s.totalAmount || 0);
         }
       });
 
@@ -90,13 +90,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       const dataMap: Record<string, number> = { "Week 1": 0, "Week 2": 0, "Week 3": 0, "Week 4": 0 };
 
       sales.forEach((s) => {
-        const sDate = new Date(s.createdAt * 1000);
+        const sDate = new Date((s.createdAt || 0) * 1000);
         const diffDays = Math.floor((now.getTime() - sDate.getTime()) / (1000 * 3600 * 24));
         if (diffDays <= 28) {
-          if (diffDays <= 7) dataMap["Week 4"] += s.totalAmount;
-          else if (diffDays <= 14) dataMap["Week 3"] += s.totalAmount;
-          else if (diffDays <= 21) dataMap["Week 2"] += s.totalAmount;
-          else dataMap["Week 1"] += s.totalAmount;
+          if (diffDays <= 7) dataMap["Week 4"] += Number(s.totalAmount || 0);
+          else if (diffDays <= 14) dataMap["Week 3"] += Number(s.totalAmount || 0);
+          else if (diffDays <= 21) dataMap["Week 2"] += Number(s.totalAmount || 0);
+          else dataMap["Week 1"] += Number(s.totalAmount || 0);
         }
       });
 
@@ -112,10 +112,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     months.forEach((m) => (dataMap[m] = 0));
 
     sales.forEach((s) => {
-      const sDate = new Date(s.createdAt * 1000);
+      const sDate = new Date((s.createdAt || 0) * 1000);
       if (sDate.getFullYear() === now.getFullYear()) {
         const monthKey = months[sDate.getMonth()];
-        dataMap[monthKey] = (dataMap[monthKey] || 0) + s.totalAmount;
+        dataMap[monthKey] = (dataMap[monthKey] || 0) + Number(s.totalAmount || 0);
       }
     });
 
@@ -154,7 +154,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           title="Total Stock Value"
           value={`PKR ${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           valueColor="success"
-          icon={<DollarSign className="size-5" />}
+          icon={<Coins className="size-5" />}
           subtitle={<span className="text-success-600 dark:text-success-400 font-semibold">+14.8% vs last month</span>}
         />
         <StatCard
@@ -227,7 +227,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(val) => `Rs.${val}`}
+                tickFormatter={(val) => `PKR ${val}`}
               />
               <Tooltip
                 cursor={{ fill: "rgba(59, 130, 246, 0.08)" }}
@@ -384,7 +384,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-gray-900 dark:text-white">
-                      PKR {order.totalAmount.toFixed(2)}
+                      PKR {Number(order.totalAmount || 0).toFixed(2)}
                     </td>
                     <td className="py-3.5 px-4">
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${

@@ -1,13 +1,28 @@
-import { db, isTauriEnvironment, memoryStore, getSqlDb } from "./client";
-import { inventory, InventoryItem, NewInventoryItem, InventorySerial } from "./schema";
-import { desc } from "drizzle-orm";
+import { isTauriEnvironment, memoryStore, getSqlDb } from "./client";
+import { InventoryItem, NewInventoryItem, InventorySerial } from "./schema";
 
 export async function getInventoryItems(): Promise<InventoryItem[]> {
-  if (isTauriEnvironment()) {
+  const isTauri = isTauriEnvironment();
+  const sqlDb = await getSqlDb();
+
+  if (isTauri && sqlDb) {
     try {
-      return await db.select().from(inventory).orderBy(desc(inventory.createdAt));
+      const rows = await sqlDb.select<any[]>(
+        "SELECT * FROM inventory ORDER BY created_at DESC"
+      );
+      return rows.map((r) => ({
+        id: Number(r.id),
+        title: r.title,
+        name: String(r.name || ""),
+        sku: String(r.sku || ""),
+        quantity: Number(r.quantity) || 0,
+        price: Number(r.price) || 0,
+        costPrice: Number(r.cost_price ?? r.costPrice ?? 0),
+        isSerialized: Number(r.is_serialized ?? r.isSerialized ?? 0),
+        createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
+      }));
     } catch (err) {
-      console.error("Failed to query inventory via Drizzle:", err);
+      console.error("Failed to query inventory from SQLite:", err);
     }
   }
   return [...memoryStore.inventory].sort((a, b) => b.createdAt - a.createdAt);
@@ -115,10 +130,17 @@ export async function getItemSerials(inventoryId: number): Promise<InventorySeri
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    return await sqlDb.select<InventorySerial[]>(
+    const rows = await sqlDb.select<any[]>(
       "SELECT * FROM inventory_serials WHERE inventory_id = $1 ORDER BY id DESC",
       [inventoryId]
     );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      inventoryId: Number(r.inventory_id ?? r.inventoryId),
+      serialNumber: String(r.serial_number || r.serialNumber || ""),
+      status: (r.status || "AVAILABLE") as "AVAILABLE" | "SOLD" | "DEFECTIVE",
+      createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
+    }));
   }
 
   return memoryStore.serials.filter((s) => s.inventoryId === inventoryId);

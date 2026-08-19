@@ -300,19 +300,19 @@ export const AdjustmentsPage: React.FC<AdjustmentsPageProps> = ({
                           {adj.itemGivenName}
                         </span>
                         <span className="text-xs text-gray-400">
-                          Price: PKR {adj.itemGivenPrice.toFixed(2)}
+                          Price: PKR {Number(adj.itemGivenPrice || 0).toFixed(2)}
                         </span>
                       </div>
                     </td>
                     <td className="py-3.5 px-5">
                       <div className="flex flex-col">
-                        {adj.netDifference > 0 ? (
+                        {Number(adj.netDifference || 0) > 0 ? (
                           <span className="font-bold text-success-600 dark:text-success-400">
-                            +PKR {adj.netDifference.toFixed(2)}
+                            +PKR {Number(adj.netDifference || 0).toFixed(2)}
                           </span>
-                        ) : adj.netDifference < 0 ? (
+                        ) : Number(adj.netDifference || 0) < 0 ? (
                           <span className="font-bold text-warning-600 dark:text-warning-400">
-                            -PKR {Math.abs(adj.netDifference).toFixed(2)}
+                            -PKR {Math.abs(Number(adj.netDifference || 0)).toFixed(2)}
                           </span>
                         ) : (
                           <span className="font-bold text-gray-500">
@@ -320,8 +320,8 @@ export const AdjustmentsPage: React.FC<AdjustmentsPageProps> = ({
                           </span>
                         )}
                         <span className="text-[10px] text-gray-400">
-                          Paid: PKR {(adj.paidAmount !== undefined ? adj.paidAmount : Math.abs(adj.netDifference)).toFixed(2)}
-                          {adj.balanceDue && adj.balanceDue > 0 ? ` (Due: PKR ${adj.balanceDue.toFixed(2)})` : ""}
+                          Paid: PKR {Number(adj.paidAmount !== undefined ? adj.paidAmount : Math.abs(Number(adj.netDifference || 0))).toFixed(2)}
+                          {Number(adj.balanceDue || 0) > 0 ? ` (Due: PKR ${Number(adj.balanceDue || 0).toFixed(2)})` : ""}
                         </span>
                       </div>
                     </td>

@@ -23,9 +23,27 @@ export async function getAdjustments(): Promise<AdjustmentRecord[]> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    return await sqlDb.select<AdjustmentRecord[]>(
+    const rows = await sqlDb.select<any[]>(
       "SELECT * FROM adjustments ORDER BY created_at DESC"
     );
+    return rows.map((r) => ({
+      id: Number(r.id),
+      adjustmentNo: String(r.adjustment_no || r.adjustmentNo || ""),
+      customerId: r.customer_id != null ? Number(r.customer_id) : r.customerId != null ? Number(r.customerId) : null,
+      customerName: String(r.customer_name || r.customerName || ""),
+      customerPhone: String(r.customer_phone || r.customerPhone || ""),
+      itemTakenName: String(r.item_taken_name || r.itemTakenName || ""),
+      itemTakenValue: Number(r.item_taken_value ?? r.itemTakenValue ?? 0),
+      itemGivenInventoryId: r.item_given_inventory_id != null ? Number(r.item_given_inventory_id) : r.itemGivenInventoryId != null ? Number(r.itemGivenInventoryId) : null,
+      itemGivenName: String(r.item_given_name || r.itemGivenName || ""),
+      itemGivenPrice: Number(r.item_given_price ?? r.itemGivenPrice ?? 0),
+      netDifference: Number(r.net_difference ?? r.netDifference ?? 0),
+      paidAmount: Number(r.paid_amount ?? r.paidAmount ?? 0),
+      balanceDue: Number(r.balance_due ?? r.balanceDue ?? 0),
+      paymentStatus: (r.payment_status || r.paymentStatus || "PAID") as PaymentStatus,
+      notes: String(r.notes || ""),
+      createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
+    }));
   }
 
   return [...memoryStore.adjustments].sort((a, b) => b.createdAt - a.createdAt);

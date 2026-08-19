@@ -6,7 +6,16 @@ export async function getCustomers(): Promise<Customer[]> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    return await sqlDb.select<Customer[]>("SELECT * FROM customers ORDER BY created_at DESC");
+    const rows = await sqlDb.select<any[]>("SELECT * FROM customers ORDER BY created_at DESC");
+    return rows.map((r) => ({
+      id: Number(r.id),
+      name: String(r.name || ""),
+      phone: String(r.phone || ""),
+      email: r.email ? String(r.email) : "",
+      address: r.address ? String(r.address) : "",
+      notes: r.notes ? String(r.notes) : "",
+      createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
+    }));
   }
 
   return [...memoryStore.customers].sort((a, b) => b.createdAt - a.createdAt);
@@ -91,14 +100,47 @@ export async function getCustomerHistory(customerId: number): Promise<{
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    const custSales = await sqlDb.select<SaleRecord[]>(
+    const rawSales = await sqlDb.select<any[]>(
       "SELECT * FROM sales WHERE customer_id = $1 ORDER BY created_at DESC",
       [customerId]
     );
-    const custRepairs = await sqlDb.select<RepairTicketRecord[]>(
+    const custSales: SaleRecord[] = rawSales.map((r) => ({
+      id: Number(r.id),
+      invoiceNo: String(r.invoice_no || r.invoiceNo || ""),
+      customerId: r.customer_id != null ? Number(r.customer_id) : r.customerId != null ? Number(r.customerId) : null,
+      customerName: String(r.customer_name || r.customerName || "Walk-in Customer"),
+      customerPhone: String(r.customer_phone || r.customerPhone || ""),
+      subtotal: Number(r.subtotal) || 0,
+      discount: Number(r.discount) || 0,
+      tax: Number(r.tax) || 0,
+      totalAmount: Number(r.total_amount ?? r.totalAmount ?? 0),
+      paidAmount: Number(r.paid_amount ?? r.paidAmount ?? (r.total_amount ?? r.totalAmount ?? 0)),
+      paymentStatus: (r.payment_status || r.paymentStatus || "PAID"),
+      balanceDue: Number(r.balance_due ?? r.balanceDue ?? 0),
+      paymentMethod: (r.payment_method || r.paymentMethod || "CASH"),
+      notes: String(r.notes || ""),
+      createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
+    }));
+
+    const rawRepairs = await sqlDb.select<any[]>(
       "SELECT * FROM repairs WHERE customer_id = $1 ORDER BY created_at DESC",
       [customerId]
     );
+    const custRepairs: RepairTicketRecord[] = rawRepairs.map((r) => ({
+      id: Number(r.id),
+      ticketNo: String(r.ticket_no || r.ticketNo || ""),
+      customerId: r.customer_id != null ? Number(r.customer_id) : r.customerId != null ? Number(r.customerId) : null,
+      customerName: String(r.customer_name || r.customerName || ""),
+      customerPhone: String(r.customer_phone || r.customerPhone || ""),
+      device: String(r.device || ""),
+      reportedIssue: String(r.reported_issue || r.reportedIssue || ""),
+      partsUsed: String(r.parts_used || r.partsUsed || "[]"),
+      laborCost: Number(r.labor_cost ?? r.laborCost ?? 0),
+      estimatedCost: Number(r.estimated_cost ?? r.estimatedCost ?? 0),
+      finalCost: Number(r.final_cost ?? r.finalCost ?? 0),
+      status: r.status || "RECEIVED",
+      createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
+    }));
 
     const totalSpent = custSales.reduce((acc, s) => acc + s.totalAmount, 0);
     return { sales: custSales, repairs: custRepairs, totalSpent };
