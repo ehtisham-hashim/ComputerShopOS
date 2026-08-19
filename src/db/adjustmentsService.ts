@@ -1,22 +1,8 @@
 import { isTauriEnvironment, memoryStore, getSqlDb } from "./client";
-import { AdjustmentRecord, PaymentStatus } from "./schema";
+import { AdjustmentRecord, PaymentStatus, CreateAdjustmentInput } from "./schema";
 import { findOrCreateCustomer } from "./customerService";
 
-export interface CreateAdjustmentInput {
-  customerId?: number;
-  customerName: string;
-  customerPhone: string;
-  itemTakenName: string;
-  itemTakenValue: number;
-  itemGivenInventoryId?: number;
-  itemGivenName: string;
-  itemGivenPrice: number;
-  netDifference: number;
-  paidAmount?: number;
-  balanceDue?: number;
-  paymentStatus?: PaymentStatus;
-  notes?: string;
-}
+export type { CreateAdjustmentInput };
 
 export async function getAdjustments(): Promise<AdjustmentRecord[]> {
   const isTauri = isTauriEnvironment();
@@ -52,7 +38,7 @@ export async function getAdjustments(): Promise<AdjustmentRecord[]> {
 export async function createAdjustment(input: CreateAdjustmentInput): Promise<string> {
   const isTauri = isTauriEnvironment();
   const sqlDb = await getSqlDb();
-  const adjustmentNo = `ADJ-${Math.floor(100 + Math.random() * 900)}`;
+  const adjustmentNo = `ADJ-${Date.now().toString().slice(-7)}`;
   const now = Math.floor(Date.now() / 1000);
 
   const netDiff = input.netDifference || 0.0;
@@ -111,6 +97,25 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
       );
     }
 
+    // Mark serial SOLD if serialized item is given out
+    if (input.serialNumber) {
+      await sqlDb.execute(
+        "UPDATE inventory_serials SET status = 'SOLD' WHERE serial_number = $1",
+        [input.serialNumber]
+      );
+    } else if (input.itemGivenInventoryId) {
+      const availableSerials = await sqlDb.select<{ id: number }[]>(
+        "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'AVAILABLE' LIMIT 1",
+        [input.itemGivenInventoryId]
+      );
+      if (availableSerials.length > 0) {
+        await sqlDb.execute(
+          "UPDATE inventory_serials SET status = 'SOLD' WHERE id = $1",
+          [availableSerials[0].id]
+        );
+      }
+    }
+
     return adjustmentNo;
   }
 
@@ -138,9 +143,21 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
 
   if (input.itemGivenInventoryId) {
     const inv = memoryStore.inventory.find((i) => i.id === input.itemGivenInventoryId);
-    if (inv && inv.quantity > 0) {
-      inv.quantity -= 1;
+    if (inv) {
+      inv.quantity = Math.max(0, inv.quantity - 1);
     }
+  }
+
+  if (input.serialNumber) {
+    const serial = memoryStore.serials.find(
+      (s) => s.serialNumber.toUpperCase() === input.serialNumber!.toUpperCase()
+    );
+    if (serial) serial.status = "SOLD";
+  } else if (input.itemGivenInventoryId) {
+    const serial = memoryStore.serials.find(
+      (s) => s.inventoryId === input.itemGivenInventoryId && s.status === "AVAILABLE"
+    );
+    if (serial) serial.status = "SOLD";
   }
 
   return adjustmentNo;
@@ -151,12 +168,45 @@ export async function deleteAdjustment(id: number): Promise<void> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
+    const rows = await sqlDb.select<any[]>(
+      "SELECT item_given_inventory_id FROM adjustments WHERE id = $1",
+      [id]
+    );
     await sqlDb.execute("DELETE FROM adjustments WHERE id = $1", [id]);
+    const invId = rows.length > 0 ? (rows[0].item_given_inventory_id ?? rows[0].itemGivenInventoryId) : null;
+    if (invId) {
+      await sqlDb.execute(
+        "UPDATE inventory SET quantity = quantity + 1 WHERE id = $1",
+        [invId]
+      );
+      // Restore serial to AVAILABLE if one was marked SOLD
+      const soldSerials = await sqlDb.select<{ id: number }[]>(
+        "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'SOLD' ORDER BY id DESC LIMIT 1",
+        [invId]
+      );
+      if (soldSerials.length > 0) {
+        await sqlDb.execute(
+          "UPDATE inventory_serials SET status = 'AVAILABLE' WHERE id = $1",
+          [soldSerials[0].id]
+        );
+      }
+    }
     return;
   }
 
   const idx = memoryStore.adjustments.findIndex((a) => a.id === id);
   if (idx !== -1) {
+    const adj = memoryStore.adjustments[idx];
+    if (adj.itemGivenInventoryId) {
+      const inv = memoryStore.inventory.find((i) => i.id === adj.itemGivenInventoryId);
+      if (inv) {
+        inv.quantity += 1;
+      }
+      const soldSerial = memoryStore.serials.find(
+        (s) => s.inventoryId === adj.itemGivenInventoryId && s.status === "SOLD"
+      );
+      if (soldSerial) soldSerial.status = "AVAILABLE";
+    }
     memoryStore.adjustments.splice(idx, 1);
   }
 }

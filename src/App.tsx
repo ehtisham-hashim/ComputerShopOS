@@ -7,6 +7,7 @@ import { LoginPage } from "./pages/Login";
 import { InventoryItem } from "./db/schema";
 import { getInventoryItems } from "./db/inventoryService";
 import { getCustomers } from "./db/customerService";
+import { getRepairTickets } from "./db/repairsService";
 import { initDb } from "./db/client";
 
 // Dynamic Route Splitting for ultra-fast load
@@ -48,6 +49,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [customersCount, setCustomersCount] = useState<number>(0);
+  const [activeRepairsCount, setActiveRepairsCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [salesInitialItems, setSalesInitialItems] = useState<InventoryItem[]>([]);
 
@@ -55,12 +57,26 @@ function AppContent() {
     try {
       if (showLoader) setIsLoading(true);
       await initDb();
-      const records = await getInventoryItems();
-      setItems(records);
-      const custs = await getCustomers();
-      setCustomersCount(custs.length);
+      try {
+        const records = await getInventoryItems();
+        setItems(records);
+      } catch (e) {
+        console.error("Failed to load inventory items:", e);
+      }
+      try {
+        const custs = await getCustomers();
+        setCustomersCount(custs.length);
+      } catch (e) {
+        console.error("Failed to load customers:", e);
+      }
+      try {
+        const repairTickets = await getRepairTickets();
+        setActiveRepairsCount(repairTickets.filter((t) => t.status !== "DELIVERED").length);
+      } catch (e) {
+        console.error("Failed to load repair tickets:", e);
+      }
     } catch (err) {
-      console.error("Failed to load inventory & customers:", err);
+      console.error("Failed to initialize database:", err);
     } finally {
       setIsLoading(false);
     }
@@ -133,7 +149,7 @@ function AppContent() {
       }}
       inventoryCount={items.length}
       lowStockCount={lowStockCount}
-      activeRepairsCount={2}
+      activeRepairsCount={activeRepairsCount}
       customersCount={customersCount}
       onQuickSale={() => {
         setSalesInitialItems([]);
@@ -172,7 +188,9 @@ function AppContent() {
           />
         )}
 
-        {activeTab === "repairs" && <RepairsPage items={items} />}
+        {activeTab === "repairs" && (
+          <RepairsPage items={items} onRefreshInventory={fetchItems} />
+        )}
 
         {activeTab === "adjustments" && (
           <AdjustmentsPage

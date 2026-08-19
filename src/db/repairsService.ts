@@ -1,25 +1,8 @@
 import { isTauriEnvironment, memoryStore, getSqlDb } from "./client";
-import { RepairTicketRecord, RepairStatus } from "./schema";
+import { RepairTicketRecord, RepairStatus, RepairPartUsed, AddRepairInput } from "./schema";
 import { findOrCreateCustomer } from "./customerService";
 
-export interface RepairPartUsed {
-  name: string;
-  cost: number;
-  isHardware: boolean;
-  inventoryId?: number;
-}
-
-export interface AddRepairInput {
-  customerId?: number;
-  customerName: string;
-  customerPhone: string;
-  device: string;
-  reportedIssue: string;
-  partsUsed?: RepairPartUsed[];
-  laborCost?: number;
-  estimatedCost?: number;
-  status?: RepairStatus;
-}
+export type { RepairPartUsed, AddRepairInput };
 
 export async function getRepairTickets(): Promise<RepairTicketRecord[]> {
   const isTauri = isTauriEnvironment();
@@ -52,7 +35,7 @@ export async function getRepairTickets(): Promise<RepairTicketRecord[]> {
 export async function addRepairTicket(ticket: AddRepairInput): Promise<string> {
   const isTauri = isTauriEnvironment();
   const sqlDb = await getSqlDb();
-  const ticketNo = `RMA-${Math.floor(1000 + Math.random() * 9000)}`;
+  const ticketNo = `RMA-${Date.now().toString().slice(-7)}`;
   const now = Math.floor(Date.now() / 1000);
 
   let custId = ticket.customerId;
@@ -89,12 +72,13 @@ export async function addRepairTicket(ticket: AddRepairInput): Promise<string> {
       ]
     );
 
-    // If hardware components from inventory were used, decrement stock
+    // If hardware components from inventory were used, decrement stock by specified quantity
     for (const p of parts) {
       if (p.isHardware && p.inventoryId) {
+        const qty = p.quantity ?? 1;
         await sqlDb.execute(
-          "UPDATE inventory SET quantity = MAX(0, quantity - 1) WHERE id = $1",
-          [p.inventoryId]
+          "UPDATE inventory SET quantity = MAX(0, quantity - $1) WHERE id = $2",
+          [qty, p.inventoryId]
         );
       }
     }
@@ -124,7 +108,7 @@ export async function addRepairTicket(ticket: AddRepairInput): Promise<string> {
   for (const p of parts) {
     if (p.isHardware && p.inventoryId) {
       const inv = memoryStore.inventory.find((i) => i.id === p.inventoryId);
-      if (inv) inv.quantity = Math.max(0, inv.quantity - 1);
+      if (inv) inv.quantity = Math.max(0, inv.quantity - (p.quantity ?? 1));
     }
   }
 
@@ -166,12 +150,47 @@ export async function deleteRepairTicket(id: number): Promise<void> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
+    const rows = await sqlDb.select<any[]>(
+      "SELECT parts_used FROM repairs WHERE id = $1",
+      [id]
+    );
     await sqlDb.execute("DELETE FROM repairs WHERE id = $1", [id]);
+    const rawParts = rows.length > 0 ? (rows[0].parts_used ?? rows[0].partsUsed) : null;
+    if (rawParts) {
+      try {
+        const parts: RepairPartUsed[] = JSON.parse(rawParts || "[]");
+        for (const p of parts) {
+          if (p.isHardware && p.inventoryId) {
+            const qty = p.quantity ?? 1;
+            await sqlDb.execute(
+              "UPDATE inventory SET quantity = quantity + $1 WHERE id = $2",
+              [qty, p.inventoryId]
+            );
+          }
+        }
+      } catch (err) {
+        console.error("Failed to parse parts_used on delete:", err);
+      }
+    }
     return;
   }
 
   const idx = memoryStore.repairs.findIndex((r) => r.id === id);
   if (idx !== -1) {
+    const ticket = memoryStore.repairs[idx];
+    try {
+      const parts: RepairPartUsed[] = JSON.parse(ticket.partsUsed || "[]");
+      for (const p of parts) {
+        if (p.isHardware && p.inventoryId) {
+          const inv = memoryStore.inventory.find((i) => i.id === p.inventoryId);
+          if (inv) {
+            inv.quantity += (p.quantity ?? 1);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to restore memory inventory on repair delete:", err);
+    }
     memoryStore.repairs.splice(idx, 1);
   }
 }

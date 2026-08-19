@@ -50,6 +50,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({
   const [customerName, setCustomerName] = useState("Walk-in Customer");
   const [customerPhone, setCustomerPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("CASH");
+  const [discountInput, setDiscountInput] = useState<string>("");
   const [amountPaidInput, setAmountPaidInput] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -120,14 +121,17 @@ export const SalesPage: React.FC<SalesPageProps> = ({
   };
 
   const addToCart = (product: InventoryItem) => {
+    const live = items.find((i) => i.id === product.id) || product;
     setCart((prev) => {
       const existing = prev.find((c) => c.item.id === product.id);
       if (existing) {
+        if (existing.quantity >= live.quantity) return prev; // at stock ceiling
         return prev.map((c) =>
           c.item.id === product.id ? { ...c, quantity: c.quantity + 1 } : c
         );
       }
-      return [...prev, { item: product, quantity: 1 }];
+      if (live.quantity < 1) return prev; // out of stock
+      return [...prev, { item: live, quantity: 1 }];
     });
   };
 
@@ -136,7 +140,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({
       prev
         .map((c) => {
           if (c.item.id === productId) {
+            const live = items.find((i) => i.id === productId) || c.item;
             const newQty = c.quantity + delta;
+            if (delta > 0 && newQty > live.quantity) return c; // at stock ceiling
             return newQty > 0 ? { ...c, quantity: newQty } : null;
           }
           return c;
@@ -151,19 +157,21 @@ export const SalesPage: React.FC<SalesPageProps> = ({
 
   const clearCart = () => {
     setCart([]);
+    setDiscountInput("");
     setAmountPaidInput("");
   };
 
   const subtotal = cart.reduce((acc, c) => acc + c.item.price * c.quantity, 0);
+  const discountAmount = Math.min(subtotal, Math.max(0, parseFloat(discountInput) || 0));
   const taxAmount = 0.0;
-  const grandTotal = subtotal;
+  const grandTotal = Math.max(0, subtotal - discountAmount + taxAmount);
 
   // Auto-calculated payment status
   const effectivePaidAmount = amountPaidInput === "" ? grandTotal : parseFloat(amountPaidInput) || 0;
   const balanceDue = Math.max(0, grandTotal - effectivePaidAmount);
 
   let calculatedPaymentStatus: PaymentStatus = "PAID";
-  if (effectivePaidAmount <= 0) {
+  if (grandTotal > 0 && effectivePaidAmount <= 0) {
     calculatedPaymentStatus = "UNPAID";
   } else if (effectivePaidAmount < grandTotal) {
     calculatedPaymentStatus = "PARTIAL";
@@ -171,6 +179,25 @@ export const SalesPage: React.FC<SalesPageProps> = ({
 
   const handleCheckout = async () => {
     if (cart.length === 0 || isProcessing) return;
+
+    // Pre-checkout stock validation (SUGGEST-05) - aggregates requested quantities per item
+    const requestedQtyByItem: Record<number, { name: string; qty: number }> = {};
+    for (const c of cart) {
+      if (!requestedQtyByItem[c.item.id]) {
+        requestedQtyByItem[c.item.id] = { name: c.item.name, qty: 0 };
+      }
+      requestedQtyByItem[c.item.id].qty += c.quantity;
+    }
+
+    for (const [idStr, req] of Object.entries(requestedQtyByItem)) {
+      const invId = Number(idStr);
+      const live = items.find((i) => i.id === invId);
+      if (!live || live.quantity < req.qty) {
+        alert(`Insufficient stock for "${req.name}". Available: ${live?.quantity ?? 0}, Requested: ${req.qty}`);
+        setIsProcessing(false);
+        return;
+      }
+    }
 
     try {
       setIsProcessing(true);
@@ -186,7 +213,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({
           unitPrice: c.item.price,
         })),
         subtotal,
-        discount: 0,
+        discount: discountAmount,
         tax: taxAmount,
         totalAmount: grandTotal,
         paidAmount: effectivePaidAmount,
@@ -219,8 +246,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({
 
   const filteredCatalog = items.filter(
     (i) =>
-      i.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-      i.sku.toLowerCase().includes(catalogSearch.toLowerCase())
+      i.quantity > 0 &&
+      (i.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
+       i.sku.toLowerCase().includes(catalogSearch.toLowerCase()))
   );
 
   const filteredSales = sales.filter((s) => {
@@ -607,6 +635,33 @@ export const SalesPage: React.FC<SalesPageProps> = ({
               </button>
             </div>
 
+            {/* Discount and Subtotal Breakdown */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 mb-1">
+                  Discount (PKR)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  value={discountInput}
+                  onChange={(e) => setDiscountInput(e.target.value)}
+                  className="tail-input text-xs font-bold"
+                />
+              </div>
+
+              <div className="flex flex-col justify-end text-right">
+                <span className="text-[10px] text-gray-400">Subtotal: {currency}{subtotal.toFixed(2)}</span>
+                {discountAmount > 0 && (
+                  <span className="text-[10px] text-success-600 dark:text-success-400 font-bold">
+                    Discount: -{currency}{discountAmount.toFixed(2)}
+                  </span>
+                )}
+              </div>
+            </div>
+
             {/* Amount Tendered vs Auto Calculated Status */}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -697,6 +752,18 @@ export const SalesPage: React.FC<SalesPageProps> = ({
           </div>
 
           <div className="py-3 space-y-1.5 border-b border-dashed border-gray-300 dark:border-gray-700">
+            {Number(viewInvoice?.discount || 0) > 0 && (
+              <>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Subtotal</span>
+                  <span>{currency}{Number(viewInvoice?.subtotal ?? 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-success-600 dark:text-success-400">
+                  <span>Discount</span>
+                  <span>-{currency}{Number(viewInvoice?.discount ?? 0).toFixed(2)}</span>
+                </div>
+              </>
+            )}
             <div className="flex justify-between font-bold text-sm">
               <span>TOTAL INVOICE</span>
               <span>{currency}{Number(viewInvoice?.totalAmount ?? completedSale?.totalAmount ?? 0).toFixed(2)}</span>

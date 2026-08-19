@@ -178,6 +178,13 @@ const memorySales: schema.SaleRecord[] = [
   },
 ];
 
+const memorySaleItems: schema.SaleLineItem[] = [
+  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 999.0, totalPrice: 999.0 },
+  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 119.99, totalPrice: 119.99 },
+  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 1499.99, totalPrice: 1499.99 },
+  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 449.0, totalPrice: 449.0 },
+];
+
 const memoryRepairs: schema.RepairTicketRecord[] = [
   {
     id: 1,
@@ -462,6 +469,7 @@ export const memoryStore = {
   inventory: memoryInventory,
   serials: memorySerials,
   sales: memorySales,
+  saleItems: memorySaleItems,
   repairs: memoryRepairs,
   adjustments: memoryAdjustments,
   settings: memorySettings,

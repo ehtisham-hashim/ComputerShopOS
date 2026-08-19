@@ -12,13 +12,12 @@ import {
   Layers,
   Eye,
 } from "lucide-react";
-import { RepairTicketRecord, RepairStatus, InventoryItem, Customer } from "../db/schema";
+import { RepairTicketRecord, RepairStatus, InventoryItem, Customer, RepairPartUsed } from "../db/schema";
 import {
   getRepairTickets,
   addRepairTicket,
   updateRepairStatus,
   deleteRepairTicket,
-  RepairPartUsed,
 } from "../db/repairsService";
 import { getCustomers } from "../db/customerService";
 import { Modal } from "../components/ui/Modal";
@@ -28,9 +27,10 @@ import { CustomSelect } from "../components/ui/Select";
 
 interface RepairsPageProps {
   items?: InventoryItem[];
+  onRefreshInventory?: () => Promise<void>;
 }
 
-export const RepairsPage: React.FC<RepairsPageProps> = ({ items = [] }) => {
+export const RepairsPage: React.FC<RepairsPageProps> = ({ items = [], onRefreshInventory }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -132,6 +132,7 @@ export const RepairsPage: React.FC<RepairsPageProps> = ({ items = [] }) => {
     });
 
     await fetchTickets();
+    if (onRefreshInventory) await onRefreshInventory();
     setIsModalOpen(false);
     // Reset
     setCustomerName("");
@@ -145,12 +146,14 @@ export const RepairsPage: React.FC<RepairsPageProps> = ({ items = [] }) => {
   const handleStatusChange = async (id: number, status: RepairStatus) => {
     await updateRepairStatus(id, status);
     await fetchTickets();
+    if (onRefreshInventory) await onRefreshInventory();
   };
 
   const handleDelete = async (id: number) => {
     if (window.confirm("Delete this repair ticket?")) {
       await deleteRepairTicket(id);
       await fetchTickets();
+      if (onRefreshInventory) await onRefreshInventory();
     }
   };
 

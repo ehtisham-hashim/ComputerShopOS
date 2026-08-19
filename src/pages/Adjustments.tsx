@@ -14,7 +14,7 @@ import { StatCard } from "../components/ui/StatCard";
 import { SearchInput } from "../components/ui/SearchInput";
 import { Modal } from "../components/ui/Modal";
 import { CustomSelect } from "../components/ui/Select";
-import { InventoryItem, AdjustmentRecord, CustomerRecord, PaymentStatus } from "../db/schema";
+import { InventoryItem, AdjustmentRecord, Customer, PaymentStatus } from "../db/schema";
 import { getAdjustments, createAdjustment, deleteAdjustment } from "../db/adjustmentsService";
 import { getCustomers } from "../db/customerService";
 
@@ -28,7 +28,7 @@ export const AdjustmentsPage: React.FC<AdjustmentsPageProps> = ({
   onRefreshInventory,
 }) => {
   const [adjustments, setAdjustments] = useState<AdjustmentRecord[]>([]);
-  const [customers, setCustomers] = useState<CustomerRecord[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -156,6 +156,7 @@ export const AdjustmentsPage: React.FC<AdjustmentsPageProps> = ({
     if (window.confirm("Delete this adjustment record?")) {
       await deleteAdjustment(id);
       await fetchAdjustments();
+      if (onRefreshInventory) await onRefreshInventory();
     }
   };
 

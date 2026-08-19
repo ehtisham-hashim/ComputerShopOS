@@ -47,7 +47,6 @@ export const customers = sqliteTable("customers", {
 });
 
 export type Customer = typeof customers.$inferSelect;
-export type CustomerRecord = Customer;
 export type NewCustomer = typeof customers.$inferInsert;
 
 // 2. Inventory Table
@@ -173,3 +172,63 @@ export const settings = sqliteTable("settings", {
 
 export type SettingRecord = typeof settings.$inferSelect;
 export type NewSettingRecord = typeof settings.$inferInsert;
+
+// --- Input Types & Domain Interfaces ---
+
+export interface RepairPartUsed {
+  name: string;
+  cost: number;
+  isHardware: boolean;
+  inventoryId?: number;
+  quantity?: number; // how many units consumed — defaults to 1
+}
+
+export interface CreateSaleInput {
+  customerId?: number;
+  customerName?: string;
+  customerPhone?: string;
+  customerAddress?: string;
+  items: {
+    inventoryId: number;
+    itemName: string;
+    serialNumber?: string;
+    quantity: number;
+    unitPrice: number;
+  }[];
+  subtotal: number;
+  discount?: number;
+  tax?: number;
+  totalAmount: number;
+  paidAmount?: number;
+  paymentMethod: PaymentMethod;
+  notes?: string;
+}
+
+export interface AddRepairInput {
+  customerId?: number;
+  customerName: string;
+  customerPhone: string;
+  device: string;
+  reportedIssue: string;
+  partsUsed?: RepairPartUsed[];
+  laborCost?: number;
+  estimatedCost?: number;
+  status?: RepairStatus;
+}
+
+export interface CreateAdjustmentInput {
+  customerId?: number;
+  customerName: string;
+  customerPhone: string;
+  itemTakenName: string;
+  itemTakenValue: number;
+  itemGivenInventoryId?: number;
+  itemGivenName: string;
+  itemGivenPrice: number;
+  serialNumber?: string;
+  netDifference: number;
+  paidAmount?: number;
+  balanceDue?: number;
+  paymentStatus?: PaymentStatus;
+  notes?: string;
+}
