@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Boxes, ShoppingCart, Wrench, Users, Settings, ArrowLeftRight, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Boxes, ShoppingCart, FileText, Wrench, Users, Settings, ArrowLeftRight, BarChart3 } from "lucide-react";
 import { useSidebar } from "../../context/SidebarContext";
 import { NavTab } from "./navTypes";
 import { SidebarBrand } from "./SidebarBrand";
@@ -30,6 +30,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   const navItems: NavItemConfig[] = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "sales", label: "Sales & Invoices", icon: ShoppingCart, hotkey: "F2" },
+    { id: "doc-generator", label: "Doc Generator", icon: FileText, hotkey: "F4" },
     { id: "inventory", label: "Inventory & Serials", icon: Boxes, badge: lowStockCount > 0 ? `${lowStockCount} Low` : `${inventoryCount}`, badgeType: lowStockCount > 0 ? "warning" : "neutral" },
     { id: "repairs", label: "Repairs & RMA", icon: Wrench, badge: activeRepairsCount > 0 ? `${activeRepairsCount}` : undefined, badgeType: "brand" },
     { id: "adjustments", label: "Swaps & Trade-Ins", icon: ArrowLeftRight },

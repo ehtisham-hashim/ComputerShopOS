@@ -173,7 +173,72 @@ export const settings = sqliteTable("settings", {
 export type SettingRecord = typeof settings.$inferSelect;
 export type NewSettingRecord = typeof settings.$inferInsert;
 
+// 9. Brand & Document Types
+export const BrandTypes = [
+  "tasnim_computers",
+  "farhan_computers",
+  "farhan_enterprises",
+] as const;
+export type BrandType = (typeof BrandTypes)[number];
+
+export const DocTypes = ["invoice", "quotation", "bill", "challan"] as const;
+export type DocType = (typeof DocTypes)[number];
+
+export interface DocumentLineItem {
+  sn: number;
+  description: string;
+  qty: number;
+  unitPrice: number;
+  totalAmount: number;
+}
+
+// 10. Generated Documents Table
+export const documents = sqliteTable("documents", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  brand: text("brand", { enum: BrandTypes }).notNull().default("tasnim_computers"),
+  docType: text("doc_type", { enum: DocTypes }).notNull().default("invoice"),
+  refNo: text("ref_no").notNull().unique(),
+  date: text("date").notNull(),
+  customerId: integer("customer_id").references(() => customers.id),
+  customerName: text("customer_name").notNull(),
+  customerAddress: text("customer_address").notNull().default(""),
+  customerPhone: text("customer_phone").notNull().default(""),
+  itemsJson: text("items_json").notNull().default("[]"),
+  subtotal: integer("subtotal").notNull().default(0),
+  discount: integer("discount").notNull().default(0),
+  tax: integer("tax").notNull().default(0),
+  totalAmount: integer("total_amount").notNull().default(0),
+  paymentMode: text("payment_mode").notNull().default("CASH"),
+  warrantyTerms: text("warranty_terms").notNull().default("ONE WEEK CHECK WARRANTY"),
+  notes: text("notes").notNull().default(""),
+  schemaVersion: integer("schema_version").notNull().default(1),
+  createdAt: integer("created_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
+  updatedAt: integer("updated_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
+export type DocumentRecord = typeof documents.$inferSelect;
+export type NewDocumentRecord = typeof documents.$inferInsert;
+
 // --- Domain Interfaces ---
+
+export interface CreateDocumentInput {
+  brand: BrandType;
+  docType?: DocType;
+  refNo: string;
+  date: string;
+  customerId?: number;
+  customerName: string;
+  customerAddress?: string;
+  customerPhone?: string;
+  items: DocumentLineItem[];
+  subtotal: number;
+  discount?: number;
+  tax?: number;
+  totalAmount: number;
+  paymentMode?: string;
+  warrantyTerms?: string;
+  notes?: string;
+}
 
 export interface RepairPartUsed {
   name: string;

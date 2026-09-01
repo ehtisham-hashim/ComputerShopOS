@@ -357,6 +357,28 @@ export async function initDb(): Promise<void> {
           key TEXT NOT NULL UNIQUE,
           value TEXT NOT NULL
         )`,
+        `CREATE TABLE IF NOT EXISTS documents (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          brand TEXT NOT NULL DEFAULT 'tasnim_computers',
+          doc_type TEXT NOT NULL DEFAULT 'invoice',
+          ref_no TEXT NOT NULL UNIQUE,
+          date TEXT NOT NULL,
+          customer_id INTEGER REFERENCES customers(id),
+          customer_name TEXT NOT NULL,
+          customer_address TEXT DEFAULT '',
+          customer_phone TEXT DEFAULT '',
+          items_json TEXT NOT NULL DEFAULT '[]',
+          subtotal INTEGER NOT NULL DEFAULT 0,
+          discount INTEGER NOT NULL DEFAULT 0,
+          tax INTEGER NOT NULL DEFAULT 0,
+          total_amount INTEGER NOT NULL DEFAULT 0,
+          payment_mode TEXT NOT NULL DEFAULT 'CASH',
+          warranty_terms TEXT NOT NULL DEFAULT 'ONE WEEK CHECK WARRANTY',
+          notes TEXT NOT NULL DEFAULT '',
+          schema_version INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+          updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
       ];
 
       for (const q of tableQueries) {
@@ -375,6 +397,9 @@ export async function initDb(): Promise<void> {
         "CREATE INDEX IF NOT EXISTS idx_adjustments_no ON adjustments(adjustment_no)",
         "CREATE INDEX IF NOT EXISTS idx_adjustments_customer ON adjustments(customer_name)",
         "CREATE INDEX IF NOT EXISTS idx_adjustments_status ON adjustments(payment_status)",
+        "CREATE INDEX IF NOT EXISTS idx_documents_brand_created ON documents(brand, created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_documents_ref_no ON documents(ref_no)",
+        "CREATE INDEX IF NOT EXISTS idx_documents_customer ON documents(customer_name)",
       ];
 
       for (const idx of indexQueries) {
