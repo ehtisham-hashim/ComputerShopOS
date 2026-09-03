@@ -306,6 +306,9 @@ const memoryPayableLedger: schema.PayableLedgerEntry[] = (seedData.payableLedger
   createdAt: l.txDate,
 }));
 
+const memoryPurchases: schema.PurchaseRecord[] = [];
+const memoryPurchaseItems: schema.PurchaseItemRecord[] = [];
+
 export async function initDb(): Promise<void> {
   if (isInitialized) return;
 
@@ -456,6 +459,32 @@ export async function initDb(): Promise<void> {
           balance INTEGER NOT NULL DEFAULT 0,
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )`,
+        `CREATE TABLE IF NOT EXISTS purchases (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          purchase_no TEXT NOT NULL UNIQUE,
+          party_id INTEGER NOT NULL REFERENCES payable_parties(id),
+          party_name TEXT NOT NULL,
+          ref_no TEXT DEFAULT '',
+          purchase_date INTEGER NOT NULL,
+          total_amount INTEGER NOT NULL DEFAULT 0,
+          paid_amount INTEGER NOT NULL DEFAULT 0,
+          balance_due INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'RECEIVED',
+          notes TEXT DEFAULT '',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
+        `CREATE TABLE IF NOT EXISTS purchase_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          purchase_id INTEGER NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
+          inventory_id INTEGER REFERENCES inventory(id),
+          title TEXT NOT NULL,
+          item_name TEXT NOT NULL,
+          sku TEXT NOT NULL,
+          quantity INTEGER NOT NULL DEFAULT 1,
+          cost_price INTEGER NOT NULL DEFAULT 0,
+          sell_price INTEGER NOT NULL DEFAULT 0,
+          total_cost INTEGER NOT NULL DEFAULT 0
+        )`,
       ];
 
       for (const q of tableQueries) {
@@ -483,6 +512,11 @@ export async function initDb(): Promise<void> {
         "CREATE INDEX IF NOT EXISTS idx_payable_parties_name ON payable_parties(name)",
         "CREATE INDEX IF NOT EXISTS idx_payable_ledger_party ON payable_ledger(party_id)",
         "CREATE INDEX IF NOT EXISTS idx_payable_ledger_date ON payable_ledger(tx_date)",
+        "CREATE INDEX IF NOT EXISTS idx_purchases_party ON purchases(party_id)",
+        "CREATE INDEX IF NOT EXISTS idx_purchases_no ON purchases(purchase_no)",
+        "CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(purchase_date)",
+        "CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase ON purchase_items(purchase_id)",
+        "CREATE INDEX IF NOT EXISTS idx_purchase_items_inventory ON purchase_items(inventory_id)",
       ];
 
       for (const idx of indexQueries) {
@@ -514,6 +548,26 @@ export async function initDb(): Promise<void> {
         }
       } catch (seedErr) {
         console.warn("Seeding payables/receivables error:", seedErr);
+      }
+
+      // Ensure any party with opening balance has an OPENING entry in payable_ledger so balance can never be wiped
+      try {
+        const partiesWithoutLedger = await sqlDb.select<any[]>(
+          `SELECT p.id, p.current_balance, p.created_at FROM payable_parties p 
+           WHERE p.current_balance > 0 
+           AND NOT EXISTS (SELECT 1 FROM payable_ledger l WHERE l.party_id = p.id)`
+        );
+        for (const p of partiesWithoutLedger) {
+          const bal = Number(p.current_balance);
+          const createdAt = Number(p.created_at) || Math.floor(Date.now() / 1000);
+          await sqlDb.execute(
+            `INSERT INTO payable_ledger (party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at)
+             VALUES ($1, $2, 'PURCHASE', 'OPENING', 'Opening Balance', 0, $3, $4, $5)`,
+            [p.id, createdAt, bal, bal, createdAt]
+          );
+        }
+      } catch (opErr) {
+        console.warn("Opening balance ledger sync error:", opErr);
       }
 
       // Re-standardize any legacy non-standard invoice IDs (e.g. INV-890568) into standard INV-YYYY-XXX
@@ -573,6 +627,27 @@ export async function initDb(): Promise<void> {
     }
   }
 
+  // Memory store fallback opening balance sync
+  for (const p of memoryStore.payableParties) {
+    if (p.currentBalance > 0 && !memoryStore.payableLedger.some((l) => l.partyId === p.id)) {
+      const entryId = memoryStore.payableLedger.length > 0
+        ? Math.max(...memoryStore.payableLedger.map((l) => l.id)) + 1
+        : 1;
+      memoryStore.payableLedger.push({
+        id: entryId,
+        partyId: p.id,
+        txDate: p.createdAt || Math.floor(Date.now() / 1000),
+        txType: "PURCHASE",
+        refNo: "OPENING",
+        description: "Opening Balance",
+        debit: 0,
+        credit: p.currentBalance,
+        balance: p.currentBalance,
+        createdAt: p.createdAt || Math.floor(Date.now() / 1000),
+      });
+    }
+  }
+
   isInitialized = true;
 }
 
@@ -621,4 +696,7 @@ export const memoryStore = {
   settings: memorySettings,
   payableParties: memoryPayableParties,
   payableLedger: memoryPayableLedger,
+  purchases: memoryPurchases,
+  purchaseItems: memoryPurchaseItems,
 };
+

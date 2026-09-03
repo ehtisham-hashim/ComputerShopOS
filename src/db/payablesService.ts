@@ -174,7 +174,7 @@ export async function getPartyLedger(partyId: number): Promise<PayableLedgerEntr
   if (isTauri && sqlDb) {
     try {
       const rows = await sqlDb.select<any[]>(
-        "SELECT * FROM payable_ledger WHERE party_id = $1 ORDER BY tx_date ASC, id ASC",
+        "SELECT * FROM payable_ledger WHERE party_id = $1 ORDER BY tx_date DESC, id DESC",
         [partyId]
       );
       return rows.map((r) => ({
@@ -196,7 +196,7 @@ export async function getPartyLedger(partyId: number): Promise<PayableLedgerEntr
 
   return memoryStore.payableLedger
     .filter((l) => l.partyId === partyId)
-    .sort((a, b) => a.txDate - b.txDate || a.id - b.id);
+    .sort((a, b) => b.txDate - a.txDate || b.id - a.id);
 }
 
 export async function addLedgerEntry(

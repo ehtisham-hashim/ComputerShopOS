@@ -364,3 +364,70 @@ export interface CreatePayableLedgerInput {
   debit?: number;
   credit?: number;
 }
+
+// 13. Purchases & Inward Stock Bills Table
+export const PurchaseStatuses = ["RECEIVED", "ORDERED"] as const;
+export type PurchaseStatus = (typeof PurchaseStatuses)[number];
+
+export const purchases = sqliteTable("purchases", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  purchaseNo: text("purchase_no").notNull().unique(),
+  partyId: integer("party_id")
+    .notNull()
+    .references(() => payableParties.id),
+  partyName: text("party_name").notNull(),
+  refNo: text("ref_no").default(""),
+  purchaseDate: integer("purchase_date").notNull(),
+  totalAmount: integer("total_amount").notNull().default(0),
+  paidAmount: integer("paid_amount").notNull().default(0),
+  balanceDue: integer("balance_due").notNull().default(0),
+  status: text("status", { enum: PurchaseStatuses }).notNull().default("RECEIVED"),
+  notes: text("notes").default(""),
+  createdAt: integer("created_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
+export type PurchaseRecord = typeof purchases.$inferSelect;
+export type NewPurchaseRecord = typeof purchases.$inferInsert;
+
+// 14. Purchase Line Items Table
+export const purchaseItems = sqliteTable("purchase_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  purchaseId: integer("purchase_id")
+    .notNull()
+    .references(() => purchases.id, { onDelete: "cascade" }),
+  inventoryId: integer("inventory_id").references(() => inventory.id),
+  title: text("title", { enum: ItemTitles }).notNull(),
+  itemName: text("item_name").notNull(),
+  sku: text("sku").notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  costPrice: integer("cost_price").notNull().default(0),
+  sellPrice: integer("sell_price").notNull().default(0),
+  totalCost: integer("total_cost").notNull().default(0),
+});
+
+export type PurchaseItemRecord = typeof purchaseItems.$inferSelect;
+export type NewPurchaseItemRecord = typeof purchaseItems.$inferInsert;
+
+export interface PurchaseItemInput {
+  inventoryId?: number | null;
+  title: ItemTitle;
+  itemName: string;
+  sku?: string;
+  quantity: number;
+  costPrice: number;
+  sellPrice?: number;
+}
+
+export interface CreatePurchaseInput {
+  partyId: number;
+  partyName?: string;
+  refNo?: string;
+  purchaseDate?: number;
+  status?: PurchaseStatus;
+  paidAmount?: number;
+  notes?: string;
+  items: PurchaseItemInput[];
+}
+

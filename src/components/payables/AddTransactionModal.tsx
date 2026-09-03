@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { PlusCircle, ShoppingBag, Banknote, Undo2, Sliders, Boxes } from "lucide-react";
 import { Modal } from "../ui/Modal";
+import { DatePicker } from "../ui/DatePicker";
 import { PayableTxType, PayableParty, ItemTitle, ItemTitles } from "../../db/schema";
 import { addLedgerEntry } from "../../db/payablesService";
 
@@ -208,12 +209,11 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1.5">
               Date *
             </label>
-            <input
-              type="date"
-              required
+            <DatePicker
               value={dateStr}
-              onChange={(e) => setDateStr(e.target.value)}
-              className="tail-input"
+              onChange={setDateStr}
+              placeholder="Select date"
+              className="w-full"
             />
           </div>
 

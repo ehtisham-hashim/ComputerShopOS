@@ -8,20 +8,25 @@ import {
   Printer,
   Trash2,
   Search,
-  Calendar,
   Building2,
   Phone,
   MapPin,
+  ArrowLeft,
+  Eye,
 } from "lucide-react";
 import { PayableParty, PayableLedgerEntry, PayableTxType } from "../../db/schema";
 import { deleteLedgerEntry, deletePayableParty } from "../../db/payablesService";
 import { ConfirmModal } from "../ui/ConfirmModal";
+import { DatePicker } from "../ui/DatePicker";
+import { ViewPurchaseModal } from "./ViewPurchaseModal";
 
 interface SupplierLedgerPaneProps {
   party: PayableParty | null;
   ledger: PayableLedgerEntry[];
   isLoading: boolean;
+  onBack?: () => void;
   onOpenAddTransaction: (type: PayableTxType) => void;
+  onOpenNewPurchase?: () => void;
   onRefresh: () => Promise<void>;
   onPartyDeleted: () => void;
 }
@@ -30,7 +35,9 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
   party,
   ledger,
   isLoading,
+  onBack,
   onOpenAddTransaction,
+  onOpenNewPurchase,
   onRefresh,
   onPartyDeleted,
 }) => {
@@ -38,6 +45,8 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+
+  const [viewPurchaseRef, setViewPurchaseRef] = useState<string | null>(null);
 
   const [deleteEntryId, setDeleteEntryId] = useState<number | null>(null);
   const [isDeletingEntry, setIsDeletingEntry] = useState(false);
@@ -141,44 +150,57 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
   const hasBalance = party.currentBalance > 0;
 
   return (
-    <div className="flex flex-col h-[750px] border border-gray-200 dark:border-gray-800 rounded-2xl bg-white dark:bg-gray-900 overflow-hidden shadow-theme-xs">
+    <div className="flex flex-col min-h-[650px] border border-gray-200 dark:border-gray-800 rounded-2xl bg-white dark:bg-gray-900 overflow-hidden shadow-theme-xs">
       {/* Top Header Card */}
-      <div className="p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/50">
+      <div className="p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/50">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                {party.name}
-              </h2>
-              <span
-                className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                  hasBalance
-                    ? "bg-error-50 text-error-600 dark:bg-error-950/40 dark:text-error-400 border border-error-200 dark:border-error-800"
-                    : "bg-success-50 text-success-600 dark:bg-success-950/40 dark:text-success-400 border border-success-200 dark:border-success-800"
-                }`}
+          <div className="flex items-start gap-3">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="tail-btn-secondary text-xs py-2 px-3 flex items-center gap-1.5 shrink-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+                title="Back to all suppliers directory"
               >
-                {hasBalance ? "Balance Due" : "Settled"}
-              </span>
-            </div>
+                <ArrowLeft className="size-4" />
+                <span className="font-bold">Suppliers</span>
+              </button>
+            )}
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {party.name}
+                </h2>
+                <span
+                  className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                    hasBalance
+                      ? "bg-error-50 text-error-600 dark:bg-error-950/40 dark:text-error-400 border border-error-200 dark:border-error-800"
+                      : "bg-success-50 text-success-600 dark:bg-success-950/40 dark:text-success-400 border border-success-200 dark:border-success-800"
+                  }`}
+                >
+                  {hasBalance ? "Balance Due" : "Settled"}
+                </span>
+              </div>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {party.phone && (
-                <div className="flex items-center gap-1 font-mono">
-                  <Phone className="size-3 text-gray-400" />
-                  <span>{party.phone}</span>
-                </div>
-              )}
-              {party.address && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="size-3 text-gray-400" />
-                  <span>{party.address}</span>
-                </div>
-              )}
-              {party.notes && (
-                <div className="text-gray-400 italic">
-                  Note: {party.notes}
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {party.phone && (
+                  <div className="flex items-center gap-1 font-mono">
+                    <Phone className="size-3 text-gray-400" />
+                    <span>{party.phone}</span>
+                  </div>
+                )}
+                {party.address && (
+                  <div className="flex items-center gap-1">
+                    <MapPin className="size-3 text-gray-400" />
+                    <span>{party.address}</span>
+                  </div>
+                )}
+                {party.notes && (
+                  <div className="text-gray-400 italic">
+                    Note: {party.notes}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -213,7 +235,13 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-200/60 dark:border-gray-800">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
-              onClick={() => onOpenAddTransaction("PURCHASE")}
+              onClick={() => {
+                if (onOpenNewPurchase) {
+                  onOpenNewPurchase();
+                } else {
+                  onOpenAddTransaction("PURCHASE");
+                }
+              }}
               className="tail-btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
             >
               <ShoppingBag className="size-3.5" />
@@ -292,33 +320,21 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
           </select>
         </div>
 
-        {/* Date range */}
-        <div className="flex items-center gap-1.5 text-gray-500">
-          <Calendar className="size-3.5 text-gray-400" />
-          <input
-            type="date"
+        {/* Date range with modern custom DatePicker */}
+        <div className="flex items-center gap-1.5">
+          <DatePicker
             value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="tail-input text-xs py-0.5 h-7 w-28"
+            onChange={setDateFrom}
+            placeholder="From Date"
+            className="w-32"
           />
-          <span className="text-gray-400">-</span>
-          <input
-            type="date"
+          <span className="text-gray-400 font-bold">-</span>
+          <DatePicker
             value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="tail-input text-xs py-0.5 h-7 w-28"
+            onChange={setDateTo}
+            placeholder="To Date"
+            className="w-32"
           />
-          {(dateFrom || dateTo) && (
-            <button
-              onClick={() => {
-                setDateFrom("");
-                setDateTo("");
-              }}
-              className="text-[10px] text-brand-600 hover:underline"
-            >
-              Clear
-            </button>
-          )}
         </div>
       </div>
 
@@ -390,13 +406,24 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
                       {entry.balance.toLocaleString()}
                     </td>
                     <td className="py-2 px-2 text-center">
-                      <button
-                        onClick={() => setDeleteEntryId(entry.id)}
-                        className="text-gray-300 hover:text-error-500 dark:text-gray-600 dark:hover:text-error-400 p-1 rounded transition-colors"
-                        title="Delete transaction"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
+                      <div className="flex items-center justify-center gap-1">
+                        {entry.txType === "PURCHASE" && (
+                          <button
+                            onClick={() => setViewPurchaseRef(entry.refNo || "")}
+                            className="text-gray-400 hover:text-brand-500 dark:hover:text-brand-400 p-1 rounded transition-colors"
+                            title="View Purchase Inward Bill"
+                          >
+                            <Eye className="size-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setDeleteEntryId(entry.id)}
+                          className="text-gray-300 hover:text-error-500 dark:text-gray-600 dark:hover:text-error-400 p-1 rounded transition-colors"
+                          title="Delete transaction"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -438,6 +465,14 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
           </div>
         </div>
       </div>
+
+      {/* View Purchase Bill Details Modal */}
+      <ViewPurchaseModal
+        isOpen={Boolean(viewPurchaseRef)}
+        onClose={() => setViewPurchaseRef(null)}
+        purchaseNoOrRef={viewPurchaseRef}
+        partyId={party.id}
+      />
 
       {/* Confirm Delete Entry Modal */}
       <ConfirmModal

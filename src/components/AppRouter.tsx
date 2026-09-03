@@ -71,7 +71,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         <PCBuilderPage items={items} onTransferToSales={(parts) => { setSalesInitialItems(parts); setActiveTab("sales"); }} />
       )}
       {activeTab === "customers" && <CustomersPage />}
-      {activeTab === "payables" && <PayablesPage />}
+      {activeTab === "payables" && <PayablesPage onRefreshInventory={fetchItems} />}
       {activeTab === "settings" && <SettingsPage />}
     </Suspense>
   );
