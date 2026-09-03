@@ -99,6 +99,9 @@ export const PayablesPage: React.FC<PayablesPageProps> = ({ onRefreshInventory }
     if (selectedParty) {
       await fetchLedger(selectedParty.id);
     }
+    if (onRefreshInventory) {
+      await onRefreshInventory();
+    }
   };
 
   return (

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { PayableParty, PayableLedgerEntry, PayableTxType } from "../../db/schema";
 import { deleteLedgerEntry, deletePayableParty } from "../../db/payablesService";
+import { getPurchases, deletePurchase } from "../../db/purchaseService";
 import { ConfirmModal } from "../ui/ConfirmModal";
 import { DatePicker } from "../ui/DatePicker";
 import { ViewPurchaseModal } from "./ViewPurchaseModal";
@@ -80,6 +81,22 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
     if (deleteEntryId === null) return;
     setIsDeletingEntry(true);
     try {
+      const entry = ledger.find((l) => l.id === deleteEntryId);
+      if (entry && entry.txType === "PURCHASE" && party) {
+        const allPurchases = await getPurchases(party.id);
+        const linked = allPurchases.find(
+          (p) =>
+            p.purchaseNo === entry.refNo ||
+            p.refNo === entry.refNo ||
+            entry.description.includes(p.purchaseNo)
+        );
+        if (linked) {
+          await deletePurchase(linked.id);
+          await onRefresh();
+          setDeleteEntryId(null);
+          return;
+        }
+      }
       await deleteLedgerEntry(deleteEntryId);
       await onRefresh();
       setDeleteEntryId(null);

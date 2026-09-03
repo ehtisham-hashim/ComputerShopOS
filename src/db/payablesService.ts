@@ -4,9 +4,7 @@ import {
   PayableLedgerEntry,
   CreatePayablePartyInput,
   CreatePayableLedgerInput,
-  ItemTitle,
 } from "./schema";
-import { addInventoryItem } from "./inventoryService";
 
 export async function getPayableParties(): Promise<PayableParty[]> {
   const isTauri = isTauriEnvironment();
@@ -200,15 +198,7 @@ export async function getPartyLedger(partyId: number): Promise<PayableLedgerEntr
 }
 
 export async function addLedgerEntry(
-  input: CreatePayableLedgerInput,
-  inventoryData?: {
-    title: ItemTitle;
-    name: string;
-    sku: string;
-    price: number;
-    costPrice: number;
-    quantity: number;
-  }
+  input: CreatePayableLedgerInput
 ): Promise<PayableLedgerEntry> {
   const isTauri = isTauriEnvironment();
   const sqlDb = await getSqlDb();
@@ -220,23 +210,6 @@ export async function addLedgerEntry(
   const party = await getPayablePartyById(input.partyId);
   const currentBal = party ? party.currentBalance : 0;
   const newBalance = currentBal + credit - debit;
-
-  // Optional: add to inventory if inventoryData is passed on PURCHASE
-  if (inventoryData && inventoryData.name.trim()) {
-    try {
-      await addInventoryItem({
-        title: inventoryData.title,
-        name: inventoryData.name.trim(),
-        sku: inventoryData.sku.trim() || `SKU-${Date.now().toString().slice(-6)}`,
-        quantity: inventoryData.quantity || 1,
-        price: inventoryData.price || 0,
-        costPrice: inventoryData.costPrice || credit,
-        isSerialized: 0,
-      });
-    } catch (invErr) {
-      console.warn("Could not auto-add inventory item from purchase:", invErr);
-    }
-  }
 
   if (isTauri && sqlDb) {
     const res = await sqlDb.execute(

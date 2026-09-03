@@ -1,7 +1,6 @@
 import Database from "@tauri-apps/plugin-sql";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import * as schema from "./schema";
-import seedData from "./seedData.json";
 
 let sqlDb: Database | null = null;
 let isInitialized = false;
@@ -259,53 +258,17 @@ const memorySettings: Record<string, string> = {
   tax_rate: "0",
 };
 
-const initialReceivables: schema.SaleRecord[] = (seedData.receivables || []).map((r: any, i: number) => ({
-  id: 4 + i,
-  invoiceNo: r.invoiceNo,
-  customerId: null,
-  customerName: r.customerName,
-  customerPhone: r.customerPhone,
-  subtotal: r.totalAmount,
-  discount: 0,
-  tax: 0,
-  totalAmount: r.totalAmount,
-  paidAmount: r.paidAmount,
-  paymentStatus: r.paymentStatus as schema.PaymentStatus,
-  balanceDue: r.balanceDue,
-  paymentMethod: r.paymentMethod as schema.PaymentMethod,
-  notes: r.notes,
-  isBadDebt: r.isBadDebt || 0,
-  dueDate: null,
-  createdAt: r.createdAt,
-}));
+async function loadSeedData() {
+  try {
+    const mod = await import("./seedData.json");
+    return (mod as any).default || mod;
+  } catch {
+    return { receivables: [], payableParties: [], payableLedger: [] };
+  }
+}
 
-memorySales.push(...initialReceivables);
-
-const memoryPayableParties: schema.PayableParty[] = (seedData.payableParties || []).map((p: any) => ({
-  id: p.id,
-  name: p.name,
-  phone: p.phone || "",
-  address: p.address || "",
-  totalDebit: p.totalDebit || 0,
-  totalCredit: p.totalCredit || 0,
-  currentBalance: p.currentBalance || 0,
-  notes: p.notes || "",
-  createdAt: Math.floor(Date.now() / 1000) - 86400 * 30,
-}));
-
-const memoryPayableLedger: schema.PayableLedgerEntry[] = (seedData.payableLedger || []).map((l: any) => ({
-  id: l.id,
-  partyId: l.partyId,
-  txDate: l.txDate,
-  txType: l.txType as schema.PayableTxType,
-  refNo: l.refNo || "",
-  description: l.description,
-  debit: l.debit || 0,
-  credit: l.credit || 0,
-  balance: l.balance || 0,
-  createdAt: l.txDate,
-}));
-
+const memoryPayableParties: schema.PayableParty[] = [];
+const memoryPayableLedger: schema.PayableLedgerEntry[] = [];
 const memoryPurchases: schema.PurchaseRecord[] = [];
 const memoryPurchaseItems: schema.PurchaseItemRecord[] = [];
 
@@ -527,22 +490,23 @@ export async function initDb(): Promise<void> {
         const existingParties = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM payable_parties");
         const count = existingParties?.[0]?.cnt ?? existingParties?.[0]?.["COUNT(*)"] ?? 0;
         if (count === 0) {
-          for (const p of memoryPayableParties) {
+          const seedData = await loadSeedData();
+          for (const p of seedData.payableParties || []) {
             await sqlDb.execute(
               "INSERT OR IGNORE INTO payable_parties (id, name, phone, address, total_debit, total_credit, current_balance, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              [p.id, p.name, p.phone || "", p.address || "", p.totalDebit, p.totalCredit, p.currentBalance, p.notes || "", p.createdAt]
+              [p.id, p.name, p.phone || "", p.address || "", p.totalDebit || 0, p.totalCredit || 0, p.currentBalance || 0, p.notes || "", p.createdAt || (Math.floor(Date.now() / 1000) - 86400 * 30)]
             );
           }
-          for (const l of memoryPayableLedger) {
+          for (const l of seedData.payableLedger || []) {
             await sqlDb.execute(
               "INSERT OR IGNORE INTO payable_ledger (id, party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              [l.id, l.partyId, l.txDate, l.txType, l.refNo || "", l.description, l.debit, l.credit, l.balance, l.createdAt]
+              [l.id, l.partyId, l.txDate, l.txType, l.refNo || "", l.description, l.debit || 0, l.credit || 0, l.balance || 0, l.createdAt || l.txDate]
             );
           }
-          for (const r of initialReceivables) {
+          for (const r of seedData.receivables || []) {
             await sqlDb.execute(
               "INSERT OR IGNORE INTO sales (invoice_no, customer_name, customer_phone, subtotal, discount, tax, total_amount, paid_amount, payment_status, balance_due, payment_method, notes, is_bad_debt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              [r.invoiceNo, r.customerName, r.customerPhone, r.subtotal, r.discount, r.tax, r.totalAmount, r.paidAmount, r.paymentStatus, r.balanceDue, r.paymentMethod, r.notes, r.isBadDebt, r.createdAt]
+              [r.invoiceNo, r.customerName, r.customerPhone, r.totalAmount, 0, 0, r.totalAmount, r.paidAmount, r.paymentStatus, r.balanceDue, r.paymentMethod, r.notes, r.isBadDebt || 0, r.createdAt]
             );
           }
         }
@@ -605,6 +569,59 @@ export async function initDb(): Promise<void> {
       return;
     } catch (err) {
       console.warn("Tauri SQL Database load failed, falling back to memory store:", err);
+    }
+  }
+
+  // Populate browser memory fallback if empty
+  if (memoryStore.payableParties.length === 0) {
+    const seedData = await loadSeedData();
+    for (const p of seedData.payableParties || []) {
+      memoryPayableParties.push({
+        id: p.id,
+        name: p.name,
+        phone: p.phone || "",
+        address: p.address || "",
+        totalDebit: p.totalDebit || 0,
+        totalCredit: p.totalCredit || 0,
+        currentBalance: p.currentBalance || 0,
+        notes: p.notes || "",
+        createdAt: p.createdAt || (Math.floor(Date.now() / 1000) - 86400 * 30),
+      });
+    }
+    for (const l of seedData.payableLedger || []) {
+      memoryPayableLedger.push({
+        id: l.id,
+        partyId: l.partyId,
+        txDate: l.txDate,
+        txType: l.txType as schema.PayableTxType,
+        refNo: l.refNo || "",
+        description: l.description,
+        debit: l.debit || 0,
+        credit: l.credit || 0,
+        balance: l.balance || 0,
+        createdAt: l.createdAt || l.txDate,
+      });
+    }
+    for (const [i, r] of (seedData.receivables || []).entries()) {
+      memorySales.push({
+        id: 4 + i,
+        invoiceNo: r.invoiceNo,
+        customerId: null,
+        customerName: r.customerName,
+        customerPhone: r.customerPhone,
+        subtotal: r.totalAmount,
+        discount: 0,
+        tax: 0,
+        totalAmount: r.totalAmount,
+        paidAmount: r.paidAmount,
+        paymentStatus: r.paymentStatus as schema.PaymentStatus,
+        balanceDue: r.balanceDue,
+        paymentMethod: r.paymentMethod as schema.PaymentMethod,
+        notes: r.notes,
+        isBadDebt: r.isBadDebt || 0,
+        dueDate: null,
+        createdAt: r.createdAt,
+      });
     }
   }
 

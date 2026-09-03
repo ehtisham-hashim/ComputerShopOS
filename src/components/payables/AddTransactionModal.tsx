@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { PlusCircle, ShoppingBag, Banknote, Undo2, Sliders, Boxes } from "lucide-react";
+import { PlusCircle, ShoppingBag, Banknote, Undo2, Sliders } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { DatePicker } from "../ui/DatePicker";
-import { PayableTxType, PayableParty, ItemTitle, ItemTitles } from "../../db/schema";
+import { PayableTxType, PayableParty } from "../../db/schema";
 import { addLedgerEntry } from "../../db/payablesService";
 
 interface AddTransactionModalProps {
@@ -27,14 +27,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   const [amount, setAmount] = useState<number | "">("");
   const [adjustmentSide, setAdjustmentSide] = useState<"DEBIT" | "CREDIT">("DEBIT");
 
-  // Optional Inventory fields for PURCHASE
-  const [addToInventory, setAddToInventory] = useState(false);
-  const [invTitle, setInvTitle] = useState<ItemTitle>("LAPTOP");
-  const [invName, setInvName] = useState("");
-  const [invSku, setInvSku] = useState("");
-  const [invPrice, setInvPrice] = useState<number | "">("");
-  const [invQty, setInvQty] = useState<number>(1);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,12 +46,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setRefNo(generateDefaultRef(defaultType));
       setDescription("");
       setAmount("");
-      setAddToInventory(false);
-      setInvTitle("LAPTOP");
-      setInvName("");
-      setInvSku("");
-      setInvPrice("");
-      setInvQty(1);
       setError(null);
     }
   }, [isOpen, defaultType]);
@@ -71,13 +57,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
       setRefNo(generateDefaultRef(newType));
     }
   };
-
-  // Keep inventory name synced with description if empty
-  useEffect(() => {
-    if (addToInventory && !invName && description) {
-      setInvName(description);
-    }
-  }, [addToInventory, description, invName]);
 
   if (!party) return null;
 
@@ -116,30 +95,15 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         }
       }
 
-      const invData =
-        txType === "PURCHASE" && addToInventory && invName.trim()
-          ? {
-              title: invTitle,
-              name: invName.trim(),
-              sku: invSku.trim() || `SKU-${Date.now().toString().slice(-6)}`,
-              price: typeof invPrice === "number" ? invPrice : numAmount,
-              costPrice: numAmount,
-              quantity: invQty > 0 ? invQty : 1,
-            }
-          : undefined;
-
-      await addLedgerEntry(
-        {
-          partyId: party.id,
-          txDate: txTimestamp,
-          txType,
-          refNo: refNo.trim(),
-          description: description.trim(),
-          debit,
-          credit,
-        },
-        invData
-      );
+      await addLedgerEntry({
+        partyId: party.id,
+        txDate: txTimestamp,
+        txType,
+        refNo: refNo.trim(),
+        description: description.trim(),
+        debit,
+        credit,
+      });
 
       await onSuccess();
       onClose();
@@ -312,101 +276,6 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
             }
           />
         </div>
-
-        {/* Optional Inventory Integration for Purchase */}
-        {txType === "PURCHASE" && (
-          <div className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 bg-gray-50/50 dark:bg-gray-900/40 space-y-3">
-            <label className="flex items-center gap-2 cursor-pointer font-bold text-gray-800 dark:text-gray-200 select-none">
-              <input
-                type="checkbox"
-                checked={addToInventory}
-                onChange={(e) => setAddToInventory(e.target.checked)}
-                className="rounded border-gray-300 text-brand-600 focus:ring-brand-500 size-4"
-              />
-              <Boxes className="size-4 text-brand-500" />
-              <span>Add item to Shop Inventory Stock (Optional)</span>
-            </label>
-
-            {addToInventory && (
-              <div className="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-800 animate-in fade-in duration-150">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
-                      Category
-                    </label>
-                    <select
-                      value={invTitle}
-                      onChange={(e) => setInvTitle(e.target.value as ItemTitle)}
-                      className="tail-input text-xs"
-                    >
-                      {ItemTitles.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
-                      Product Name *
-                    </label>
-                    <input
-                      type="text"
-                      required={addToInventory}
-                      value={invName}
-                      onChange={(e) => setInvName(e.target.value)}
-                      className="tail-input text-xs"
-                      placeholder="e.g. HP EliteBook 840 G6"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
-                      SKU (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={invSku}
-                      onChange={(e) => setInvSku(e.target.value)}
-                      className="tail-input font-mono text-xs"
-                      placeholder="Auto-generated if blank"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
-                      Selling Price (PKR)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={invPrice}
-                      onChange={(e) =>
-                        setInvPrice(e.target.value === "" ? "" : parseInt(e.target.value, 10) || 0)
-                      }
-                      className="tail-input font-mono text-xs"
-                      placeholder="Target retail price"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
-                      Quantity
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={invQty}
-                      onChange={(e) => setInvQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="tail-input font-mono text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
           <div className="text-gray-500 font-mono text-[11px]">
