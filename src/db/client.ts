@@ -236,6 +236,7 @@ const memoryAdjustments: schema.AdjustmentRecord[] = [
     customerId: 1,
     customerName: "Alex Chen",
     customerPhone: "+1 (555) 321-7654",
+    itemTakenInventoryId: null,
     itemTakenName: "Old GTX 1070 8GB Rig",
     itemTakenValue: 45000,
     itemGivenInventoryId: 2,
@@ -360,6 +361,7 @@ export async function initDb(): Promise<void> {
           customer_id INTEGER REFERENCES customers(id),
           customer_name TEXT NOT NULL,
           customer_phone TEXT NOT NULL,
+          item_taken_inventory_id INTEGER REFERENCES inventory(id),
           item_taken_name TEXT NOT NULL,
           item_taken_value INTEGER NOT NULL DEFAULT 0,
           item_given_inventory_id INTEGER REFERENCES inventory(id),
@@ -456,6 +458,7 @@ export async function initDb(): Promise<void> {
 
       try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN is_bad_debt INTEGER NOT NULL DEFAULT 0;"); } catch {}
       try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN due_date INTEGER;"); } catch {}
+      try { await sqlDb.execute("ALTER TABLE adjustments ADD COLUMN item_taken_inventory_id INTEGER;"); } catch {}
 
       const indexQueries = [
         "CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)",
@@ -469,6 +472,7 @@ export async function initDb(): Promise<void> {
         "CREATE INDEX IF NOT EXISTS idx_adjustments_no ON adjustments(adjustment_no)",
         "CREATE INDEX IF NOT EXISTS idx_adjustments_customer ON adjustments(customer_name)",
         "CREATE INDEX IF NOT EXISTS idx_adjustments_status ON adjustments(payment_status)",
+        "CREATE INDEX IF NOT EXISTS idx_adjustments_taken_inv ON adjustments(item_taken_inventory_id)",
         "CREATE INDEX IF NOT EXISTS idx_documents_brand_created ON documents(brand, created_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_documents_ref_no ON documents(ref_no)",
         "CREATE INDEX IF NOT EXISTS idx_documents_customer ON documents(customer_name)",

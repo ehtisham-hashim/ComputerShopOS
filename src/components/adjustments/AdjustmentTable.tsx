@@ -65,7 +65,21 @@ export const AdjustmentTable: React.FC<AdjustmentTableProps> = ({
                 <tr key={adj.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
                   <td className="py-3.5 px-4 font-mono text-xs font-bold text-brand-500">{adj.adjustmentNo}</td>
                   <td className="py-3.5 px-4 font-semibold text-gray-900 dark:text-white truncate max-w-[130px]"><span className="flex items-center gap-1.5"><User className="size-3.5 text-gray-400 shrink-0" /><span className="truncate">{adj.customerName}</span></span></td>
-                  <td className="py-3.5 px-4 truncate max-w-[140px]"><span className="font-semibold text-gray-800 dark:text-gray-200 block truncate">{adj.itemTakenName}</span><span className="text-xs text-gray-400">Valued: PKR {adj.itemTakenValue.toLocaleString()}</span></td>
+                  <td className="py-3.5 px-4 max-w-[180px]">
+                    <span className="font-semibold text-gray-800 dark:text-gray-200 block truncate">
+                      {adj.itemTakenName}
+                    </span>
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <span className="text-gray-400 font-mono">
+                        Valued: PKR {adj.itemTakenValue.toLocaleString()}
+                      </span>
+                      {adj.itemTakenInventoryId && (
+                        <span className="inline-block text-[10px] bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 font-medium px-1 rounded">
+                          Inwarded
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-3.5 px-4 truncate max-w-[140px]"><span className="font-semibold text-gray-800 dark:text-gray-200 block truncate">{adj.itemGivenName}</span><span className="text-xs text-gray-400">Price: PKR {Number(adj.itemGivenPrice || 0).toLocaleString()}</span></td>
                   <td className="py-3.5 px-4 font-mono font-bold">{Number(adj.netDifference || 0) > 0 ? <span className="text-success-600 dark:text-success-400">+PKR {Number(adj.netDifference || 0).toLocaleString()}</span> : Number(adj.netDifference || 0) < 0 ? <span className="text-warning-600 dark:text-warning-400">-PKR {Math.abs(Number(adj.netDifference || 0)).toLocaleString()}</span> : <span className="text-gray-500">PKR 0</span>}</td>
                   <td className="py-3.5 px-4"><StatusBadge status={adj.paymentStatus} /></td>

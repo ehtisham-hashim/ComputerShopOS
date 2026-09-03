@@ -149,6 +149,7 @@ export const adjustments = sqliteTable("adjustments", {
   customerId: integer("customer_id").references(() => customers.id),
   customerName: text("customer_name").notNull(),
   customerPhone: text("customer_phone").notNull(),
+  itemTakenInventoryId: integer("item_taken_inventory_id").references(() => inventory.id),
   itemTakenName: text("item_taken_name").notNull(),
   itemTakenValue: integer("item_taken_value").notNull().default(0),
   itemGivenInventoryId: integer("item_given_inventory_id").references(() => inventory.id),
@@ -287,8 +288,13 @@ export interface CreateAdjustmentInput {
   customerId?: number;
   customerName: string;
   customerPhone: string;
+  itemTakenTitle?: ItemTitle;
   itemTakenName: string;
+  itemTakenSku?: string;
   itemTakenValue: number;
+  itemTakenSellPrice?: number;
+  itemTakenSerial?: string;
+  itemTakenCondition?: string;
   itemGivenInventoryId?: number;
   itemGivenName: string;
   itemGivenPrice: number;
