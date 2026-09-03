@@ -119,6 +119,8 @@ export async function getCustomerHistory(customerId: number): Promise<{
       balanceDue: Number(r.balance_due ?? r.balanceDue ?? 0),
       paymentMethod: (r.payment_method || r.paymentMethod || "CASH"),
       notes: String(r.notes || ""),
+      isBadDebt: Number(r.is_bad_debt || r.isBadDebt || 0),
+      dueDate: r.due_date ? Number(r.due_date) : r.dueDate ? Number(r.dueDate) : null,
       createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
     }));
 

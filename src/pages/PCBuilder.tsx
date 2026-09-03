@@ -1,26 +1,14 @@
 import React, { useState } from "react";
-import {
-  Cpu,
-  Zap,
-  CheckCircle2,
-  Trash2,
-  FileText,
-  ShoppingCart,
-} from "lucide-react";
 import { InventoryItem } from "../db/schema";
-import { Modal } from "../components/ui/Modal";
-import { StatCard } from "../components/ui/StatCard";
+import { BuildSlot } from "../components/pcBuilder/types";
+import { BuildHeader } from "../components/pcBuilder/BuildHeader";
+import { BuildSummaryCard } from "../components/pcBuilder/BuildSummaryCard";
+import { BuildSlotRow } from "../components/pcBuilder/BuildSlotRow";
+import { QuotationModal } from "../components/pcBuilder/QuotationModal";
 
 interface PCBuilderPageProps {
   items: InventoryItem[];
   onTransferToSales?: (selectedParts: InventoryItem[]) => void;
-}
-
-interface BuildSlot {
-  category: string;
-  label: string;
-  estimatedWatts: number;
-  item: InventoryItem | null;
 }
 
 export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferToSales }) => {
@@ -35,26 +23,18 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
   ]);
 
   const [isQuotationModalOpen, setIsQuotationModalOpen] = useState(false);
-  const [customerName, setCustomerName] = useState("");
 
   const handleSelectPart = (category: string, item: InventoryItem) => {
-    setSlots((prev) =>
-      prev.map((s) => (s.category === category ? { ...s, item } : s))
-    );
+    setSlots((prev) => prev.map((s) => (s.category === category ? { ...s, item } : s)));
   };
 
   const handleRemovePart = (category: string) => {
-    setSlots((prev) =>
-      prev.map((s) => (s.category === category ? { ...s, item: null } : s))
-    );
+    setSlots((prev) => prev.map((s) => (s.category === category ? { ...s, item: null } : s)));
   };
 
   const selectedCount = slots.filter((s) => s.item !== null).length;
   const totalPrice = slots.reduce((acc, s) => acc + (s.item?.price || 0), 0);
-  const totalWatts = slots.reduce(
-    (acc, s) => acc + (s.item ? s.estimatedWatts : 0),
-    0
-  );
+  const totalWatts = slots.reduce((acc, s) => acc + (s.item ? s.estimatedWatts : 0), 0);
   const recommendedPSUWatts = Math.ceil((totalWatts * 1.3) / 50) * 50;
 
   const handleCheckoutBuild = () => {
@@ -66,197 +46,38 @@ export const PCBuilderPage: React.FC<PCBuilderPageProps> = ({ items, onTransferT
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
-            <Cpu className="size-6 text-purple-500" />
-            Custom PC Builder
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Build custom hardware rigs with real-time TDP wattage check and instant quotation
-          </p>
-        </div>
+      <BuildHeader
+        selectedCount={selectedCount}
+        onOpenQuotation={() => setIsQuotationModalOpen(true)}
+        onCheckout={handleCheckoutBuild}
+      />
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setIsQuotationModalOpen(true)}
-            disabled={selectedCount === 0}
-            className="tail-btn-secondary text-xs"
-          >
-            <FileText className="size-4" />
-            <span>Generate Quote</span>
-          </button>
-          <button
-            onClick={handleCheckoutBuild}
-            disabled={selectedCount === 0}
-            className="tail-btn-primary text-xs"
-          >
-            <ShoppingCart className="size-4" />
-            <span>Send to Sales Checkout</span>
-          </button>
-        </div>
-      </div>
+      <BuildSummaryCard
+        selectedCount={selectedCount}
+        totalSlots={slots.length}
+        totalWatts={totalWatts}
+        recommendedPSUWatts={recommendedPSUWatts}
+        totalPrice={totalPrice}
+      />
 
-      {/* Wattage & Cost Summary Banner */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard
-          title="Components Selected"
-          value={`${selectedCount} / ${slots.length}`}
-          subtitle="Parts Configured"
-        />
-        <StatCard
-          title="Estimated Power (TDP)"
-          value={`~${totalWatts} W`}
-          valueColor="warning"
-          icon={<Zap className="size-4" />}
-          subtitle={<span className="text-brand-500 font-semibold">(Recommend {recommendedPSUWatts}W+ PSU)</span>}
-        />
-        <StatCard
-          title="Total Build Cost"
-          value={`PKR ${totalPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-          valueColor="success"
-        />
-      </div>
-
-      {/* Component Slots Grid */}
       <div className="space-y-3">
-        {slots.map((slot) => {
-          const matchingItems = items.filter((i) => i.title === slot.category);
-
-          return (
-            <div
-              key={slot.category}
-              className="tail-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-            >
-              {/* Slot Header */}
-              <div className="flex items-center gap-3 min-w-[200px]">
-                <div
-                  className={`size-10 flex items-center justify-center rounded-xl font-bold text-xs ${
-                    slot.item
-                      ? "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-400"
-                      : "bg-gray-100 text-gray-400 dark:bg-gray-800"
-                  }`}
-                >
-                  {slot.item ? <CheckCircle2 className="size-5" /> : slot.category.slice(0, 3)}
-                </div>
-                <div>
-                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white">
-                    {slot.label}
-                  </h4>
-                  <span className="text-xs text-gray-400">
-                    Est. {slot.estimatedWatts}W TDP
-                  </span>
-                </div>
-              </div>
-
-              {/* Selected Item / Selection Dropdown */}
-              <div className="flex-1 max-w-lg">
-                {slot.item ? (
-                  <div className="flex items-center justify-between p-2.5 rounded-xl border border-gray-200 bg-gray-50/80 dark:border-gray-800 dark:bg-gray-800/40">
-                    <div className="flex flex-col truncate pr-2">
-                      <span className="font-semibold text-xs text-gray-900 dark:text-white truncate">
-                        {slot.item.name}
-                      </span>
-                      <span className="font-mono text-[10px] text-gray-400">
-                        {slot.item.sku}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <span className="font-bold text-sm text-gray-900 dark:text-white">
-                        PKR {slot.item.price.toFixed(2)}
-                      </span>
-                      <button
-                        onClick={() => handleRemovePart(slot.category)}
-                        className="text-gray-400 hover:text-error-500"
-                        title="Remove component"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <select
-                      onChange={(e) => {
-                        const it = items.find((i) => i.id === Number(e.target.value));
-                        if (it) handleSelectPart(slot.category, it);
-                      }}
-                      defaultValue=""
-                      className="tail-select text-xs"
-                    >
-                      <option value="" disabled>
-                        Select compatible {slot.label}... ({matchingItems.length} in stock)
-                      </option>
-                      {matchingItems.map((it) => (
-                        <option key={it.id} value={it.id}>
-                          {it.name} — PKR {it.price.toFixed(2)} ({it.quantity} avail)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
+        {slots.map((slot) => (
+          <BuildSlotRow
+            key={slot.category}
+            slot={slot}
+            items={items}
+            onSelectPart={handleSelectPart}
+            onRemovePart={handleRemovePart}
+          />
+        ))}
       </div>
 
-      {/* Quotation Dialog */}
-      <Modal
+      <QuotationModal
         isOpen={isQuotationModalOpen}
         onClose={() => setIsQuotationModalOpen(false)}
-        title="Custom PC Build Quotation"
-        subtitle="Export official quotation sheet for customer"
-        icon={<FileText className="size-5 text-purple-500" />}
-        maxWidth="lg"
-      >
-        <div className="mb-4">
-          <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-            Customer Name
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. John Doe"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="tail-input"
-          />
-        </div>
-
-        <div className="space-y-2 max-h-56 overflow-y-auto border border-gray-100 dark:border-gray-800 rounded-xl p-3 text-xs font-mono">
-          {slots
-            .filter((s) => s.item !== null)
-            .map((s) => (
-              <div key={s.category} className="flex justify-between py-1 border-b border-gray-50 dark:border-gray-800">
-                <span className="font-medium text-gray-700 dark:text-gray-300">
-                  {s.label}: {s.item?.name}
-                </span>
-                <span className="font-bold">PKR {s.item?.price.toFixed(2)}</span>
-              </div>
-            ))}
-          <div className="flex justify-between pt-2 font-bold text-sm text-brand-500">
-            <span>Total Quotation Estimate:</span>
-            <span>PKR {totalPrice.toFixed(2)}</span>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2.5 mt-4">
-          <button
-            onClick={() => setIsQuotationModalOpen(false)}
-            className="tail-btn-secondary"
-          >
-            Close
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="tail-btn-primary"
-          >
-            Print Quotation
-          </button>
-        </div>
-      </Modal>
+        slots={slots}
+        totalPrice={totalPrice}
+      />
     </div>
   );
 };

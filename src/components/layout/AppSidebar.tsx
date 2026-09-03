@@ -1,29 +1,12 @@
 import React from "react";
-import {
-  LayoutDashboard,
-  Boxes,
-  ShoppingCart,
-  Cpu,
-  Wrench,
-  Users,
-  Settings,
-  Sparkles,
-  Database,
-  ArrowLeftRight,
-  PanelLeftClose,
-  PanelLeftOpen,
-} from "lucide-react";
+import { LayoutDashboard, Boxes, ShoppingCart, FileText, Wrench, Users, Settings, ArrowLeftRight, BarChart3, Building2 } from "lucide-react";
 import { useSidebar } from "../../context/SidebarContext";
+import { NavTab } from "./navTypes";
+import { SidebarBrand } from "./SidebarBrand";
+import { SidebarNavItem, NavItemConfig } from "./SidebarNavItem";
+import { SidebarFooter } from "./SidebarFooter";
 
-export type NavTab =
-  | "dashboard"
-  | "inventory"
-  | "sales"
-  | "repairs"
-  | "adjustments"
-  | "pc-builder"
-  | "customers"
-  | "settings";
+export type { NavTab };
 
 interface AppSidebarProps {
   activeTab: NavTab;
@@ -32,6 +15,7 @@ interface AppSidebarProps {
   lowStockCount?: number;
   activeRepairsCount?: number;
   customersCount?: number;
+  payablesCount?: number;
 }
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({
@@ -41,224 +25,56 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   lowStockCount = 0,
   activeRepairsCount = 0,
   customersCount = 0,
+  payablesCount = 0,
 }) => {
   const { isExpanded, toggleSidebar, isMobileOpen, closeMobileSidebar } = useSidebar();
 
-  const navItems = [
-    {
-      id: "dashboard" as NavTab,
-      label: "Dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      id: "sales" as NavTab,
-      label: "Sales & Invoices",
-      icon: ShoppingCart,
-      hotkey: "F2",
-    },
-    {
-      id: "inventory" as NavTab,
-      label: "Inventory & Serials",
-      icon: Boxes,
-      badge: lowStockCount > 0 ? `${lowStockCount} Low` : `${inventoryCount}`,
-      badgeType: lowStockCount > 0 ? "warning" : "neutral",
-    },
-    {
-      id: "repairs" as NavTab,
-      label: "Repairs & RMA",
-      icon: Wrench,
-      badge: activeRepairsCount > 0 ? `${activeRepairsCount}` : undefined,
-      badgeType: "brand",
-    },
-    {
-      id: "adjustments" as NavTab,
-      label: "Swaps & Trade-Ins",
-      icon: ArrowLeftRight,
-    },
-    {
-      id: "pc-builder" as NavTab,
-      label: "Custom PC Builder",
-      icon: Cpu,
-    },
-    {
-      id: "customers" as NavTab,
-      label: "Customers (CRM)",
-      icon: Users,
-      badge: customersCount > 0 ? `${customersCount}` : undefined,
-      badgeType: "neutral",
-    },
-    {
-      id: "settings" as NavTab,
-      label: "Settings & System",
-      icon: Settings,
-    },
+  const navItems: NavItemConfig[] = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "sales", label: "Sales & Invoices", icon: ShoppingCart, hotkey: "F2" },
+    { id: "payables", label: "Payables & Vendors", icon: Building2, badge: payablesCount > 0 ? `${payablesCount}` : undefined, badgeType: "warning" },
+    { id: "doc-generator", label: "Doc Generator", icon: FileText, hotkey: "F4" },
+    { id: "inventory", label: "Inventory & Serials", icon: Boxes, badge: lowStockCount > 0 ? `${lowStockCount} Low` : `${inventoryCount}`, badgeType: lowStockCount > 0 ? "warning" : "neutral" },
+    { id: "repairs", label: "Repairs & RMA", icon: Wrench, badge: activeRepairsCount > 0 ? `${activeRepairsCount}` : undefined, badgeType: "brand" },
+    { id: "adjustments", label: "Swaps & Trade-Ins", icon: ArrowLeftRight },
+    { id: "reports", label: "Financial Reports", icon: BarChart3 },
+    { id: "customers", label: "Customers (CRM)", icon: Users, badge: customersCount > 0 ? `${customersCount}` : undefined, badgeType: "neutral" },
+    { id: "settings", label: "Settings & System", icon: Settings },
   ];
 
   return (
     <>
-      {/* Mobile Backdrop */}
       {isMobileOpen && (
-        <div
-          onClick={closeMobileSidebar}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-        />
+        <div onClick={closeMobileSidebar} className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden animate-in fade-in" />
       )}
-
-      {/* Sidebar Aside */}
       <aside
         className={`fixed top-0 left-0 z-40 flex h-screen flex-col justify-between border-r border-gray-200 bg-white transition-all duration-300 ease-in-out dark:border-gray-800 dark:bg-gray-950 ${
           isExpanded ? "w-[280px]" : "w-[88px]"
-        } ${
-          isMobileOpen
-            ? "translate-x-0"
-            : "-translate-x-full lg:translate-x-0"
-        }`}
+        } ${isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
-        {/* Brand Header */}
-        <div>
-          <div
-            className={`flex h-20 items-center border-b border-gray-200 dark:border-gray-800 ${
-              isExpanded
-                ? "justify-between px-5"
-                : "justify-center px-0"
-            }`}
-          >
-            {/* Brand Logo & Title */}
-            <div
-              onClick={(e) => {
-                e.preventDefault();
-                if (!isExpanded) {
-                  toggleSidebar();
-                } else {
-                  onSelectTab("dashboard");
-                }
-              }}
-              className="flex items-center gap-3 cursor-pointer select-none group"
-              title={!isExpanded ? "Click to expand sidebar" : "Dashboard"}
-            >
-              <div className="flex size-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-theme-xs group-hover:scale-105 transition-transform shrink-0">
-                <Sparkles className="size-5" />
-              </div>
-
-              {isExpanded && (
-                <div className="flex flex-col truncate">
-                  <span className="text-base font-bold tracking-tight text-gray-900 dark:text-white">
-                    ComputerShop<span className="text-brand-500">OS</span>
-                  </span>
-                  <span className="text-[11px] font-medium text-gray-400">
-                    Pro Store Edition
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Collapse Toggle Button (Visible only when expanded) */}
-            {isExpanded && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  toggleSidebar();
-                }}
-                className="hidden size-8 items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-100 hover:text-gray-700 lg:flex dark:border-gray-800 dark:hover:bg-gray-900 dark:hover:text-gray-200 transition-colors"
-                title="Collapse Sidebar"
-              >
-                <PanelLeftClose className="size-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Navigation Links */}
-          <div className="px-3.5 py-4 space-y-1">
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <SidebarBrand isExpanded={isExpanded} toggleSidebar={toggleSidebar} />
+          <div className="flex-1 overflow-y-auto px-3.5 py-4 space-y-1 scrollbar-thin">
             {isExpanded && (
               <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">
                 Core Modules
               </p>
             )}
-
-            <nav className="space-y-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      onSelectTab(item.id);
-                      closeMobileSidebar();
-                    }}
-                    className={`menu-item ${
-                      isActive ? "menu-item-active" : "menu-item-inactive"
-                    } ${!isExpanded ? "justify-center px-0" : ""}`}
-                    title={!isExpanded ? item.label : undefined}
-                  >
-                    <Icon className="size-5 shrink-0" />
-
-                    {isExpanded && (
-                      <div className="flex flex-1 items-center justify-between">
-                        <span className="truncate">{item.label}</span>
-
-                        <div className="flex items-center gap-1.5 ml-2">
-                          {item.hotkey && (
-                            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-mono text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                              {item.hotkey}
-                            </span>
-                          )}
-
-                          {item.badge && (
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                item.badgeType === "warning"
-                                  ? "bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-400"
-                                  : item.badgeType === "brand"
-                                  ? "bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400"
-                                  : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-                              }`}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </nav>
+            {navItems.map((item) => (
+              <SidebarNavItem
+                key={item.id}
+                item={item}
+                isActive={activeTab === item.id}
+                isExpanded={isExpanded}
+                onClick={() => {
+                  onSelectTab(item.id);
+                  closeMobileSidebar();
+                }}
+              />
+            ))}
           </div>
         </div>
-
-        {/* Sidebar Footer Status / Expand Hint */}
-        <div className="border-t border-gray-100 p-3.5 dark:border-gray-800">
-          {!isExpanded ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                toggleSidebar();
-              }}
-              className="flex w-full items-center justify-center p-2 rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-900 dark:hover:text-gray-200 transition-colors"
-              title="Expand Sidebar"
-            >
-              <PanelLeftOpen className="size-5 text-gray-400 hover:text-brand-500" />
-            </button>
-          ) : (
-            <div className="flex items-center gap-2.5 rounded-xl bg-gray-50 p-2.5 dark:bg-gray-900/60">
-              <div className="size-2 rounded-full bg-success-500 animate-pulse shrink-0" />
-              <div className="flex flex-col truncate">
-                <span className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate flex items-center gap-1">
-                  <Database className="size-3 text-brand-500" /> SQLite WAL Mode
-                </span>
-                <span className="text-[10px] text-gray-400 truncate">
-                  Ready & Persistent
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        <SidebarFooter isExpanded={isExpanded} />
       </aside>
     </>
   );

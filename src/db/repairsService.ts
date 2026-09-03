@@ -21,9 +21,9 @@ export async function getRepairTickets(): Promise<RepairTicketRecord[]> {
       device: String(r.device || ""),
       reportedIssue: String(r.reported_issue || r.reportedIssue || ""),
       partsUsed: String(r.parts_used || r.partsUsed || "[]"),
-      laborCost: Number(r.labor_cost ?? r.laborCost ?? 0),
-      estimatedCost: Number(r.estimated_cost ?? r.estimatedCost ?? 0),
-      finalCost: Number(r.final_cost ?? r.finalCost ?? 0),
+      laborCost: Math.round(Number(r.labor_cost ?? r.laborCost ?? 0)),
+      estimatedCost: Math.round(Number(r.estimated_cost ?? r.estimatedCost ?? 0)),
+      finalCost: Math.round(Number(r.final_cost ?? r.finalCost ?? 0)),
       status: (r.status || "RECEIVED") as RepairStatus,
       createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
     }));
@@ -43,11 +43,15 @@ export async function addRepairTicket(ticket: AddRepairInput): Promise<string> {
     custId = await findOrCreateCustomer(ticket.customerName, ticket.customerPhone);
   }
 
-  const parts = ticket.partsUsed || [];
-  const partsCost = parts.reduce((acc, p) => acc + (p.cost || 0), 0);
-  const labor = ticket.laborCost || 0.0;
+  const parts = (ticket.partsUsed || []).map((p) => ({
+    ...p,
+    cost: Math.round(Number(p.cost) || 0),
+    quantity: Math.round(Number(p.quantity) || 1),
+  }));
+  const partsCost = parts.reduce((acc, p) => acc + p.cost, 0);
+  const labor = Math.round(Number(ticket.laborCost) || 0);
   const totalCost = partsCost + labor;
-  const estCost = ticket.estimatedCost || totalCost;
+  const estCost = Math.round(ticket.estimatedCost || totalCost);
   const partsJson = JSON.stringify(parts);
 
   if (isTauri && sqlDb) {
@@ -72,7 +76,6 @@ export async function addRepairTicket(ticket: AddRepairInput): Promise<string> {
       ]
     );
 
-    // If hardware components from inventory were used, decrement stock by specified quantity
     for (const p of parts) {
       if (p.isHardware && p.inventoryId) {
         const qty = p.quantity ?? 1;
@@ -122,12 +125,13 @@ export async function updateRepairStatus(
 ): Promise<void> {
   const isTauri = isTauriEnvironment();
   const sqlDb = await getSqlDb();
+  const costInt = finalCost !== undefined ? Math.round(Number(finalCost)) : undefined;
 
   if (isTauri && sqlDb) {
-    if (finalCost !== undefined) {
+    if (costInt !== undefined) {
       await sqlDb.execute(
         "UPDATE repairs SET status = $1, final_cost = $2 WHERE id = $3",
-        [status, finalCost, id]
+        [status, costInt, id]
       );
     } else {
       await sqlDb.execute(
@@ -141,7 +145,7 @@ export async function updateRepairStatus(
   const found = memoryStore.repairs.find((r) => r.id === id);
   if (found) {
     found.status = status;
-    if (finalCost !== undefined) found.finalCost = finalCost;
+    if (costInt !== undefined) found.finalCost = costInt;
   }
 }
 

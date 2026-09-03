@@ -10,6 +10,7 @@ interface AppLayoutProps {
   lowStockCount?: number;
   activeRepairsCount?: number;
   customersCount?: number;
+  payablesCount?: number;
   children: React.ReactNode;
   onQuickSale?: () => void;
   onLockSession?: () => void;
@@ -22,6 +23,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   lowStockCount,
   activeRepairsCount,
   customersCount,
+  payablesCount,
   children,
   onQuickSale,
   onLockSession,
@@ -37,6 +39,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         lowStockCount={lowStockCount}
         activeRepairsCount={activeRepairsCount}
         customersCount={customersCount}
+        payablesCount={payablesCount}
       />
 
       <div

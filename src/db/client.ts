@@ -5,7 +5,6 @@ import * as schema from "./schema";
 let sqlDb: Database | null = null;
 let isInitialized = false;
 
-// Mock memory stores for browser preview mode
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 const memoryCustomers: schema.Customer[] = [
@@ -45,8 +44,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)",
     sku: "TP-X1C-G11-001",
     quantity: 8,
-    price: 1499.99,
-    costPrice: 1250.0,
+    price: 150000,
+    costPrice: 125000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 5,
   },
@@ -56,8 +55,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "NVIDIA GeForce RTX 4080 Super 16GB",
     sku: "NV-RTX4080S-16G",
     quantity: 4,
-    price: 999.0,
-    costPrice: 850.0,
+    price: 285000,
+    costPrice: 250000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 3,
   },
@@ -67,8 +66,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "AMD Ryzen 7 7800X3D 8-Core Processor",
     sku: "AMD-R7-7800X3D",
     quantity: 12,
-    price: 449.0,
-    costPrice: 380.0,
+    price: 120000,
+    costPrice: 105000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 2,
   },
@@ -78,8 +77,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz",
     sku: "COR-DDR5-32G-6000",
     quantity: 20,
-    price: 119.99,
-    costPrice: 90.0,
+    price: 32000,
+    costPrice: 26000,
     isSerialized: 0,
     createdAt: Math.floor(Date.now() / 1000) - 86400,
   },
@@ -89,8 +88,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "Samsung 990 PRO 2TB PCIe 4.0 NVMe SSD",
     sku: "SAM-990PRO-2TB",
     quantity: 15,
-    price: 179.99,
-    costPrice: 135.0,
+    price: 48000,
+    costPrice: 38000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 36000,
   },
@@ -100,8 +99,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "ASUS ROG STRIX B650-A GAMING WIFI",
     sku: "ASUS-ROG-B650A",
     quantity: 6,
-    price: 239.99,
-    costPrice: 195.0,
+    price: 68000,
+    costPrice: 55000,
     isSerialized: 1,
     createdAt: Math.floor(Date.now() / 1000) - 20000,
   },
@@ -111,8 +110,8 @@ const memoryInventory: schema.InventoryItem[] = [
     name: "Corsair RM850x 850W 80+ Gold Fully Modular",
     sku: "COR-RM850X-GOLD",
     quantity: 10,
-    price: 139.99,
-    costPrice: 105.0,
+    price: 38000,
+    costPrice: 30000,
     isSerialized: 0,
     createdAt: Math.floor(Date.now() / 1000) - 10000,
   },
@@ -131,15 +130,17 @@ const memorySales: schema.SaleRecord[] = [
     customerId: 1,
     customerName: "Alex Chen",
     customerPhone: "+1 (555) 321-7654",
-    subtotal: 1118.99,
-    discount: 0,
-    tax: 55.95,
-    totalAmount: 1174.94,
-    paidAmount: 1174.94,
+    subtotal: 317000,
+    discount: 5000,
+    tax: 0,
+    totalAmount: 312000,
+    paidAmount: 312000,
     paymentStatus: "PAID",
     balanceDue: 0,
     paymentMethod: "CARD",
     notes: "RTX 4080S + RAM purchase",
+    isBadDebt: 0,
+    dueDate: null,
     createdAt: Math.floor(Date.now() / 1000) - 7200,
   },
   {
@@ -148,15 +149,17 @@ const memorySales: schema.SaleRecord[] = [
     customerId: 2,
     customerName: "David Miller",
     customerPhone: "+1 (555) 234-5678",
-    subtotal: 1499.99,
-    discount: 50.0,
-    tax: 72.50,
-    totalAmount: 1522.49,
-    paidAmount: 1000.00,
+    subtotal: 150000,
+    discount: 5000,
+    tax: 0,
+    totalAmount: 145000,
+    paidAmount: 100000,
     paymentStatus: "PARTIAL",
-    balanceDue: 522.49,
+    balanceDue: 45000,
     paymentMethod: "SPLIT",
     notes: "ThinkPad X1 purchase - Partial deposit",
+    isBadDebt: 0,
+    dueDate: null,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 2,
   },
   {
@@ -165,24 +168,26 @@ const memorySales: schema.SaleRecord[] = [
     customerId: 3,
     customerName: "Sarah Jenkins",
     customerPhone: "+1 (555) 987-6543",
-    subtotal: 449.00,
+    subtotal: 120000,
     discount: 0,
-    tax: 22.45,
-    totalAmount: 471.45,
-    paidAmount: 0.0,
+    tax: 0,
+    totalAmount: 120000,
+    paidAmount: 0,
     paymentStatus: "UNPAID",
-    balanceDue: 471.45,
+    balanceDue: 120000,
     paymentMethod: "CASH",
     notes: "Ryzen 7800X3D reserved invoice",
+    isBadDebt: 0,
+    dueDate: null,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 4,
   },
 ];
 
 const memorySaleItems: schema.SaleLineItem[] = [
-  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 999.0, totalPrice: 999.0 },
-  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 119.99, totalPrice: 119.99 },
-  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 1499.99, totalPrice: 1499.99 },
-  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 449.0, totalPrice: 449.0 },
+  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 285000, totalPrice: 285000 },
+  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 32000, totalPrice: 32000 },
+  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 150000, totalPrice: 150000 },
+  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 120000, totalPrice: 120000 },
 ];
 
 const memoryRepairs: schema.RepairTicketRecord[] = [
@@ -195,12 +200,12 @@ const memoryRepairs: schema.RepairTicketRecord[] = [
     device: "ASUS ROG Zephyrus G14",
     reportedIssue: "GPU thermal throttling and fan noise",
     partsUsed: JSON.stringify([
-      { name: "Liquid Metal Repaste + Thermal Pads", cost: 35.0, isHardware: true },
-      { name: "BIOS & Thermal Profile Update", cost: 25.0, isHardware: false },
+      { name: "Liquid Metal Repaste + Thermal Pads", cost: 4500, isHardware: true },
+      { name: "BIOS & Thermal Profile Update", cost: 2500, isHardware: false },
     ]),
-    laborCost: 60.0,
-    estimatedCost: 120.0,
-    finalCost: 120.0,
+    laborCost: 5000,
+    estimatedCost: 12000,
+    finalCost: 12000,
     status: "IN_PROGRESS",
     createdAt: Math.floor(Date.now() / 1000) - 86400,
   },
@@ -213,12 +218,12 @@ const memoryRepairs: schema.RepairTicketRecord[] = [
     device: "Custom Desktop PC (i7-13700K / RTX 4070)",
     reportedIssue: "Corrupted NVMe boot partition & driver BSOD",
     partsUsed: JSON.stringify([
-      { name: "Samsung 990 PRO 2TB PCIe 4.0 NVMe SSD", cost: 179.99, isHardware: true, inventoryId: 5 },
-      { name: "Windows 11 OS Reinstallation & Drivers", cost: 40.0, isHardware: false },
+      { name: "Samsung 990 PRO 2TB PCIe 4.0 NVMe SSD", cost: 48000, isHardware: true, inventoryId: 5 },
+      { name: "Windows 11 OS Reinstallation & Drivers", cost: 3500, isHardware: false },
     ]),
-    laborCost: 50.0,
-    estimatedCost: 269.99,
-    finalCost: 269.99,
+    laborCost: 4500,
+    estimatedCost: 56000,
+    finalCost: 56000,
     status: "READY",
     createdAt: Math.floor(Date.now() / 1000) - 172800,
   },
@@ -231,14 +236,15 @@ const memoryAdjustments: schema.AdjustmentRecord[] = [
     customerId: 1,
     customerName: "Alex Chen",
     customerPhone: "+1 (555) 321-7654",
+    itemTakenInventoryId: null,
     itemTakenName: "Old GTX 1070 8GB Rig",
-    itemTakenValue: 200.0,
+    itemTakenValue: 45000,
     itemGivenInventoryId: 2,
     itemGivenName: "NVIDIA GeForce RTX 4080 Super 16GB",
-    itemGivenPrice: 999.0,
-    netDifference: 799.0,
-    paidAmount: 799.0,
-    balanceDue: 0.0,
+    itemGivenPrice: 285000,
+    netDifference: 240000,
+    paidAmount: 240000,
+    balanceDue: 0,
     paymentStatus: "PAID",
     notes: "Customer traded in old GTX 1070 rig towards RTX 4080 Super",
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 3,
@@ -250,8 +256,22 @@ const memorySettings: Record<string, string> = {
   store_address: "Shop #12, Computer Plaza, Main Boulevard",
   store_phone: "+92 300 1234567",
   currency_symbol: "PKR ",
-  tax_rate: "0.0",
+  tax_rate: "0",
 };
+
+async function loadSeedData() {
+  try {
+    const mod = await import("./seedData.json");
+    return (mod as any).default || mod;
+  } catch {
+    return { receivables: [], payableParties: [], payableLedger: [] };
+  }
+}
+
+const memoryPayableParties: schema.PayableParty[] = [];
+const memoryPayableLedger: schema.PayableLedgerEntry[] = [];
+const memoryPurchases: schema.PurchaseRecord[] = [];
+const memoryPurchaseItems: schema.PurchaseItemRecord[] = [];
 
 export async function initDb(): Promise<void> {
   if (isInitialized) return;
@@ -260,13 +280,11 @@ export async function initDb(): Promise<void> {
     try {
       sqlDb = await Database.load("sqlite:pc_shop.db");
 
-      // 1. Performance & Security PRAGMAs
       try { await sqlDb.execute("PRAGMA journal_mode = WAL;"); } catch {}
       try { await sqlDb.execute("PRAGMA synchronous = NORMAL;"); } catch {}
       try { await sqlDb.execute("PRAGMA foreign_keys = ON;"); } catch {}
       try { await sqlDb.execute("PRAGMA busy_timeout = 5000;"); } catch {}
 
-      // 2. Create Relational Tables Individually (SQLite requires single statements per execute)
       const tableQueries = [
         `CREATE TABLE IF NOT EXISTS customers (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -283,8 +301,8 @@ export async function initDb(): Promise<void> {
           name TEXT NOT NULL,
           sku TEXT NOT NULL UNIQUE,
           quantity INTEGER NOT NULL DEFAULT 0,
-          price REAL NOT NULL DEFAULT 0.0,
-          cost_price REAL NOT NULL DEFAULT 0.0,
+          price INTEGER NOT NULL DEFAULT 0,
+          cost_price INTEGER NOT NULL DEFAULT 0,
           is_serialized INTEGER NOT NULL DEFAULT 0,
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )`,
@@ -301,13 +319,13 @@ export async function initDb(): Promise<void> {
           customer_id INTEGER REFERENCES customers(id),
           customer_name TEXT NOT NULL DEFAULT 'Walk-in Customer',
           customer_phone TEXT NOT NULL DEFAULT '',
-          subtotal REAL NOT NULL DEFAULT 0.0,
-          discount REAL NOT NULL DEFAULT 0.0,
-          tax REAL NOT NULL DEFAULT 0.0,
-          total_amount REAL NOT NULL DEFAULT 0.0,
-          paid_amount REAL NOT NULL DEFAULT 0.0,
+          subtotal INTEGER NOT NULL DEFAULT 0,
+          discount INTEGER NOT NULL DEFAULT 0,
+          tax INTEGER NOT NULL DEFAULT 0,
+          total_amount INTEGER NOT NULL DEFAULT 0,
+          paid_amount INTEGER NOT NULL DEFAULT 0,
           payment_status TEXT NOT NULL DEFAULT 'PAID',
-          balance_due REAL NOT NULL DEFAULT 0.0,
+          balance_due INTEGER NOT NULL DEFAULT 0,
           payment_method TEXT NOT NULL DEFAULT 'CASH',
           notes TEXT NOT NULL DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
@@ -319,8 +337,8 @@ export async function initDb(): Promise<void> {
           item_name TEXT NOT NULL,
           serial_number TEXT,
           quantity INTEGER NOT NULL DEFAULT 1,
-          unit_price REAL NOT NULL DEFAULT 0.0,
-          total_price REAL NOT NULL DEFAULT 0.0
+          unit_price INTEGER NOT NULL DEFAULT 0,
+          total_price INTEGER NOT NULL DEFAULT 0
         )`,
         `CREATE TABLE IF NOT EXISTS repairs (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -331,9 +349,9 @@ export async function initDb(): Promise<void> {
           device TEXT NOT NULL,
           reported_issue TEXT NOT NULL,
           parts_used TEXT DEFAULT '[]',
-          labor_cost REAL NOT NULL DEFAULT 0.0,
-          estimated_cost REAL NOT NULL DEFAULT 0.0,
-          final_cost REAL NOT NULL DEFAULT 0.0,
+          labor_cost INTEGER NOT NULL DEFAULT 0,
+          estimated_cost INTEGER NOT NULL DEFAULT 0,
+          final_cost INTEGER NOT NULL DEFAULT 0,
           status TEXT NOT NULL DEFAULT 'RECEIVED',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )`,
@@ -343,14 +361,15 @@ export async function initDb(): Promise<void> {
           customer_id INTEGER REFERENCES customers(id),
           customer_name TEXT NOT NULL,
           customer_phone TEXT NOT NULL,
+          item_taken_inventory_id INTEGER REFERENCES inventory(id),
           item_taken_name TEXT NOT NULL,
-          item_taken_value REAL NOT NULL DEFAULT 0.0,
+          item_taken_value INTEGER NOT NULL DEFAULT 0,
           item_given_inventory_id INTEGER REFERENCES inventory(id),
           item_given_name TEXT NOT NULL,
-          item_given_price REAL NOT NULL DEFAULT 0.0,
-          net_difference REAL NOT NULL DEFAULT 0.0,
-          paid_amount REAL NOT NULL DEFAULT 0.0,
-          balance_due REAL NOT NULL DEFAULT 0.0,
+          item_given_price INTEGER NOT NULL DEFAULT 0,
+          net_difference INTEGER NOT NULL DEFAULT 0,
+          paid_amount INTEGER NOT NULL DEFAULT 0,
+          balance_due INTEGER NOT NULL DEFAULT 0,
           payment_status TEXT NOT NULL DEFAULT 'PAID',
           notes TEXT DEFAULT '',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
@@ -360,17 +379,87 @@ export async function initDb(): Promise<void> {
           key TEXT NOT NULL UNIQUE,
           value TEXT NOT NULL
         )`,
+        `CREATE TABLE IF NOT EXISTS documents (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          brand TEXT NOT NULL DEFAULT 'tasnim_computers',
+          doc_type TEXT NOT NULL DEFAULT 'invoice',
+          ref_no TEXT NOT NULL UNIQUE,
+          date TEXT NOT NULL,
+          customer_id INTEGER REFERENCES customers(id),
+          customer_name TEXT NOT NULL,
+          customer_address TEXT DEFAULT '',
+          customer_phone TEXT DEFAULT '',
+          items_json TEXT NOT NULL DEFAULT '[]',
+          subtotal INTEGER NOT NULL DEFAULT 0,
+          discount INTEGER NOT NULL DEFAULT 0,
+          tax INTEGER NOT NULL DEFAULT 0,
+          total_amount INTEGER NOT NULL DEFAULT 0,
+          payment_mode TEXT NOT NULL DEFAULT 'CASH',
+          warranty_terms TEXT NOT NULL DEFAULT 'ONE WEEK CHECK WARRANTY',
+          notes TEXT NOT NULL DEFAULT '',
+          schema_version INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+          updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
+        `CREATE TABLE IF NOT EXISTS payable_parties (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT DEFAULT '',
+          address TEXT DEFAULT '',
+          total_debit INTEGER NOT NULL DEFAULT 0,
+          total_credit INTEGER NOT NULL DEFAULT 0,
+          current_balance INTEGER NOT NULL DEFAULT 0,
+          notes TEXT DEFAULT '',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
+        `CREATE TABLE IF NOT EXISTS payable_ledger (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          party_id INTEGER NOT NULL REFERENCES payable_parties(id) ON DELETE CASCADE,
+          tx_date INTEGER NOT NULL,
+          tx_type TEXT NOT NULL DEFAULT 'PURCHASE',
+          ref_no TEXT DEFAULT '',
+          description TEXT NOT NULL DEFAULT '',
+          debit INTEGER NOT NULL DEFAULT 0,
+          credit INTEGER NOT NULL DEFAULT 0,
+          balance INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
+        `CREATE TABLE IF NOT EXISTS purchases (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          purchase_no TEXT NOT NULL UNIQUE,
+          party_id INTEGER NOT NULL REFERENCES payable_parties(id),
+          party_name TEXT NOT NULL,
+          ref_no TEXT DEFAULT '',
+          purchase_date INTEGER NOT NULL,
+          total_amount INTEGER NOT NULL DEFAULT 0,
+          paid_amount INTEGER NOT NULL DEFAULT 0,
+          balance_due INTEGER NOT NULL DEFAULT 0,
+          status TEXT NOT NULL DEFAULT 'RECEIVED',
+          notes TEXT DEFAULT '',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
+        `CREATE TABLE IF NOT EXISTS purchase_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          purchase_id INTEGER NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
+          inventory_id INTEGER REFERENCES inventory(id),
+          title TEXT NOT NULL,
+          item_name TEXT NOT NULL,
+          sku TEXT NOT NULL,
+          quantity INTEGER NOT NULL DEFAULT 1,
+          cost_price INTEGER NOT NULL DEFAULT 0,
+          sell_price INTEGER NOT NULL DEFAULT 0,
+          total_cost INTEGER NOT NULL DEFAULT 0
+        )`,
       ];
 
       for (const q of tableQueries) {
-        try {
-          await sqlDb.execute(q);
-        } catch (err) {
-          console.warn("Table init:", err);
-        }
+        try { await sqlDb.execute(q); } catch (err) { console.warn("Table init:", err); }
       }
 
-      // 3. Performance Indexes
+      try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN is_bad_debt INTEGER NOT NULL DEFAULT 0;"); } catch {}
+      try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN due_date INTEGER;"); } catch {}
+      try { await sqlDb.execute("ALTER TABLE adjustments ADD COLUMN item_taken_inventory_id INTEGER;"); } catch {}
+
       const indexQueries = [
         "CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)",
         "CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)",
@@ -383,38 +472,101 @@ export async function initDb(): Promise<void> {
         "CREATE INDEX IF NOT EXISTS idx_adjustments_no ON adjustments(adjustment_no)",
         "CREATE INDEX IF NOT EXISTS idx_adjustments_customer ON adjustments(customer_name)",
         "CREATE INDEX IF NOT EXISTS idx_adjustments_status ON adjustments(payment_status)",
+        "CREATE INDEX IF NOT EXISTS idx_adjustments_taken_inv ON adjustments(item_taken_inventory_id)",
+        "CREATE INDEX IF NOT EXISTS idx_documents_brand_created ON documents(brand, created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_documents_ref_no ON documents(ref_no)",
+        "CREATE INDEX IF NOT EXISTS idx_documents_customer ON documents(customer_name)",
+        "CREATE INDEX IF NOT EXISTS idx_payable_parties_name ON payable_parties(name)",
+        "CREATE INDEX IF NOT EXISTS idx_payable_ledger_party ON payable_ledger(party_id)",
+        "CREATE INDEX IF NOT EXISTS idx_payable_ledger_date ON payable_ledger(tx_date)",
+        "CREATE INDEX IF NOT EXISTS idx_purchases_party ON purchases(party_id)",
+        "CREATE INDEX IF NOT EXISTS idx_purchases_no ON purchases(purchase_no)",
+        "CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(purchase_date)",
+        "CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase ON purchase_items(purchase_id)",
+        "CREATE INDEX IF NOT EXISTS idx_purchase_items_inventory ON purchase_items(inventory_id)",
       ];
 
       for (const idx of indexQueries) {
-        try {
-          await sqlDb.execute(idx);
-        } catch {}
+        try { await sqlDb.execute(idx); } catch {}
       }
 
-      // 4. Safe Schema Migrations for Existing SQLite DBs (each column migration runs individually)
-      const migrations = [
-        "ALTER TABLE sales ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE sales ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'PAID'",
-        "ALTER TABLE sales ADD COLUMN balance_due REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE sales ADD COLUMN discount REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE sales ADD COLUMN tax REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE sales ADD COLUMN notes TEXT NOT NULL DEFAULT ''",
-        "ALTER TABLE sales ADD COLUMN customer_name TEXT NOT NULL DEFAULT 'Walk-in Customer'",
-        "ALTER TABLE sales ADD COLUMN customer_phone TEXT NOT NULL DEFAULT ''",
-        "ALTER TABLE adjustments ADD COLUMN paid_amount REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE adjustments ADD COLUMN balance_due REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE adjustments ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'PAID'",
-        "ALTER TABLE inventory ADD COLUMN cost_price REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE inventory ADD COLUMN is_serialized INTEGER NOT NULL DEFAULT 0",
-        "ALTER TABLE repairs ADD COLUMN parts_used TEXT DEFAULT '[]'",
-        "ALTER TABLE repairs ADD COLUMN labor_cost REAL NOT NULL DEFAULT 0.0",
-        "ALTER TABLE repairs ADD COLUMN final_cost REAL NOT NULL DEFAULT 0.0",
-      ];
+      try {
+        const existingParties = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM payable_parties");
+        const count = existingParties?.[0]?.cnt ?? existingParties?.[0]?.["COUNT(*)"] ?? 0;
+        if (count === 0) {
+          const seedData = await loadSeedData();
+          for (const p of seedData.payableParties || []) {
+            await sqlDb.execute(
+              "INSERT OR IGNORE INTO payable_parties (id, name, phone, address, total_debit, total_credit, current_balance, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [p.id, p.name, p.phone || "", p.address || "", p.totalDebit || 0, p.totalCredit || 0, p.currentBalance || 0, p.notes || "", p.createdAt || (Math.floor(Date.now() / 1000) - 86400 * 30)]
+            );
+          }
+          for (const l of seedData.payableLedger || []) {
+            await sqlDb.execute(
+              "INSERT OR IGNORE INTO payable_ledger (id, party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [l.id, l.partyId, l.txDate, l.txType, l.refNo || "", l.description, l.debit || 0, l.credit || 0, l.balance || 0, l.createdAt || l.txDate]
+            );
+          }
+          for (const r of seedData.receivables || []) {
+            await sqlDb.execute(
+              "INSERT OR IGNORE INTO sales (invoice_no, customer_name, customer_phone, subtotal, discount, tax, total_amount, paid_amount, payment_status, balance_due, payment_method, notes, is_bad_debt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [r.invoiceNo, r.customerName, r.customerPhone, r.totalAmount, 0, 0, r.totalAmount, r.paidAmount, r.paymentStatus, r.balanceDue, r.paymentMethod, r.notes, r.isBadDebt || 0, r.createdAt]
+            );
+          }
+        }
+      } catch (seedErr) {
+        console.warn("Seeding payables/receivables error:", seedErr);
+      }
 
-      for (const m of migrations) {
-        try {
-          await sqlDb.execute(m);
-        } catch {}
+      // Ensure any party with opening balance has an OPENING entry in payable_ledger so balance can never be wiped
+      try {
+        const partiesWithoutLedger = await sqlDb.select<any[]>(
+          `SELECT p.id, p.current_balance, p.created_at FROM payable_parties p 
+           WHERE p.current_balance > 0 
+           AND NOT EXISTS (SELECT 1 FROM payable_ledger l WHERE l.party_id = p.id)`
+        );
+        for (const p of partiesWithoutLedger) {
+          const bal = Number(p.current_balance);
+          const createdAt = Number(p.created_at) || Math.floor(Date.now() / 1000);
+          await sqlDb.execute(
+            `INSERT INTO payable_ledger (party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at)
+             VALUES ($1, $2, 'PURCHASE', 'OPENING', 'Opening Balance', 0, $3, $4, $5)`,
+            [p.id, createdAt, bal, bal, createdAt]
+          );
+        }
+      } catch (opErr) {
+        console.warn("Opening balance ledger sync error:", opErr);
+      }
+
+      // Re-standardize any legacy non-standard invoice IDs (e.g. INV-890568) into standard INV-YYYY-XXX
+      try {
+        const legacySales = await sqlDb.select<{ id: number; invoice_no: string; created_at: number }[]>(
+          `SELECT id, invoice_no, created_at FROM sales 
+           WHERE invoice_no NOT LIKE 'INV-____-%' AND invoice_no NOT LIKE 'RCV-____-%' 
+           ORDER BY created_at ASC, id ASC`
+        );
+        if (legacySales && legacySales.length > 0) {
+          const year = new Date().getFullYear();
+          const existingStandard = await sqlDb.select<{ invoice_no: string }[]>(
+            `SELECT invoice_no FROM sales WHERE invoice_no LIKE $1`,
+            [`INV-${year}-%`]
+          );
+          let maxSeq = 0;
+          for (const row of existingStandard) {
+            const parts = (row.invoice_no || "").split("-");
+            if (parts.length >= 3) {
+              const num = parseInt(parts[2], 10);
+              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            }
+          }
+          for (const s of legacySales) {
+            maxSeq++;
+            const newInvoiceNo = `INV-${year}-${String(maxSeq).padStart(3, "0")}`;
+            await sqlDb.execute(`UPDATE sales SET invoice_no = $1 WHERE id = $2`, [newInvoiceNo, s.id]);
+          }
+        }
+      } catch (legacyErr) {
+        console.warn("Legacy invoice re-standardization error:", legacyErr);
       }
 
       isInitialized = true;
@@ -424,13 +576,105 @@ export async function initDb(): Promise<void> {
     }
   }
 
+  // Populate browser memory fallback if empty
+  if (memoryStore.payableParties.length === 0) {
+    const seedData = await loadSeedData();
+    for (const p of seedData.payableParties || []) {
+      memoryPayableParties.push({
+        id: p.id,
+        name: p.name,
+        phone: p.phone || "",
+        address: p.address || "",
+        totalDebit: p.totalDebit || 0,
+        totalCredit: p.totalCredit || 0,
+        currentBalance: p.currentBalance || 0,
+        notes: p.notes || "",
+        createdAt: p.createdAt || (Math.floor(Date.now() / 1000) - 86400 * 30),
+      });
+    }
+    for (const l of seedData.payableLedger || []) {
+      memoryPayableLedger.push({
+        id: l.id,
+        partyId: l.partyId,
+        txDate: l.txDate,
+        txType: l.txType as schema.PayableTxType,
+        refNo: l.refNo || "",
+        description: l.description,
+        debit: l.debit || 0,
+        credit: l.credit || 0,
+        balance: l.balance || 0,
+        createdAt: l.createdAt || l.txDate,
+      });
+    }
+    for (const [i, r] of (seedData.receivables || []).entries()) {
+      memorySales.push({
+        id: 4 + i,
+        invoiceNo: r.invoiceNo,
+        customerId: null,
+        customerName: r.customerName,
+        customerPhone: r.customerPhone,
+        subtotal: r.totalAmount,
+        discount: 0,
+        tax: 0,
+        totalAmount: r.totalAmount,
+        paidAmount: r.paidAmount,
+        paymentStatus: r.paymentStatus as schema.PaymentStatus,
+        balanceDue: r.balanceDue,
+        paymentMethod: r.paymentMethod as schema.PaymentMethod,
+        notes: r.notes,
+        isBadDebt: r.isBadDebt || 0,
+        dueDate: null,
+        createdAt: r.createdAt,
+      });
+    }
+  }
+
+  // Memory store fallback re-standardization
+  const year = new Date().getFullYear();
+  let memMaxSeq = 0;
+  for (const s of memoryStore.sales) {
+    if ((s.invoiceNo || "").startsWith(`INV-${year}-`)) {
+      const parts = (s.invoiceNo || "").split("-");
+      if (parts.length >= 3) {
+        const num = parseInt(parts[2], 10);
+        if (!isNaN(num) && num > memMaxSeq) memMaxSeq = num;
+      }
+    }
+  }
+  for (const s of memoryStore.sales) {
+    if (!s.invoiceNo.startsWith(`INV-${year}-`) && !s.invoiceNo.startsWith(`RCV-${year}-`)) {
+      memMaxSeq++;
+      s.invoiceNo = `INV-${year}-${String(memMaxSeq).padStart(3, "0")}`;
+    }
+  }
+
+  // Memory store fallback opening balance sync
+  for (const p of memoryStore.payableParties) {
+    if (p.currentBalance > 0 && !memoryStore.payableLedger.some((l) => l.partyId === p.id)) {
+      const entryId = memoryStore.payableLedger.length > 0
+        ? Math.max(...memoryStore.payableLedger.map((l) => l.id)) + 1
+        : 1;
+      memoryStore.payableLedger.push({
+        id: entryId,
+        partyId: p.id,
+        txDate: p.createdAt || Math.floor(Date.now() / 1000),
+        txType: "PURCHASE",
+        refNo: "OPENING",
+        description: "Opening Balance",
+        debit: 0,
+        credit: p.currentBalance,
+        balance: p.currentBalance,
+        createdAt: p.createdAt || Math.floor(Date.now() / 1000),
+      });
+    }
+  }
+
   isInitialized = true;
 }
 
 export const db = drizzle<typeof schema>(
   async (sql, params, method) => {
     await initDb();
-
     if (isTauri && sqlDb) {
       try {
         if (method === "all" || method === "values") {
@@ -448,7 +692,6 @@ export const db = drizzle<typeof schema>(
         throw err;
       }
     }
-
     return { rows: [] };
   },
   { schema }
@@ -463,7 +706,6 @@ export function isTauriEnvironment(): boolean {
   return isTauri && sqlDb !== null;
 }
 
-// Memory Store Accessors for browser fallback
 export const memoryStore = {
   customers: memoryCustomers,
   inventory: memoryInventory,
@@ -473,4 +715,9 @@ export const memoryStore = {
   repairs: memoryRepairs,
   adjustments: memoryAdjustments,
   settings: memorySettings,
+  payableParties: memoryPayableParties,
+  payableLedger: memoryPayableLedger,
+  purchases: memoryPurchases,
+  purchaseItems: memoryPurchaseItems,
 };
+
