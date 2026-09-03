@@ -516,10 +516,60 @@ export async function initDb(): Promise<void> {
         console.warn("Seeding payables/receivables error:", seedErr);
       }
 
+      // Re-standardize any legacy non-standard invoice IDs (e.g. INV-890568) into standard INV-YYYY-XXX
+      try {
+        const legacySales = await sqlDb.select<{ id: number; invoice_no: string; created_at: number }[]>(
+          `SELECT id, invoice_no, created_at FROM sales 
+           WHERE invoice_no NOT LIKE 'INV-____-%' AND invoice_no NOT LIKE 'RCV-____-%' 
+           ORDER BY created_at ASC, id ASC`
+        );
+        if (legacySales && legacySales.length > 0) {
+          const year = new Date().getFullYear();
+          const existingStandard = await sqlDb.select<{ invoice_no: string }[]>(
+            `SELECT invoice_no FROM sales WHERE invoice_no LIKE $1`,
+            [`INV-${year}-%`]
+          );
+          let maxSeq = 0;
+          for (const row of existingStandard) {
+            const parts = (row.invoice_no || "").split("-");
+            if (parts.length >= 3) {
+              const num = parseInt(parts[2], 10);
+              if (!isNaN(num) && num > maxSeq) maxSeq = num;
+            }
+          }
+          for (const s of legacySales) {
+            maxSeq++;
+            const newInvoiceNo = `INV-${year}-${String(maxSeq).padStart(3, "0")}`;
+            await sqlDb.execute(`UPDATE sales SET invoice_no = $1 WHERE id = $2`, [newInvoiceNo, s.id]);
+          }
+        }
+      } catch (legacyErr) {
+        console.warn("Legacy invoice re-standardization error:", legacyErr);
+      }
+
       isInitialized = true;
       return;
     } catch (err) {
       console.warn("Tauri SQL Database load failed, falling back to memory store:", err);
+    }
+  }
+
+  // Memory store fallback re-standardization
+  const year = new Date().getFullYear();
+  let memMaxSeq = 0;
+  for (const s of memoryStore.sales) {
+    if ((s.invoiceNo || "").startsWith(`INV-${year}-`)) {
+      const parts = (s.invoiceNo || "").split("-");
+      if (parts.length >= 3) {
+        const num = parseInt(parts[2], 10);
+        if (!isNaN(num) && num > memMaxSeq) memMaxSeq = num;
+      }
+    }
+  }
+  for (const s of memoryStore.sales) {
+    if (!s.invoiceNo.startsWith(`INV-${year}-`) && !s.invoiceNo.startsWith(`RCV-${year}-`)) {
+      memMaxSeq++;
+      s.invoiceNo = `INV-${year}-${String(memMaxSeq).padStart(3, "0")}`;
     }
   }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { ShoppingCart, Plus, Coins, Receipt } from "lucide-react";
 import { InventoryItem, SaleRecord, Customer, SaleLineItem } from "../db/schema";
 import { getRecentSales, deleteSale, getAllSaleItems } from "../db/posService";
@@ -74,6 +74,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, onSaleComplete, ini
     if (created) setReceiptSale(created);
   };
 
+  const posInvoices = useMemo(() => sales.filter((s) => !s.invoiceNo.startsWith("RCV-")), [sales]);
   const outstandingDuesCount = sales.filter((s) => s.balanceDue > 0 || s.isBadDebt === 1).length;
 
   return (
@@ -114,7 +115,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, onSaleComplete, ini
           <Receipt className="size-4" />
           <span>Invoices & Point of Sale</span>
           <span className="text-[11px] font-mono px-1.5 py-0.2 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-semibold">
-            {sales.length}
+            {posInvoices.length}
           </span>
         </button>
 
@@ -138,9 +139,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, onSaleComplete, ini
 
       {activeSubTab === "invoices" ? (
         <>
-          <SalesStats sales={sales} />
+          <SalesStats sales={posInvoices} />
           <SalesTable
-            sales={sales}
+            sales={posInvoices}
             saleItems={saleItems}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}

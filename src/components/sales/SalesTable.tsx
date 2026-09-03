@@ -67,14 +67,14 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                     </td>
                     <td className="py-3.5 px-4 text-xs"><span className="rounded-lg bg-gray-100 px-2 py-0.5 font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-300">{s.paymentMethod}</span></td>
                     <td className="py-3.5 px-4 font-semibold text-gray-900 dark:text-white">PKR {Number(s.totalAmount || 0).toLocaleString()}</td>
-                    <td className="py-3.5 px-4 font-medium text-success-600 dark:text-success-400">PKR {Number(s.paidAmount || s.totalAmount || 0).toLocaleString()}</td>
+                    <td className="py-3.5 px-4 font-medium text-success-600 dark:text-success-400">PKR {Number(s.paidAmount ?? 0).toLocaleString()}</td>
                     <td className="py-3.5 px-4 font-mono text-xs font-bold text-error-600 dark:text-error-400">{Number(s.balanceDue || 0) > 0 ? `PKR ${Number(s.balanceDue || 0).toLocaleString()}` : "—"}</td>
                     <td className="py-3.5 px-4"><StatusBadge status={s.paymentStatus || "PAID"} /></td>
                     <td className="py-3.5 px-4 text-xs text-gray-400">{new Date((s.createdAt || 0) * 1000).toLocaleDateString()}</td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         {s.paymentStatus !== "PAID" && onCollectPayment && (
-                          <button onClick={() => onCollectPayment(s)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-400" title="Collect remaining balance"><Banknote className="size-3.5" /><span>Pay</span></button>
+                          <button onClick={() => onCollectPayment(s)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-400" title="Collect remaining balance"><Banknote className="size-3.5" /><span>Collect</span></button>
                         )}
                         <button onClick={() => onViewInvoice(s)} className="inline-flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/15 dark:hover:text-brand-400" title="View details"><Eye className="size-4" /></button>
                         <button onClick={() => onPrintReceipt(s)} className="inline-flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/15 dark:hover:text-brand-400" title="Print receipt"><Printer className="size-4" /></button>

@@ -4,10 +4,75 @@ import { findOrCreateCustomer } from "./customerService";
 
 export type { CreateSaleInput };
 
+export async function getNextSequenceInvoiceNo(prefix: "INV" | "RCV" = "INV"): Promise<string> {
+  const isTauri = isTauriEnvironment();
+  const sqlDb = await getSqlDb();
+  const year = new Date().getFullYear();
+  const prefixYear = `${prefix}-${year}-`;
+
+  let maxSeq = 0;
+
+  if (isTauri && sqlDb) {
+    try {
+      const rows = await sqlDb.select<{ invoice_no: string }[]>(
+        `SELECT invoice_no FROM sales WHERE invoice_no LIKE $1`,
+        [`${prefixYear}%`]
+      );
+      for (const row of rows) {
+        const parts = (row.invoice_no || "").split("-");
+        if (parts.length >= 3) {
+          const num = parseInt(parts[2], 10);
+          if (!isNaN(num) && num > maxSeq) {
+            maxSeq = num;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to query invoice sequence in SQLite:", e);
+    }
+  }
+
+  for (const s of memoryStore.sales) {
+    if ((s.invoiceNo || "").startsWith(prefixYear)) {
+      const parts = (s.invoiceNo || "").split("-");
+      if (parts.length >= 3) {
+        const num = parseInt(parts[2], 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    }
+  }
+
+  let candidate = maxSeq + 1;
+  let finalInvoiceNo = `${prefixYear}${String(candidate).padStart(3, "0")}`;
+
+  if (isTauri && sqlDb) {
+    while (true) {
+      try {
+        const check = await sqlDb.select<{ count: number }[]>(
+          `SELECT COUNT(*) as count FROM sales WHERE invoice_no = $1`,
+          [finalInvoiceNo]
+        );
+        if (check && check[0] && check[0].count > 0) {
+          candidate++;
+          finalInvoiceNo = `${prefixYear}${String(candidate).padStart(3, "0")}`;
+        } else {
+          break;
+        }
+      } catch {
+        break;
+      }
+    }
+  }
+
+  return finalInvoiceNo;
+}
+
 export async function createSaleTransaction(input: CreateSaleInput): Promise<string> {
   const isTauri = isTauriEnvironment();
   const sqlDb = await getSqlDb();
-  const invoiceNo = `INV-${Date.now().toString().slice(-6)}`;
+  const invoiceNo = await getNextSequenceInvoiceNo("INV");
   const now = Math.floor(Date.now() / 1000);
 
   const subtotalInt = Math.round(Number(input.subtotal) || 0);
@@ -385,7 +450,7 @@ export async function recordManualReceivable(input: {
   const sqlDb = await getSqlDb();
   const now = Math.floor(Date.now() / 1000);
   const amount = Math.max(0, Math.round(Number(input.amount) || 0));
-  const invoiceNo = `RCV-${Date.now().toString().slice(-7)}`;
+  const invoiceNo = await getNextSequenceInvoiceNo("RCV");
   const isBadDebtInt = input.isBadDebt ? 1 : 0;
 
   if (isTauri && sqlDb) {
