@@ -95,6 +95,8 @@ export const sales = sqliteTable("sales", {
   balanceDue: integer("balance_due").notNull().default(0),
   paymentMethod: text("payment_method", { enum: PaymentMethods }).notNull().default("CASH"),
   notes: text("notes").notNull().default(""),
+  isBadDebt: integer("is_bad_debt").notNull().default(0),
+  dueDate: integer("due_date"),
   createdAt: integer("created_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
 });
 
@@ -296,4 +298,69 @@ export interface CreateAdjustmentInput {
   balanceDue?: number;
   paymentStatus?: PaymentStatus;
   notes?: string;
+}
+
+// 11. Payables - Suppliers / Parties Master Table
+export const payableParties = sqliteTable("payable_parties", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  phone: text("phone").default(""),
+  address: text("address").default(""),
+  totalDebit: integer("total_debit").notNull().default(0),
+  totalCredit: integer("total_credit").notNull().default(0),
+  currentBalance: integer("current_balance").notNull().default(0),
+  notes: text("notes").default(""),
+  createdAt: integer("created_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
+export type PayableParty = typeof payableParties.$inferSelect;
+export type NewPayableParty = typeof payableParties.$inferInsert;
+
+// 12. Payables - 2-Level Transaction Ledger Table
+export const PayableTxTypes = [
+  "PURCHASE",
+  "PAYMENT",
+  "RETURN",
+  "ADJUSTMENT",
+] as const;
+export type PayableTxType = (typeof PayableTxTypes)[number];
+
+export const payableLedger = sqliteTable("payable_ledger", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  partyId: integer("party_id")
+    .notNull()
+    .references(() => payableParties.id, { onDelete: "cascade" }),
+  txDate: integer("tx_date").notNull(),
+  txType: text("tx_type", { enum: PayableTxTypes }).notNull().default("PURCHASE"),
+  refNo: text("ref_no").default(""),
+  description: text("description").notNull().default(""),
+  debit: integer("debit").notNull().default(0),
+  credit: integer("credit").notNull().default(0),
+  balance: integer("balance").notNull().default(0),
+  createdAt: integer("created_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
+export type PayableLedgerEntry = typeof payableLedger.$inferSelect;
+export type NewPayableLedgerEntry = typeof payableLedger.$inferInsert;
+
+export interface CreatePayablePartyInput {
+  name: string;
+  phone?: string;
+  address?: string;
+  notes?: string;
+  openingBalance?: number;
+}
+
+export interface CreatePayableLedgerInput {
+  partyId: number;
+  txDate: number;
+  txType: PayableTxType;
+  refNo?: string;
+  description: string;
+  debit?: number;
+  credit?: number;
 }

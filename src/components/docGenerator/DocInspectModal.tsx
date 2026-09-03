@@ -35,8 +35,8 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
     }
   };
 
-  // Add empty filler rows if needed to match real invoice height
-  const emptyRowsCount = Math.max(0, 3 - items.length);
+  // Add empty filler rows to match 5 total rows
+  const emptyRowsCount = Math.max(0, 5 - items.length);
 
   return (
     <Modal
@@ -53,11 +53,11 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
           
           {/* WATERMARK IN BACKGROUND */}
           {assets.watermark && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.08]">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.14] select-none">
               <img
                 src={assets.watermark}
                 alt="Watermark"
-                className="max-h-[380px] max-w-[450px] object-contain select-none"
+                className="max-h-[360px] max-w-[460px] object-contain select-none"
               />
             </div>
           )}
@@ -67,12 +67,12 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
             <img
               src={assets.header}
               alt={brandConfig.displayName + " Header"}
-              className="w-full h-auto object-contain rounded-sm"
+              className="w-full h-auto object-contain rounded-sm shadow-none border-0"
             />
           </div>
 
-          {/* 2. METADATA ROW: REF NO & DATE */}
-          <div className="relative z-10 flex items-center justify-between text-xs font-bold text-gray-900 pb-2 border-b border-gray-200">
+          {/* 2. METADATA ROW: REF NO & DATE (NO BORDER) */}
+          <div className="relative z-10 flex items-center justify-between text-xs font-bold text-gray-900 pb-2">
             <div>
               <span>Ref.NO </span>
               <span className="underline font-mono text-sm tracking-wide">
@@ -96,34 +96,34 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
             <div className="font-semibold flex items-start gap-4">
               <span className="w-16 shrink-0">Address:</span>
               <span className="text-gray-700">
-                {doc.customerAddress || "N/A"}
+                {doc.customerAddress || "PWD ISB,"}
               </span>
             </div>
           </div>
 
           {/* 4. 5-COLUMN ITEMS TABLE */}
-          <div className="relative z-10 my-4 overflow-hidden border border-gray-800 rounded-none">
+          <div className="relative z-10 my-4 overflow-hidden border-2 border-black rounded-none">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-gray-100 border-b border-gray-800 text-gray-900 font-bold">
-                  <th className="px-3 py-2 text-center w-12 border-r border-gray-800">S N</th>
-                  <th className="px-3 py-2 border-r border-gray-800">Description</th>
-                  <th className="px-3 py-2 text-center w-14 border-r border-gray-800">Qty</th>
-                  <th className="px-3 py-2 text-center w-24 border-r border-gray-800">Unit price</th>
+                <tr className="bg-[#D9D9D9] border-b-2 border-black text-black font-bold">
+                  <th className="px-3 py-2 text-center w-12 border-r border-black">S N</th>
+                  <th className="px-3 py-2 border-r border-black">Description</th>
+                  <th className="px-3 py-2 text-center w-14 border-r border-black">Qty</th>
+                  <th className="px-3 py-2 text-center w-24 border-r border-black">Unit price</th>
                   <th className="px-3 py-2 text-right w-28">Total Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-800">
+              <tbody className="divide-y border-black">
                 {items.map((item, idx) => {
                   const lines = (item.description || "").split("\n");
                   const qtyStr = item.qty < 10 ? "0" + item.qty : "" + item.qty;
 
                   return (
-                    <tr key={idx} className="align-top">
-                      <td className="px-3 py-2.5 text-center font-bold border-r border-gray-800">
+                    <tr key={idx} className="align-top border-b border-black">
+                      <td className="px-3 py-2.5 text-center font-bold border-r border-black">
                         {idx + 1}
                       </td>
-                      <td className="px-3 py-2.5 border-r border-gray-800">
+                      <td className="px-3 py-2.5 border-r border-black">
                         <div className="font-bold text-gray-950">{lines[0]}</div>
                         {lines.length > 1 && (
                           <div className="text-[11px] font-semibold text-gray-700 mt-0.5 whitespace-pre-line">
@@ -131,10 +131,10 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
                           </div>
                         )}
                       </td>
-                      <td className="px-3 py-2.5 text-center border-r border-gray-800 font-mono font-semibold">
+                      <td className="px-3 py-2.5 text-center border-r border-black font-mono font-semibold">
                         {qtyStr}
                       </td>
-                      <td className="px-3 py-2.5 text-center border-r border-gray-800 font-mono font-semibold">
+                      <td className="px-3 py-2.5 text-center border-r border-black font-mono font-semibold">
                         {item.unitPrice.toLocaleString()}
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono font-bold text-gray-950">
@@ -146,17 +146,17 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
 
                 {/* Empty Rows Filler */}
                 {Array.from({ length: emptyRowsCount }).map((_, i) => (
-                  <tr key={"empty-" + i} className="h-7">
-                    <td className="border-r border-gray-800"></td>
-                    <td className="border-r border-gray-800"></td>
-                    <td className="border-r border-gray-800"></td>
-                    <td className="border-r border-gray-800"></td>
+                  <tr key={"empty-" + i} className="h-8 border-b border-black">
+                    <td className="border-r border-black"></td>
+                    <td className="border-r border-black"></td>
+                    <td className="border-r border-black"></td>
+                    <td className="border-r border-black"></td>
                     <td></td>
                   </tr>
                 ))}
 
                 {/* TOTAL AMOUNT ROW */}
-                <tr className="bg-gray-50 font-bold border-t-2 border-gray-800 text-xs">
+                <tr className="bg-gray-50 font-bold border-t-2 border-black text-xs">
                   <td colSpan={4} className="px-3 py-2.5 uppercase font-black tracking-wider">
                     TOTAL AMOUNT
                   </td>
@@ -181,31 +181,31 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
             </div>
           </div>
 
-          {/* 6. BOTTOM SECTION: ADDRESSES & STAMP + PC GRAPHIC */}
-          <div className="relative z-10 mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row items-end justify-between gap-4">
+          {/* 6. BOTTOM SECTION: BRANCHES ON LEFT, STAMP ABOVE COMPUTER ON RIGHT */}
+          <div className="relative z-10 mt-6 pt-4 flex flex-col sm:flex-row items-end justify-between gap-4">
             {/* Left: Branch Addresses */}
-            <div className="text-[11px] space-y-1 text-gray-700 font-medium max-w-[360px]">
+            <div className="text-[11px] space-y-1 text-gray-800 font-medium max-w-[360px]">
               {brandConfig.addresses.map((addr, i) => (
-                <div key={i} className="font-bold text-gray-800">
+                <div key={i} className="font-bold">
                   {addr}
                 </div>
               ))}
             </div>
 
-            {/* Right: Circular Stamp + PC Graphic */}
-            <div className="flex items-center gap-3 shrink-0">
+            {/* Right: Circular Stamp ABOVE Desktop PC Graphic */}
+            <div className="flex flex-col items-end gap-2 shrink-0">
               {assets.stamp && (
                 <img
                   src={assets.stamp}
                   alt="Stamp"
-                  className="size-20 object-contain drop-shadow-sm"
+                  className="size-20 object-contain drop-shadow-sm select-none"
                 />
               )}
               {assets.graphic && (
                 <img
                   src={assets.graphic}
                   alt="Hardware Graphic"
-                  className="h-16 w-24 object-contain"
+                  className="h-16 w-28 object-contain select-none"
                 />
               )}
             </div>

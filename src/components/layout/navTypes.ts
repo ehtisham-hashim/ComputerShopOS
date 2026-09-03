@@ -7,6 +7,7 @@ export type NavTab =
   | "adjustments"
   | "pc-builder"
   | "customers"
+  | "payables"
   | "reports"
   | "settings";
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { InventoryItem, SaleRecord } from "../db/schema";
 import { getRecentSales } from "../db/posService";
+import { getPayablesSummary } from "../db/payablesService";
 import { DashboardStats } from "../components/dashboard/DashboardStats";
 import { DashboardSalesChart } from "../components/dashboard/DashboardSalesChart";
 import { RecentSalesWidget } from "../components/dashboard/RecentSalesWidget";
@@ -20,14 +21,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onNavigateToSales,
 }) => {
   const [sales, setSales] = useState<SaleRecord[]>([]);
+  const [totalPayables, setTotalPayables] = useState<number>(0);
 
   useEffect(() => {
-    getRecentSales(100).then(setSales);
+    getRecentSales(500).then(setSales);
+    getPayablesSummary().then((p) => setTotalPayables(p.totalOutstanding)).catch(console.error);
   }, []);
 
   const totalUnits = items.reduce((acc, i) => acc + i.quantity, 0);
   const totalValue = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
   const totalRevenue = sales.reduce((acc, s) => acc + Number(s.totalAmount || 0), 0);
+  const totalReceivables = sales.reduce((acc, s) => acc + Number(s.balanceDue || 0), 0);
   const lowStockItems = items.filter((i) => i.quantity <= 5);
 
   return (
@@ -48,6 +52,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         totalValue={totalValue}
         totalRevenue={totalRevenue}
         lowStockCount={lowStockItems.length}
+        totalReceivables={totalReceivables}
+        totalPayables={totalPayables}
       />
 
       <DashboardSalesChart sales={sales} />

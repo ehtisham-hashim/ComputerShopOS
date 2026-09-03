@@ -124,6 +124,8 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
     balanceDue: balanceDueInt,
     paymentMethod: input.paymentMethod,
     notes: input.notes || "",
+    isBadDebt: 0,
+    dueDate: null,
     createdAt: now,
   };
 
@@ -193,6 +195,8 @@ export async function getRecentSales(limit = 100): Promise<SaleRecord[]> {
       balanceDue: Math.round(Number(r.balance_due ?? r.balanceDue ?? 0)),
       paymentMethod: (r.payment_method || r.paymentMethod || "CASH") as PaymentMethod,
       notes: String(r.notes || ""),
+      isBadDebt: Number(r.is_bad_debt || r.isBadDebt || 0),
+      dueDate: r.due_date ? Number(r.due_date) : r.dueDate ? Number(r.dueDate) : null,
       createdAt: Number(r.created_at ?? r.createdAt ?? Math.floor(Date.now() / 1000)),
     }));
   }
@@ -367,6 +371,79 @@ export async function deleteSale(id: number): Promise<void> {
   const idx = memoryStore.sales.findIndex((s) => s.id === id);
   if (idx !== -1) {
     memoryStore.sales.splice(idx, 1);
+  }
+}
+
+export async function recordManualReceivable(input: {
+  customerName: string;
+  customerPhone?: string;
+  amount: number;
+  notes?: string;
+  isBadDebt?: boolean;
+}): Promise<string> {
+  const isTauri = isTauriEnvironment();
+  const sqlDb = await getSqlDb();
+  const now = Math.floor(Date.now() / 1000);
+  const amount = Math.max(0, Math.round(Number(input.amount) || 0));
+  const invoiceNo = `RCV-${Date.now().toString().slice(-7)}`;
+  const isBadDebtInt = input.isBadDebt ? 1 : 0;
+
+  if (isTauri && sqlDb) {
+    await sqlDb.execute(
+      `INSERT INTO sales (invoice_no, customer_name, customer_phone, subtotal, discount, tax, total_amount, paid_amount, payment_status, balance_due, payment_method, notes, is_bad_debt, created_at)
+       VALUES ($1, $2, $3, $4, 0, 0, $5, 0, 'UNPAID', $6, 'CASH', $7, $8, $9)`,
+      [
+        invoiceNo,
+        input.customerName.trim() || "Walk-in Customer",
+        input.customerPhone?.trim() || "",
+        amount,
+        amount,
+        amount,
+        input.notes?.trim() || "Manual receivable record",
+        isBadDebtInt,
+        now,
+      ]
+    );
+    return invoiceNo;
+  }
+
+  const newId = memoryStore.sales.length > 0 ? Math.max(...memoryStore.sales.map((s) => s.id)) + 1 : 1;
+  memoryStore.sales.unshift({
+    id: newId,
+    invoiceNo,
+    customerId: null,
+    customerName: input.customerName.trim() || "Walk-in Customer",
+    customerPhone: input.customerPhone?.trim() || "",
+    subtotal: amount,
+    discount: 0,
+    tax: 0,
+    totalAmount: amount,
+    paidAmount: 0,
+    paymentStatus: "UNPAID",
+    balanceDue: amount,
+    paymentMethod: "CASH",
+    notes: input.notes?.trim() || "Manual receivable record",
+    isBadDebt: isBadDebtInt,
+    dueDate: null,
+    createdAt: now,
+  });
+
+  return invoiceNo;
+}
+
+export async function toggleSaleBadDebt(saleId: number, isBadDebt: boolean): Promise<void> {
+  const isTauri = isTauriEnvironment();
+  const sqlDb = await getSqlDb();
+  const val = isBadDebt ? 1 : 0;
+
+  if (isTauri && sqlDb) {
+    await sqlDb.execute("UPDATE sales SET is_bad_debt = $1 WHERE id = $2", [val, saleId]);
+    return;
+  }
+
+  const s = memoryStore.sales.find((sale) => sale.id === saleId);
+  if (s) {
+    s.isBadDebt = val;
   }
 }
 

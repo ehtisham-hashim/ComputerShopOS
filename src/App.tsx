@@ -17,7 +17,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
   const [salesInitialItems, setSalesInitialItems] = useState<InventoryItem[]>([]);
 
-  const { items, customersCount, activeRepairsCount, lowStockCount, isLoading, fetchItems } = useAppData(isAuthenticated);
+  const { items, customersCount, activeRepairsCount, payablesCount, lowStockCount, isLoading, fetchItems } = useAppData(isAuthenticated);
   useGlobalShortcuts(isAuthenticated, setActiveTab);
 
   const handleLockSession = () => {
@@ -44,6 +44,7 @@ function AppContent() {
       lowStockCount={lowStockCount}
       activeRepairsCount={activeRepairsCount}
       customersCount={customersCount}
+      payablesCount={payablesCount}
       onQuickSale={() => { setSalesInitialItems([]); setActiveTab("sales"); }}
       onLockSession={handleLockSession}
     >

@@ -12,6 +12,7 @@ const ReportsPage = lazy(() => import("../pages/Reports").then((m) => ({ default
 const CustomersPage = lazy(() => import("../pages/Customers").then((m) => ({ default: m.CustomersPage })));
 const SettingsPage = lazy(() => import("../pages/Settings").then((m) => ({ default: m.SettingsPage })));
 const DocGeneratorPage = lazy(() => import("../pages/DocGenerator").then((m) => ({ default: m.DocGeneratorPage })));
+const PayablesPage = lazy(() => import("../pages/Payables").then((m) => ({ default: m.PayablesPage })));
 
 const PageLoader = () => (
   <div className="flex h-64 w-full items-center justify-center">
@@ -70,6 +71,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         <PCBuilderPage items={items} onTransferToSales={(parts) => { setSalesInitialItems(parts); setActiveTab("sales"); }} />
       )}
       {activeTab === "customers" && <CustomersPage />}
+      {activeTab === "payables" && <PayablesPage />}
       {activeTab === "settings" && <SettingsPage />}
     </Suspense>
   );

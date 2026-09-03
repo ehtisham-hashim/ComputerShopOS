@@ -13,6 +13,12 @@ import {
   ImageRun,
   UnderlineType,
   HeightRule,
+  TabStopType,
+  TabStopPosition,
+  HorizontalPositionRelativeFrom,
+  HorizontalPositionAlign,
+  VerticalPositionRelativeFrom,
+  TextWrappingType,
 } from "docx";
 import { saveAs } from "file-saver";
 import { DocumentRecord, DocumentLineItem } from "../../db/schema";
@@ -51,8 +57,8 @@ const BORDER_CONFIG = {
 };
 
 const CELL_MARGINS = {
-  top: 80,
-  bottom: 80,
+  top: 90,
+  bottom: 90,
   left: 120,
   right: 120,
 };
@@ -62,8 +68,37 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
   const assets = await loadBrandAssets(doc.brand);
   const items: DocumentLineItem[] = parseDocumentItems(doc.itemsJson);
 
-  // 1. Header Banner Image Paragraph
-  const headerChildren: (ImageRun | TextRun)[] = [];
+  // 1. Watermark (Placed as floating behindDocument run in the top paragraph)
+  const watermarkChildren: (ImageRun | TextRun)[] = [];
+  if (assets.watermark) {
+    watermarkChildren.push(
+      new ImageRun({
+        data: assets.watermark,
+        type: "png",
+        transformation: {
+          width: 320,
+          height: 170,
+        },
+        floating: {
+          horizontalPosition: {
+            relative: HorizontalPositionRelativeFrom.PAGE,
+            align: HorizontalPositionAlign.CENTER,
+          },
+          verticalPosition: {
+            relative: VerticalPositionRelativeFrom.PAGE,
+            offset: 4800000, // Center of standard A4 page behind table
+          },
+          wrap: {
+            type: TextWrappingType.NONE,
+          },
+          behindDocument: true,
+        },
+      })
+    );
+  }
+
+  // 2. Header Banner Image
+  const headerChildren: (ImageRun | TextRun)[] = [...watermarkChildren];
   if (assets.header) {
     headerChildren.push(
       new ImageRun({
@@ -71,7 +106,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         type: "jpg",
         transformation: {
           width: 595,
-          height: 115,
+          height: 110,
         },
       })
     );
@@ -79,65 +114,46 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
 
   const headerParagraph = new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { before: 0, after: 140 },
+    spacing: { before: 0, after: 120 },
     children: headerChildren,
   });
 
-  // 2. Ref.NO & Date Row (Borderless Table)
-  const metaTable = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: NO_BORDER_CONFIG,
-    rows: [
-      new TableRow({
-        children: [
-          new TableCell({
-            width: { size: 60, type: WidthType.PERCENTAGE },
-            borders: NO_BORDER_CONFIG,
-            children: [
-              new Paragraph({
-                spacing: { after: 60 },
-                children: [
-                  new TextRun({ text: "Ref.NO ", bold: true, size: 21 }),
-                  new TextRun({
-                    text: doc.refNo,
-                    bold: true,
-                    size: 21,
-                    underline: { type: UnderlineType.SINGLE },
-                  }),
-                ],
-              }),
-            ],
-          }),
-          new TableCell({
-            width: { size: 40, type: WidthType.PERCENTAGE },
-            borders: NO_BORDER_CONFIG,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.RIGHT,
-                spacing: { after: 60 },
-                children: [
-                  new TextRun({ text: "Date: ", bold: true, size: 21 }),
-                  new TextRun({ text: doc.date, bold: true, size: 21 }),
-                ],
-              }),
-            ],
-          }),
-        ],
+  // 3. Ref.NO & Date Row (Using TabStop to guarantee zero table borders in LibreOffice)
+  const refDateParagraph = new Paragraph({
+    spacing: { before: 40, after: 80 },
+    tabStops: [
+      {
+        type: TabStopType.RIGHT,
+        position: TabStopPosition.MAX,
+      },
+    ],
+    children: [
+      new TextRun({ text: "Ref.NO ", bold: true, size: 21 }),
+      new TextRun({
+        text: doc.refNo,
+        bold: true,
+        size: 21,
+        underline: { type: UnderlineType.SINGLE },
+      }),
+      new TextRun({
+        text: "\tDate: " + doc.date,
+        bold: true,
+        size: 21,
       }),
     ],
   });
 
-  // 3. Customer Info Block
+  // 4. Customer Info Block
   const customerParagraphs = [
     new Paragraph({
-      spacing: { before: 40, after: 30 },
+      spacing: { before: 20, after: 20 },
       children: [
         new TextRun({ text: "MS:              ", bold: true, size: 21 }),
         new TextRun({ text: doc.customerName.toUpperCase(), bold: true, size: 21 }),
       ],
     }),
     new Paragraph({
-      spacing: { after: 120 },
+      spacing: { after: 140 },
       children: [
         new TextRun({ text: "Address:      ", bold: true, size: 21 }),
         new TextRun({ text: doc.customerAddress || "PWD ISB,", size: 21 }),
@@ -145,7 +161,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
     }),
   ];
 
-  // 4. 5-Column Items Table
+  // 5. 5-Column Items Table
   const colWidths = {
     sn: { size: 7, type: WidthType.PERCENTAGE },
     desc: { size: 53, type: WidthType.PERCENTAGE },
@@ -156,7 +172,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
 
   const tableHeaderRow = new TableRow({
     tableHeader: true,
-    height: { value: 400, rule: HeightRule.ATLEAST },
+    height: { value: 420, rule: HeightRule.ATLEAST },
     children: [
       new TableCell({
         width: colWidths.sn,
@@ -311,14 +327,14 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
     });
   });
 
-  // Empty filler rows (5 minimum total rows to give authentic tall layout)
+  // Empty filler rows to maintain full-page proportion
   const totalRowsTarget = 5;
   const emptyRowsCount = Math.max(0, totalRowsTarget - items.length);
   const emptyRows: TableRow[] = [];
   for (let i = 0; i < emptyRowsCount; i++) {
     emptyRows.push(
       new TableRow({
-        height: { value: 500, rule: HeightRule.ATLEAST },
+        height: { value: 520, rule: HeightRule.ATLEAST },
         children: [
           new TableCell({
             width: colWidths.sn,
@@ -403,10 +419,10 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
     rows: [tableHeaderRow, ...tableDataRows, ...emptyRows, totalRow],
   });
 
-  // 5. Terms & Sign-off Section
+  // 6. Terms & Sign-off Section
   const termsParagraphs = [
     new Paragraph({
-      spacing: { before: 180, after: 30 },
+      spacing: { before: 200, after: 30 },
       children: [
         new TextRun({
           text: "TERMS & CONDITIONS: -",
@@ -446,7 +462,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
       ],
     }),
     new Paragraph({
-      spacing: { after: 80 },
+      spacing: { after: 60 },
       children: [
         new TextRun({
           text: "THIS IS A SYSTEM GENERATED INVOICE AND DOES NOT NEED ANY SIGNATURE",
@@ -457,36 +473,49 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
     }),
   ];
 
-  // 6. Bottom Section: Branch Details on Left, Circular Stamp + PC Graphic on Right
-  const rightGraphics: (ImageRun | TextRun)[] = [];
+  // 7. Bottom Section:
+  // Left: Branch Details
+  // Right: Stamp ABOVE the Computer Graphic (Vertical Stack)
+  const rightChildren: Paragraph[] = [];
   if (assets.stamp) {
-    rightGraphics.push(
-      new ImageRun({
-        data: assets.stamp,
-        type: "png",
-        transformation: {
-          width: 90,
-          height: 90,
-        },
+    rightChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { after: 40 },
+        children: [
+          new ImageRun({
+            data: assets.stamp,
+            type: "png",
+            transformation: {
+              width: 90,
+              height: 90,
+            },
+          }),
+        ],
       })
     );
   }
   if (assets.graphic) {
-    rightGraphics.push(
-      new ImageRun({
-        data: assets.graphic,
-        type: "png",
-        transformation: {
-          width: 110,
-          height: 75,
-        },
+    rightChildren.push(
+      new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        children: [
+          new ImageRun({
+            data: assets.graphic,
+            type: "png",
+            transformation: {
+              width: 140,
+              height: 90,
+            },
+          }),
+        ],
       })
     );
   }
 
   const branchParagraphs = brandConfig.addresses.map((addr) =>
     new Paragraph({
-      spacing: { after: 25 },
+      spacing: { after: 30 },
       children: [new TextRun({ text: addr, size: 16, bold: true })],
     })
   );
@@ -498,21 +527,16 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
       new TableRow({
         children: [
           new TableCell({
-            width: { size: 62, type: WidthType.PERCENTAGE },
+            width: { size: 60, type: WidthType.PERCENTAGE },
             borders: NO_BORDER_CONFIG,
             verticalAlign: VerticalAlign.BOTTOM,
             children: branchParagraphs,
           }),
           new TableCell({
-            width: { size: 38, type: WidthType.PERCENTAGE },
+            width: { size: 40, type: WidthType.PERCENTAGE },
             borders: NO_BORDER_CONFIG,
             verticalAlign: VerticalAlign.BOTTOM,
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.RIGHT,
-                children: rightGraphics,
-              }),
-            ],
+            children: rightChildren,
           }),
         ],
       }),
@@ -540,16 +564,16 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         properties: {
           page: {
             margin: {
-              top: 500,
-              bottom: 450,
-              left: 720,
-              right: 720,
+              top: 450,
+              bottom: 400,
+              left: 700,
+              right: 700,
             },
           },
         },
         children: [
           headerParagraph,
-          metaTable,
+          refDateParagraph,
           ...customerParagraphs,
           mainTable,
           ...termsParagraphs,

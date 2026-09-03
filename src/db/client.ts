@@ -1,6 +1,7 @@
 import Database from "@tauri-apps/plugin-sql";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import * as schema from "./schema";
+import seedData from "./seedData.json";
 
 let sqlDb: Database | null = null;
 let isInitialized = false;
@@ -139,6 +140,8 @@ const memorySales: schema.SaleRecord[] = [
     balanceDue: 0,
     paymentMethod: "CARD",
     notes: "RTX 4080S + RAM purchase",
+    isBadDebt: 0,
+    dueDate: null,
     createdAt: Math.floor(Date.now() / 1000) - 7200,
   },
   {
@@ -156,6 +159,8 @@ const memorySales: schema.SaleRecord[] = [
     balanceDue: 45000,
     paymentMethod: "SPLIT",
     notes: "ThinkPad X1 purchase - Partial deposit",
+    isBadDebt: 0,
+    dueDate: null,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 2,
   },
   {
@@ -173,6 +178,8 @@ const memorySales: schema.SaleRecord[] = [
     balanceDue: 120000,
     paymentMethod: "CASH",
     notes: "Ryzen 7800X3D reserved invoice",
+    isBadDebt: 0,
+    dueDate: null,
     createdAt: Math.floor(Date.now() / 1000) - 86400 * 4,
   },
 ];
@@ -251,6 +258,53 @@ const memorySettings: Record<string, string> = {
   currency_symbol: "PKR ",
   tax_rate: "0",
 };
+
+const initialReceivables: schema.SaleRecord[] = (seedData.receivables || []).map((r: any, i: number) => ({
+  id: 4 + i,
+  invoiceNo: r.invoiceNo,
+  customerId: null,
+  customerName: r.customerName,
+  customerPhone: r.customerPhone,
+  subtotal: r.totalAmount,
+  discount: 0,
+  tax: 0,
+  totalAmount: r.totalAmount,
+  paidAmount: r.paidAmount,
+  paymentStatus: r.paymentStatus as schema.PaymentStatus,
+  balanceDue: r.balanceDue,
+  paymentMethod: r.paymentMethod as schema.PaymentMethod,
+  notes: r.notes,
+  isBadDebt: r.isBadDebt || 0,
+  dueDate: null,
+  createdAt: r.createdAt,
+}));
+
+memorySales.push(...initialReceivables);
+
+const memoryPayableParties: schema.PayableParty[] = (seedData.payableParties || []).map((p: any) => ({
+  id: p.id,
+  name: p.name,
+  phone: p.phone || "",
+  address: p.address || "",
+  totalDebit: p.totalDebit || 0,
+  totalCredit: p.totalCredit || 0,
+  currentBalance: p.currentBalance || 0,
+  notes: p.notes || "",
+  createdAt: Math.floor(Date.now() / 1000) - 86400 * 30,
+}));
+
+const memoryPayableLedger: schema.PayableLedgerEntry[] = (seedData.payableLedger || []).map((l: any) => ({
+  id: l.id,
+  partyId: l.partyId,
+  txDate: l.txDate,
+  txType: l.txType as schema.PayableTxType,
+  refNo: l.refNo || "",
+  description: l.description,
+  debit: l.debit || 0,
+  credit: l.credit || 0,
+  balance: l.balance || 0,
+  createdAt: l.txDate,
+}));
 
 export async function initDb(): Promise<void> {
   if (isInitialized) return;
@@ -379,11 +433,37 @@ export async function initDb(): Promise<void> {
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
           updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )`,
+        `CREATE TABLE IF NOT EXISTS payable_parties (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          phone TEXT DEFAULT '',
+          address TEXT DEFAULT '',
+          total_debit INTEGER NOT NULL DEFAULT 0,
+          total_credit INTEGER NOT NULL DEFAULT 0,
+          current_balance INTEGER NOT NULL DEFAULT 0,
+          notes TEXT DEFAULT '',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
+        `CREATE TABLE IF NOT EXISTS payable_ledger (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          party_id INTEGER NOT NULL REFERENCES payable_parties(id) ON DELETE CASCADE,
+          tx_date INTEGER NOT NULL,
+          tx_type TEXT NOT NULL DEFAULT 'PURCHASE',
+          ref_no TEXT DEFAULT '',
+          description TEXT NOT NULL DEFAULT '',
+          debit INTEGER NOT NULL DEFAULT 0,
+          credit INTEGER NOT NULL DEFAULT 0,
+          balance INTEGER NOT NULL DEFAULT 0,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
       ];
 
       for (const q of tableQueries) {
         try { await sqlDb.execute(q); } catch (err) { console.warn("Table init:", err); }
       }
+
+      try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN is_bad_debt INTEGER NOT NULL DEFAULT 0;"); } catch {}
+      try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN due_date INTEGER;"); } catch {}
 
       const indexQueries = [
         "CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)",
@@ -400,10 +480,40 @@ export async function initDb(): Promise<void> {
         "CREATE INDEX IF NOT EXISTS idx_documents_brand_created ON documents(brand, created_at DESC)",
         "CREATE INDEX IF NOT EXISTS idx_documents_ref_no ON documents(ref_no)",
         "CREATE INDEX IF NOT EXISTS idx_documents_customer ON documents(customer_name)",
+        "CREATE INDEX IF NOT EXISTS idx_payable_parties_name ON payable_parties(name)",
+        "CREATE INDEX IF NOT EXISTS idx_payable_ledger_party ON payable_ledger(party_id)",
+        "CREATE INDEX IF NOT EXISTS idx_payable_ledger_date ON payable_ledger(tx_date)",
       ];
 
       for (const idx of indexQueries) {
         try { await sqlDb.execute(idx); } catch {}
+      }
+
+      try {
+        const existingParties = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM payable_parties");
+        const count = existingParties?.[0]?.cnt ?? existingParties?.[0]?.["COUNT(*)"] ?? 0;
+        if (count === 0) {
+          for (const p of memoryPayableParties) {
+            await sqlDb.execute(
+              "INSERT OR IGNORE INTO payable_parties (id, name, phone, address, total_debit, total_credit, current_balance, notes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [p.id, p.name, p.phone || "", p.address || "", p.totalDebit, p.totalCredit, p.currentBalance, p.notes || "", p.createdAt]
+            );
+          }
+          for (const l of memoryPayableLedger) {
+            await sqlDb.execute(
+              "INSERT OR IGNORE INTO payable_ledger (id, party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [l.id, l.partyId, l.txDate, l.txType, l.refNo || "", l.description, l.debit, l.credit, l.balance, l.createdAt]
+            );
+          }
+          for (const r of initialReceivables) {
+            await sqlDb.execute(
+              "INSERT OR IGNORE INTO sales (invoice_no, customer_name, customer_phone, subtotal, discount, tax, total_amount, paid_amount, payment_status, balance_due, payment_method, notes, is_bad_debt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              [r.invoiceNo, r.customerName, r.customerPhone, r.subtotal, r.discount, r.tax, r.totalAmount, r.paidAmount, r.paymentStatus, r.balanceDue, r.paymentMethod, r.notes, r.isBadDebt, r.createdAt]
+            );
+          }
+        }
+      } catch (seedErr) {
+        console.warn("Seeding payables/receivables error:", seedErr);
       }
 
       isInitialized = true;
@@ -459,4 +569,6 @@ export const memoryStore = {
   repairs: memoryRepairs,
   adjustments: memoryAdjustments,
   settings: memorySettings,
+  payableParties: memoryPayableParties,
+  payableLedger: memoryPayableLedger,
 };

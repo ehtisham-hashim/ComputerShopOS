@@ -2,6 +2,7 @@ import { getRecentSales, getAllSaleItems } from "./posService";
 import { getInventoryItems } from "./inventoryService";
 import { getRepairTickets } from "./repairsService";
 import { getAdjustments } from "./adjustmentsService";
+import { getPayablesSummary } from "./payablesService";
 
 export type ReportPeriod = "monthly" | "yearly" | "lifetime";
 
@@ -11,6 +12,7 @@ export interface ReportData {
   discounts: number;
   collectedCash: number;
   receivables: number;
+  totalPayables: number;
   cogs: number;
   grossProfit: number;
   marginPercent: number;
@@ -28,12 +30,13 @@ export interface ReportData {
 }
 
 export async function generateFinancialReport(period: ReportPeriod): Promise<ReportData> {
-  const [sales, saleItems, inventory, repairs, adjustments] = await Promise.all([
+  const [sales, saleItems, inventory, repairs, adjustments, payablesSum] = await Promise.all([
     getRecentSales(500),
     getAllSaleItems(),
     getInventoryItems(),
     getRepairTickets(),
     getAdjustments(),
+    getPayablesSummary(),
   ]);
 
   const now = new Date();
@@ -122,6 +125,7 @@ export async function generateFinancialReport(period: ReportPeriod): Promise<Rep
     discounts,
     collectedCash,
     receivables,
+    totalPayables: payablesSum.totalOutstanding,
     cogs,
     grossProfit,
     marginPercent,

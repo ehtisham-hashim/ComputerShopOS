@@ -70,28 +70,31 @@ async function urlToUint8Array(url: string): Promise<Uint8Array | null> {
 
 export async function loadBrandAssets(brand: BrandType): Promise<BrandImageBuffers> {
   if (brand === 'tasnim_computers') {
-    const [header, stamp, graphic] = await Promise.all([
+    const [header, stamp, graphic, watermark] = await Promise.all([
       urlToUint8Array(tasnimHeader),
       urlToUint8Array(tasnimStamp),
       urlToUint8Array(tasnimPc),
+      urlToUint8Array(tasnimWm),
     ]);
-    return { header, stamp, graphic };
+    return { header, stamp, graphic, watermark };
   } else if (brand === 'farhan_computers') {
-    const [header, stamp, footer, graphic] = await Promise.all([
+    const [header, stamp, footer, graphic, watermark] = await Promise.all([
       urlToUint8Array(farhanPcHeader),
       urlToUint8Array(farhanPcStamp),
       urlToUint8Array(farhanPcFooter),
       urlToUint8Array(farhanPcPc),
+      urlToUint8Array(farhanPcWm),
     ]);
-    return { header, stamp, footer, graphic };
+    return { header, stamp, footer, graphic, watermark };
   } else {
     // Farhan Enterprises
-    const [header, stamp, footer, graphic] = await Promise.all([
+    const [header, stamp, footer, graphic, watermark] = await Promise.all([
       urlToUint8Array(farhanEntHeader),
       urlToUint8Array(farhanEntStamp),
       urlToUint8Array(farhanEntFooter),
       urlToUint8Array(farhanEntDevice),
+      urlToUint8Array(farhanEntWm),
     ]);
-    return { header, stamp, footer, graphic };
+    return { header, stamp, footer, graphic, watermark };
   }
 }
