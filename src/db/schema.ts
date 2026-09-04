@@ -437,3 +437,124 @@ export interface CreatePurchaseInput {
   items: PurchaseItemInput[];
 }
 
+// 15. Expenses Table
+export const ExpenseCategories = [
+  "RENT",
+  "UTILITIES",
+  "SALARY",
+  "SECURITY_GUARD",
+  "INTERNET",
+  "TEA_FOOD",
+  "MAINTENANCE",
+  "MARKETING",
+  "MISC",
+] as const;
+export type ExpenseCategory = (typeof ExpenseCategories)[number];
+
+export const expenses = sqliteTable("expenses", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  category: text("category", { enum: ExpenseCategories }).notNull().default("MISC"),
+  title: text("title").notNull(),
+  amount: integer("amount").notNull().default(0),
+  expenseDate: integer("expense_date").notNull(),
+  paymentMethod: text("payment_method").notNull().default("CASH"),
+  notes: text("notes").default(""),
+  createdAt: integer("created_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
+export type Expense = typeof expenses.$inferSelect;
+export type NewExpense = typeof expenses.$inferInsert;
+
+// 16. Monthly Reports Archive Table
+export const ReportStatuses = ["OPEN", "CLOSED"] as const;
+export type ReportStatus = (typeof ReportStatuses)[number];
+
+export const monthlyReports = sqliteTable("monthly_reports", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  year: integer("year").notNull(),
+  month: integer("month").notNull(),
+  monthLabel: text("month_label").notNull(),
+  grossSales: integer("gross_sales").notNull().default(0),
+  grossProfit: integer("gross_profit").notNull().default(0),
+  totalExpenses: integer("total_expenses").notNull().default(0),
+  netProfit: integer("net_profit").notNull().default(0),
+  collectedCash: integer("collected_cash").notNull().default(0),
+  receivables: integer("receivables").notNull().default(0),
+  payables: integer("payables").notNull().default(0),
+  repairRevenue: integer("repair_revenue").notNull().default(0),
+  swapMargin: integer("swap_margin").notNull().default(0),
+  dailyDataJson: text("daily_data_json").notNull().default("[]"),
+  expenseDataJson: text("expense_data_json").notNull().default("[]"),
+  status: text("status", { enum: ReportStatuses }).notNull().default("CLOSED"),
+  createdAt: integer("created_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+  updatedAt: integer("updated_at")
+    .notNull()
+    .$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
+export type MonthlyReportRecord = typeof monthlyReports.$inferSelect;
+export type NewMonthlyReportRecord = typeof monthlyReports.$inferInsert;
+
+// --- Monthly Reports & Expense Domain Interfaces ---
+
+export interface DailyReportRow {
+  day: number;
+  date: string;
+  dayOfWeek: string;
+  sales: number;
+  grossProfit: number;
+  remarks: string;
+}
+
+export interface ExpenseRecord {
+  id: number;
+  year: number;
+  month: number;
+  category: string;
+  title: string;
+  amount: number;
+  expenseDate: number;
+  paymentMethod: string;
+  notes?: string | null;
+  createdAt?: number;
+}
+
+export type CreateExpenseInput = Omit<ExpenseRecord, "id">;
+
+export type UpdateExpenseInput = Partial<CreateExpenseInput>;
+
+export interface MonthlyExpenseSummary {
+  total: number;
+  byCategory: Record<string, number>;
+  count?: number;
+}
+
+export interface MonthlyReportDetail {
+  id?: number;
+  year: number;
+  month: number;
+  monthLabel: string;
+  grossSales: number;
+  grossProfit: number;
+  totalExpenses: number;
+  netProfit: number;
+  collectedCash: number;
+  receivables: number;
+  payables: number;
+  repairRevenue: number;
+  swapMargin: number;
+  dailyData: DailyReportRow[];
+  expenses: ExpenseRecord[];
+  status: "OPEN" | "CLOSED";
+  createdAt?: number;
+  updatedAt?: number;
+}
+
+export type MonthlyReportHistoryItem = Omit<MonthlyReportDetail, "dailyData" | "expenses">;
+

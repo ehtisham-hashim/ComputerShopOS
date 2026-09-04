@@ -9,5 +9,6 @@ export type NavTab =
   | "customers"
   | "payables"
   | "reports"
+  | "expenses"
   | "settings";
 

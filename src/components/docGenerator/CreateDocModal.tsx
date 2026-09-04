@@ -18,6 +18,7 @@ import { BRAND_CONFIGS } from "../../services/docx/brandConfigs";
 import { getNextDocRefNo, createDocument, parseDocumentItems } from "../../db/documentsService";
 import { generateAndDownloadDocx } from "../../services/docx/docxGenerator";
 import { Modal } from "../ui/Modal";
+import { CustomDropdown } from "../ui/CustomDropdown";
 
 interface CreateDocModalProps {
   isOpen: boolean;
@@ -311,18 +312,16 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
             {customers.length > 0 && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">Auto-fill from CRM:</span>
-                <select
+                <CustomDropdown
                   value={selectedCustomerId}
-                  onChange={(e) => handleSelectCustomer(e.target.value)}
-                  className="tail-select text-xs py-1 px-2 w-auto max-w-[200px]"
-                >
-                  <option value="">-- Choose Customer --</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.phone})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => handleSelectCustomer(val)}
+                  options={[
+                    { value: "", label: "-- Choose Customer --" },
+                    ...customers.map((c) => ({ value: String(c.id), label: `${c.name} (${c.phone})` })),
+                  ]}
+                  size="sm"
+                  minWidth={200}
+                />
               </div>
             )}
           </div>
@@ -406,17 +405,20 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
                     {/* Description */}
                     <td className="px-3 py-2 space-y-1.5">
                       {inventoryItems.length > 0 && (
-                        <select
-                          onChange={(e) => handlePickInventory(index, e.target.value)}
-                          className="tail-select text-[11px] py-1 px-2 w-full text-gray-500"
-                        >
-                          <option value="">-- Quick pick from Inventory --</option>
-                          {inventoryItems.map((inv) => (
-                            <option key={inv.id} value={inv.id}>
-                              {inv.name} (PKR {inv.price.toLocaleString()})
-                            </option>
-                          ))}
-                        </select>
+                        <CustomDropdown
+                          value=""
+                          onChange={(val) => handlePickInventory(index, val)}
+                          options={[
+                            { value: "", label: "-- Quick pick from Inventory --" },
+                            ...inventoryItems.map((inv) => ({
+                              value: String(inv.id),
+                              label: `${inv.name} (PKR ${inv.price.toLocaleString()})`,
+                            })),
+                          ]}
+                          size="sm"
+                          className="w-full"
+                          buttonClassName="w-full text-[11px] py-1 text-gray-500"
+                        />
                       )}
                       <textarea
                         rows={2}

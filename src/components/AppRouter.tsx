@@ -13,6 +13,7 @@ const CustomersPage = lazy(() => import("../pages/Customers").then((m) => ({ def
 const SettingsPage = lazy(() => import("../pages/Settings").then((m) => ({ default: m.SettingsPage })));
 const DocGeneratorPage = lazy(() => import("../pages/DocGenerator").then((m) => ({ default: m.DocGeneratorPage })));
 const PayablesPage = lazy(() => import("../pages/Payables").then((m) => ({ default: m.PayablesPage })));
+const ExpensesPage = lazy(() => import("../pages/Expenses").then((m) => ({ default: m.ExpensesPage })));
 
 const PageLoader = () => (
   <div className="flex h-64 w-full items-center justify-center">
@@ -67,6 +68,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         <AdjustmentsPage items={items} onRefreshInventory={fetchItems} />
       )}
       {activeTab === "reports" && <ReportsPage />}
+      {activeTab === "expenses" && <ExpensesPage />}
       {activeTab === "pc-builder" && (
         <PCBuilderPage items={items} onTransferToSales={(parts) => { setSalesInitialItems(parts); setActiveTab("sales"); }} />
       )}
