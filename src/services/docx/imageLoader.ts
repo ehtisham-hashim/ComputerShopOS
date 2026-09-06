@@ -1,7 +1,10 @@
 // Brand image asset imports
 import tasnimHeader from '../../assets/brands/tasnim_computers/header.jpg';
-import tasnimStamp from '../../assets/brands/tasnim_computers/stamp.jpg';
+import tasnimStamp from '../../assets/brands/tasnim_computers/stamp.png';
 import tasnimPc from '../../assets/brands/tasnim_computers/pc.png';
+import tasnimContactIcons from '../../assets/brands/tasnim_computers/contact_icons.png';
+import tasnimPhoneIcon from '../../assets/brands/tasnim_computers/phone_icon.png';
+import tasnimEmailIcon from '../../assets/brands/tasnim_computers/email_icon.png';
 
 import farhanPcHeader from '../../assets/brands/farhan_computers/header.jpg';
 import farhanPcStamp from '../../assets/brands/farhan_computers/stamp.png';
@@ -19,12 +22,26 @@ import farhanEntWm from '../../assets/brands/farhan_enterprises/watermark.png';
 
 import { BrandType } from '../../db/schema';
 
-export const BRAND_ASSETS_MAP = {
+export interface BrandAssetUrls {
+  header: string;
+  stamp: string;
+  footer?: string;
+  graphic?: string;
+  watermark?: string;
+  contactIcons?: string;
+  phoneIcon?: string;
+  emailIcon?: string;
+}
+
+export const BRAND_ASSETS_MAP: Record<BrandType, BrandAssetUrls> = {
   tasnim_computers: {
     header: tasnimHeader,
     stamp: tasnimStamp,
     graphic: tasnimPc,
     watermark: tasnimWm,
+    contactIcons: tasnimContactIcons,
+    phoneIcon: tasnimPhoneIcon,
+    emailIcon: tasnimEmailIcon,
   },
   farhan_computers: {
     header: farhanPcHeader,
@@ -48,6 +65,9 @@ export interface BrandImageBuffers {
   footer?: Uint8Array | null;
   graphic?: Uint8Array | null;
   watermark?: Uint8Array | null;
+  contactIcons?: Uint8Array | null;
+  phoneIcon?: Uint8Array | null;
+  emailIcon?: Uint8Array | null;
 }
 
 const bufferCache = new Map<string, Uint8Array>();
@@ -70,13 +90,16 @@ async function urlToUint8Array(url: string): Promise<Uint8Array | null> {
 
 export async function loadBrandAssets(brand: BrandType): Promise<BrandImageBuffers> {
   if (brand === 'tasnim_computers') {
-    const [header, stamp, graphic, watermark] = await Promise.all([
+    const [header, stamp, graphic, watermark, contactIcons, phoneIcon, emailIcon] = await Promise.all([
       urlToUint8Array(tasnimHeader),
       urlToUint8Array(tasnimStamp),
       urlToUint8Array(tasnimPc),
       urlToUint8Array(tasnimWm),
+      urlToUint8Array(tasnimContactIcons),
+      urlToUint8Array(tasnimPhoneIcon),
+      urlToUint8Array(tasnimEmailIcon),
     ]);
-    return { header, stamp, graphic, watermark };
+    return { header, stamp, graphic, watermark, contactIcons, phoneIcon, emailIcon };
   } else if (brand === 'farhan_computers') {
     const [header, stamp, footer, graphic, watermark] = await Promise.all([
       urlToUint8Array(farhanPcHeader),

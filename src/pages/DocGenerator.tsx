@@ -75,7 +75,7 @@ export const DocGeneratorPage: React.FC<DocGeneratorPageProps> = ({ items }) => 
       {/* Page Header */}
       <PageHeader
         title="Document Generator"
-        subtitle="Generate and print official DOCX bills, invoices, and quotations with verified store letterheads"
+        subtitle="Generate and print official PDF bills, invoices, and quotations with verified store letterheads"
         icon={FileText}
       >
         <button

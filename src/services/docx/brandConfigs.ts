@@ -1,5 +1,10 @@
 import { BrandType } from '../../db/schema';
 
+export interface BrandDimensions {
+  width: number;
+  height: number;
+}
+
 export interface BrandConfig {
   id: BrandType;
   displayName: string;
@@ -15,6 +20,14 @@ export interface BrandConfig {
   defaultWarranty: string;
   defaultPaymentMode: string;
   defaultDisclaimer: string;
+  termsHeading?: string;
+  hasFooterBanner: boolean;
+  headerDimensions: BrandDimensions;
+  footerDimensions?: BrandDimensions;
+  watermarkDimensions: BrandDimensions;
+  stampDimensions: BrandDimensions;
+  graphicDimensions?: BrandDimensions;
+  targetEmptyRows: number;
 }
 
 export const BRAND_CONFIGS: Record<BrandType, BrandConfig> = {
@@ -36,6 +49,13 @@ export const BRAND_CONFIGS: Record<BrandType, BrandConfig> = {
     defaultWarranty: 'ONE WEEK CHECK WARRENTY',
     defaultPaymentMode: 'CASH',
     defaultDisclaimer: 'THIS IS A SYSTEM GENERATED INVOICE AND DOES NOT NEED ANY SIGNATURE',
+    termsHeading: 'CONDITIONS: -',
+    hasFooterBanner: false,
+    headerDimensions: { width: 565, height: 104 },
+    watermarkDimensions: { width: 330, height: 221 },
+    stampDimensions: { width: 95, height: 95 },
+    graphicDimensions: { width: 145, height: 94 },
+    targetEmptyRows: 6,
   },
   farhan_computers: {
     id: 'farhan_computers',
@@ -47,11 +67,17 @@ export const BRAND_CONFIGS: Record<BrandType, BrandConfig> = {
     accentColor: '#3B82F6',
     badgeText: 'Sales & Service',
     phoneNumbers: ['0345-5982628', '0345-5551559', '051-4265300'],
-    email: 'farhanqt125@gmail.com',
+    email: 'farhangill26@gmail.com',
     addresses: ['Anwar Chowk, Wah Cantt.'],
     defaultWarranty: 'ONE WEEK CHECK WARRENTY',
     defaultPaymentMode: 'CASH',
     defaultDisclaimer: 'THIS IS A SYSTEM GENERATED INVOICE AND DOES NOT NEED ANY SIGNATURE',
+    hasFooterBanner: true,
+    headerDimensions: { width: 570, height: 112 },
+    footerDimensions: { width: 570, height: 106 },
+    watermarkDimensions: { width: 300, height: 300 },
+    stampDimensions: { width: 105, height: 105 },
+    targetEmptyRows: 6,
   },
   farhan_enterprises: {
     id: 'farhan_enterprises',
@@ -68,5 +94,11 @@ export const BRAND_CONFIGS: Record<BrandType, BrandConfig> = {
     defaultWarranty: '1 YEAR OFFICIAL / CHECK WARRANTY',
     defaultPaymentMode: 'CASH',
     defaultDisclaimer: 'THIS IS A SYSTEM GENERATED INVOICE AND DOES NOT NEED ANY SIGNATURE',
+    hasFooterBanner: true,
+    headerDimensions: { width: 570, height: 162 },
+    footerDimensions: { width: 570, height: 165 },
+    watermarkDimensions: { width: 300, height: 300 },
+    stampDimensions: { width: 105, height: 105 },
+    targetEmptyRows: 5,
   },
 };
