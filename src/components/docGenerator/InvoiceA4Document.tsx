@@ -21,7 +21,6 @@ import emailIcon from "../../assets/brands/tasnim_computers/email_icon.png";
 // Farhan Computers assets
 import farhanPcHeader from "../../assets/brands/farhan_computers/header.jpg";
 import farhanPcStamp from "../../assets/brands/farhan_computers/stamp.png";
-import farhanPcFooter from "../../assets/brands/farhan_computers/footer.jpg";
 import farhanPcWm from "../../assets/brands/farhan_computers/watermark.png";
 
 // Farhan Enterprises assets
@@ -47,6 +46,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
   const items: DocumentLineItem[] = parseDocumentItems(doc.itemsJson);
 
   const isA5 = paperSize === "a5";
+  const isFullBleedBrand = doc.brand === "farhan_enterprises" || doc.brand === "farhan_computers";
   const itemsPerPage = isA5 ? 5 : 7;
   const isMultiPage = items.length > itemsPerPage;
 
@@ -88,7 +88,9 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
         const isLastPage = pageIndex === pages.length - 1;
 
         // Ensure enough filler rows so the table spans comfortably down the page without leaving a huge void
-        const targetRowCount = isA5 ? 5 : 7;
+        const targetRowCount = isA5
+          ? (doc.brand === "farhan_enterprises" ? 4 : 5)
+          : (doc.brand === "farhan_enterprises" ? 6 : 7);
         const emptyRowsCount = isLastPage
           ? Math.max(0, targetRowCount - pageItems.length)
           : 0;
@@ -101,7 +103,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
             style={{
               width: pageWidth,
               minHeight: pageMinHeight,
-              padding: pagePadding,
+              padding: isFullBleedBrand ? 0 : pagePadding,
               boxSizing: "border-box",
               backgroundColor: "#ffffff",
               color: "#000000",
@@ -148,7 +150,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
             <div style={{ position: "relative", zIndex: 10, width: "100%" }}>
               {/* HEADER BANNER */}
               {isFirstPage ? (
-                <div style={{ width: "100%", marginBottom: isA5 ? "12px" : "18px" }}>
+                <div style={{ width: "100%", marginBottom: isFullBleedBrand ? (isA5 ? "8px" : "12px") : (isA5 ? "12px" : "18px") }}>
                   {doc.brand === "tasnim_computers" ? (
                     // Tasnim Computers: Pure Flexbox Header with separate assets & CSS separator
                     <div>
@@ -274,8 +276,8 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       </div>
                     </div>
                   ) : (
-                    // Farhan Computers / Farhan Enterprises Header Banner
-                    <div>
+                    // Farhan Computers / Farhan Enterprises Header Banner - Full Bleed
+                    <div style={{ width: "100%" }}>
                       <img
                         src={doc.brand === "farhan_enterprises" ? farhanEntHeader : farhanPcHeader}
                         alt={brandConfig.displayName}
@@ -298,7 +300,9 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                     justifyContent: "space-between",
                     alignItems: "center",
                     borderBottom: "2px solid #000000",
-                    paddingBottom: "8px",
+                    padding: isFullBleedBrand
+                      ? (isA5 ? "8mm 10mm 8px 10mm" : "12mm 16mm 8px 16mm")
+                      : "0 0 8px 0",
                     marginBottom: "16px",
                     fontSize: "13px",
                     fontWeight: 700,
@@ -312,23 +316,33 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                 </div>
               )}
 
-              {/* METADATA ROW & CUSTOMER BLOCK (Page 1) */}
-              {isFirstPage && (
-                <>
-                  {/* Ref.NO & Date - Same Font, Clean Size */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontSize: isA5 ? "13px" : "15px",
-                      fontWeight: 700,
-                      marginBottom: isA5 ? "10px" : "14px",
-                      fontFamily: "Arial, Helvetica, sans-serif",
-                    }}
-                  >
-                    <div>
-                      <span>Ref.NO&nbsp;</span>
+              {/* CONTENT SECTION (Padded to keep table & text perfectly aligned) */}
+              <div
+                style={{
+                  padding: isFullBleedBrand
+                    ? (isA5 ? "0 10mm" : "0 16mm")
+                    : "0",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* METADATA ROW & CUSTOMER BLOCK (Page 1) */}
+                {isFirstPage && (
+                  <>
+                    {/* Ref.NO & Date - Same Font, Clean Size */}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        fontSize: isA5 ? "13px" : "15px",
+                        fontWeight: 700,
+                        marginBottom: isA5 ? "10px" : "14px",
+                        fontFamily: "Arial, Helvetica, sans-serif",
+                      }}
+                    >
+                      <div>
+                        <span>Ref.NO&nbsp;</span>
                       <span
                         style={{
                           textDecoration: "underline",
@@ -445,7 +459,13 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
 
                     {/* Empty filler rows for balance */}
                     {Array.from({ length: emptyRowsCount }).map((_, i) => (
-                      <tr key={`empty-${i}`} style={{ height: isA5 ? "36px" : "48px", borderBottom: "1px solid #000000" }}>
+                      <tr
+                        key={`empty-${i}`}
+                        style={{
+                          height: isA5 ? "32px" : (doc.brand === "farhan_enterprises" ? "42px" : "48px"),
+                          borderBottom: "1px solid #000000",
+                        }}
+                      >
                         <td style={{ borderRight: "1px solid #000000" }}></td>
                         <td style={{ borderRight: "1px solid #000000" }}></td>
                         <td style={{ borderRight: "1px solid #000000" }}></td>
@@ -506,29 +526,170 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                 </div>
               )}
             </div>
+          </div>
 
             {/* BOTTOM FOOTER SECTION (Only on Last Page) */}
             {isLastPage && (
-              <div style={{ position: "relative", zIndex: 10, width: "100%", marginTop: isA5 ? "16px" : "24px" }}>
+              <div
+                style={{
+                  position: "relative",
+                  zIndex: 10,
+                  width: "100%",
+                  marginTop: isFullBleedBrand
+                    ? (isA5 ? "8px" : "14px")
+                    : (isA5 ? "16px" : "24px"),
+                }}
+              >
                 {doc.brand === "farhan_enterprises" ? (
                   // Farhan Enterprises Footer
                   <div>
                     {stampSrc && (
-                      <div style={{ display: "flex", justifyContent: "flex-end", paddingRight: "40px", marginBottom: "-15px" }}>
-                        <img src={stampSrc} alt="Stamp" style={{ width: isA5 ? "75px" : "95px", height: "auto", objectFit: "contain", border: "none" }} />
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          paddingRight: isA5 ? "25px" : "40px",
+                          marginBottom: "8px",
+                          position: "relative",
+                          zIndex: 20,
+                        }}
+                      >
+                        <img
+                          src={stampSrc}
+                          alt="Stamp"
+                          style={{
+                            width: isA5 ? "75px" : "95px",
+                            height: isA5 ? "75px" : "95px",
+                            objectFit: "contain",
+                            border: "none",
+                            display: "block",
+                          }}
+                        />
                       </div>
                     )}
-                    <img src={farhanEntFooter} alt="Footer" style={{ width: "100%", height: "auto", display: "block", border: "none" }} />
+                    <img
+                      src={farhanEntFooter}
+                      alt="Footer"
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        display: "block",
+                        border: "none",
+                        outline: "none",
+                      }}
+                    />
                   </div>
                 ) : doc.brand === "farhan_computers" ? (
-                  // Farhan Computers Footer
-                  <div>
-                    {stampSrc && (
-                      <div style={{ display: "flex", justifyContent: "flex-end", paddingRight: "60px", marginBottom: "-15px" }}>
-                        <img src={stampSrc} alt="Stamp" style={{ width: isA5 ? "75px" : "95px", height: "auto", objectFit: "contain", border: "none" }} />
+                  // Farhan Computers: Clean Vector Contact Grid + Un-squished PC + Uplifted Stamp
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
+                      width: "100%",
+                      padding: isA5 ? "0 10mm 8mm 10mm" : "0 16mm 14mm 16mm",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {/* Left: 4-Row Contact Layout */}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: isA5 ? "6px" : "8px",
+                        fontSize: isA5 ? "11px" : "13px",
+                        color: "#111111",
+                        fontFamily: "Arial, Helvetica, sans-serif",
+                      }}
+                    >
+                      {/* Row 1: Address */}
+                      <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "7px" : "9px" }}>
+                        <div style={{ width: isA5 ? "14px" : "16px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                          <img
+                            src={pinIcon}
+                            alt=""
+                            style={{ width: isA5 ? "13px" : "15px", height: isA5 ? "14px" : "16px", objectFit: "contain" }}
+                          />
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>Anwar Chowk, Wah Cantt.</span>
+                        </div>
                       </div>
-                    )}
-                    <img src={farhanPcFooter} alt="Footer" style={{ width: "100%", height: "auto", display: "block", border: "none" }} />
+
+                      {/* Row 2: Email */}
+                      <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "7px" : "9px" }}>
+                        <div style={{ width: isA5 ? "14px" : "16px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                          <img
+                            src={emailIcon}
+                            alt=""
+                            style={{ width: isA5 ? "14px" : "16px", height: isA5 ? "11px" : "13px", objectFit: "contain" }}
+                          />
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>farhangill26@gmail.com</span>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Mobile */}
+                      <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "7px" : "9px" }}>
+                        <div style={{ width: isA5 ? "14px" : "16px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                          <img
+                            src={mobileIcon}
+                            alt=""
+                            style={{ width: isA5 ? "13px" : "15px", height: isA5 ? "14px" : "16px", objectFit: "contain" }}
+                          />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "14px" : "20px", fontWeight: 600 }}>
+                          <span>0345-5982628</span>
+                          <span>0345-5551559</span>
+                        </div>
+                      </div>
+
+                      {/* Row 4: Landline */}
+                      <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "7px" : "9px" }}>
+                        <div style={{ width: isA5 ? "14px" : "16px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                          <img
+                            src={landlineIcon}
+                            alt=""
+                            style={{ width: isA5 ? "13px" : "15px", height: isA5 ? "13px" : "15px", objectFit: "contain" }}
+                          />
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>051-4265300</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Round FC Stamp stacked cleanly above Desktop PC graphic */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isA5 ? "110px" : "150px", flexShrink: 0 }}>
+                      {stampSrc && (
+                        <img
+                          src={stampSrc}
+                          alt="Stamp"
+                          style={{
+                            width: isA5 ? "78px" : "96px",
+                            height: isA5 ? "78px" : "96px",
+                            objectFit: "contain",
+                            border: "none",
+                            marginBottom: isA5 ? "8px" : "12px",
+                            position: "relative",
+                            zIndex: 20,
+                            display: "block",
+                          }}
+                        />
+                      )}
+                      <img
+                        src={tasnimPc}
+                        alt="PC Graphic"
+                        style={{
+                          width: isA5 ? "110px" : "150px",
+                          height: "auto",
+                          objectFit: "contain",
+                          border: "none",
+                          display: "block",
+                        }}
+                      />
+                    </div>
                   </div>
                 ) : (
                   // Tasnim Computers: Clean Left Grid Layout + Right Stamp/PC
