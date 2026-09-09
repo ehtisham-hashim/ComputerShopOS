@@ -19,6 +19,7 @@ import { deleteLedgerEntry, deletePayableParty } from "../../db/payablesService"
 import { getPurchases, deletePurchase } from "../../db/purchaseService";
 import { ConfirmModal } from "../ui/ConfirmModal";
 import { DatePicker } from "../ui/DatePicker";
+import { CustomDropdown } from "../ui/CustomDropdown";
 import { ViewPurchaseModal } from "./ViewPurchaseModal";
 
 interface SupplierLedgerPaneProps {
@@ -324,17 +325,19 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
           </div>
 
           {/* Type dropdown */}
-          <select
+          <CustomDropdown
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="tail-input text-xs py-1 h-7 w-32"
-          >
-            <option value="ALL">All Types</option>
-            <option value="PURCHASE">Purchases</option>
-            <option value="PAYMENT">Payments</option>
-            <option value="RETURN">Returns</option>
-            <option value="ADJUSTMENT">Adjustments</option>
-          </select>
+            onChange={(val) => setTypeFilter(val)}
+            options={[
+              { value: "ALL", label: "All Types" },
+              { value: "PURCHASE", label: "Purchases" },
+              { value: "PAYMENT", label: "Payments" },
+              { value: "RETURN", label: "Returns" },
+              { value: "ADJUSTMENT", label: "Adjustments" },
+            ]}
+            size="sm"
+            minWidth={130}
+          />
         </div>
 
         {/* Date range with modern custom DatePicker */}

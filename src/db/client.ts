@@ -264,7 +264,13 @@ async function loadSeedData() {
     const mod = await import("./seedData.json");
     return (mod as any).default || mod;
   } catch {
-    return { receivables: [], payableParties: [], payableLedger: [] };
+    return {
+      receivables: [],
+      payableParties: [],
+      payableLedger: [],
+      monthlyReports: [],
+      expenses: [],
+    };
   }
 }
 
@@ -272,6 +278,8 @@ const memoryPayableParties: schema.PayableParty[] = [];
 const memoryPayableLedger: schema.PayableLedgerEntry[] = [];
 const memoryPurchases: schema.PurchaseRecord[] = [];
 const memoryPurchaseItems: schema.PurchaseItemRecord[] = [];
+const memoryExpenses: schema.Expense[] = [];
+const memoryMonthlyReports: schema.MonthlyReportRecord[] = [];
 
 export async function initDb(): Promise<void> {
   if (isInitialized) return;
@@ -450,6 +458,38 @@ export async function initDb(): Promise<void> {
           sell_price INTEGER NOT NULL DEFAULT 0,
           total_cost INTEGER NOT NULL DEFAULT 0
         )`,
+        `CREATE TABLE IF NOT EXISTS expenses (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          year INTEGER NOT NULL,
+          month INTEGER NOT NULL,
+          category TEXT NOT NULL DEFAULT 'MISC',
+          title TEXT NOT NULL,
+          amount INTEGER NOT NULL DEFAULT 0,
+          expense_date INTEGER NOT NULL,
+          payment_method TEXT NOT NULL DEFAULT 'CASH',
+          notes TEXT DEFAULT '',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
+        `CREATE TABLE IF NOT EXISTS monthly_reports (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          year INTEGER NOT NULL,
+          month INTEGER NOT NULL,
+          month_label TEXT NOT NULL,
+          gross_sales INTEGER NOT NULL DEFAULT 0,
+          gross_profit INTEGER NOT NULL DEFAULT 0,
+          total_expenses INTEGER NOT NULL DEFAULT 0,
+          net_profit INTEGER NOT NULL DEFAULT 0,
+          collected_cash INTEGER NOT NULL DEFAULT 0,
+          receivables INTEGER NOT NULL DEFAULT 0,
+          payables INTEGER NOT NULL DEFAULT 0,
+          repair_revenue INTEGER NOT NULL DEFAULT 0,
+          swap_margin INTEGER NOT NULL DEFAULT 0,
+          daily_data_json TEXT NOT NULL DEFAULT '[]',
+          expense_data_json TEXT NOT NULL DEFAULT '[]',
+          status TEXT NOT NULL DEFAULT 'CLOSED',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+          updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
       ];
 
       for (const q of tableQueries) {
@@ -484,6 +524,10 @@ export async function initDb(): Promise<void> {
         "CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(purchase_date)",
         "CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase ON purchase_items(purchase_id)",
         "CREATE INDEX IF NOT EXISTS idx_purchase_items_inventory ON purchase_items(inventory_id)",
+        "CREATE INDEX IF NOT EXISTS idx_expenses_year_month ON expenses(year, month)",
+        "CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)",
+        "CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_monthly_reports_year_month ON monthly_reports(year, month)",
       ];
 
       for (const idx of indexQueries) {
@@ -516,6 +560,80 @@ export async function initDb(): Promise<void> {
         }
       } catch (seedErr) {
         console.warn("Seeding payables/receivables error:", seedErr);
+      }
+
+      try {
+        const existingReports = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM monthly_reports");
+        const reportCount = existingReports?.[0]?.cnt ?? existingReports?.[0]?.["COUNT(*)"] ?? 0;
+        if (Number(reportCount) === 0) {
+          const seedData = await loadSeedData();
+          for (const mr of seedData.monthlyReports || []) {
+            const dailyDataStr = typeof mr.dailyDataJson === "string"
+              ? mr.dailyDataJson
+              : JSON.stringify(mr.dailyDataJson || []);
+            const expenseDataStr = typeof mr.expenseDataJson === "string"
+              ? mr.expenseDataJson
+              : JSON.stringify(mr.expenseDataJson || []);
+            await sqlDb.execute(
+              `INSERT OR IGNORE INTO monthly_reports (
+                id, year, month, month_label, gross_sales, gross_profit, total_expenses,
+                net_profit, collected_cash, receivables, payables, repair_revenue,
+                swap_margin, daily_data_json, expense_data_json, status, created_at, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                mr.id,
+                mr.year,
+                mr.month,
+                mr.monthLabel,
+                mr.grossSales ?? 0,
+                mr.grossProfit ?? 0,
+                mr.totalExpenses ?? 0,
+                mr.netProfit ?? 0,
+                mr.collectedCash ?? 0,
+                mr.receivables ?? 0,
+                mr.payables ?? 0,
+                mr.repairRevenue ?? 0,
+                mr.swapMargin ?? 0,
+                dailyDataStr,
+                expenseDataStr,
+                mr.status ?? "CLOSED",
+                mr.createdAt ?? Math.floor(Date.now() / 1000),
+                mr.updatedAt ?? Math.floor(Date.now() / 1000),
+              ]
+            );
+          }
+        }
+      } catch (reportSeedErr) {
+        console.warn("Seeding monthly_reports error:", reportSeedErr);
+      }
+
+      try {
+        const existingExpenses = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM expenses");
+        const expenseCount = existingExpenses?.[0]?.cnt ?? existingExpenses?.[0]?.["COUNT(*)"] ?? 0;
+        if (Number(expenseCount) === 0) {
+          const seedData = await loadSeedData();
+          for (const exp of seedData.expenses || []) {
+            await sqlDb.execute(
+              `INSERT OR IGNORE INTO expenses (
+                id, year, month, category, title, amount, expense_date, payment_method, notes, created_at
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                exp.id,
+                exp.year,
+                exp.month,
+                exp.category,
+                exp.title,
+                exp.amount ?? 0,
+                exp.expenseDate,
+                exp.paymentMethod ?? "CASH",
+                exp.notes ?? "",
+                exp.createdAt ?? Math.floor(Date.now() / 1000),
+              ]
+            );
+          }
+        }
+      } catch (expenseSeedErr) {
+        console.warn("Seeding expenses error:", expenseSeedErr);
       }
 
       // Ensure any party with opening balance has an OPENING entry in payable_ledger so balance can never be wiped
@@ -577,55 +695,109 @@ export async function initDb(): Promise<void> {
   }
 
   // Populate browser memory fallback if empty
-  if (memoryStore.payableParties.length === 0) {
+  if (
+    memoryStore.payableParties.length === 0 ||
+    memoryExpenses.length === 0 ||
+    memoryMonthlyReports.length === 0
+  ) {
     const seedData = await loadSeedData();
-    for (const p of seedData.payableParties || []) {
-      memoryPayableParties.push({
-        id: p.id,
-        name: p.name,
-        phone: p.phone || "",
-        address: p.address || "",
-        totalDebit: p.totalDebit || 0,
-        totalCredit: p.totalCredit || 0,
-        currentBalance: p.currentBalance || 0,
-        notes: p.notes || "",
-        createdAt: p.createdAt || (Math.floor(Date.now() / 1000) - 86400 * 30),
-      });
+    if (memoryStore.payableParties.length === 0) {
+      for (const p of seedData.payableParties || []) {
+        memoryPayableParties.push({
+          id: p.id,
+          name: p.name,
+          phone: p.phone || "",
+          address: p.address || "",
+          totalDebit: p.totalDebit || 0,
+          totalCredit: p.totalCredit || 0,
+          currentBalance: p.currentBalance || 0,
+          notes: p.notes || "",
+          createdAt: p.createdAt || (Math.floor(Date.now() / 1000) - 86400 * 30),
+        });
+      }
+      for (const l of seedData.payableLedger || []) {
+        memoryPayableLedger.push({
+          id: l.id,
+          partyId: l.partyId,
+          txDate: l.txDate,
+          txType: l.txType as schema.PayableTxType,
+          refNo: l.refNo || "",
+          description: l.description,
+          debit: l.debit || 0,
+          credit: l.credit || 0,
+          balance: l.balance || 0,
+          createdAt: l.createdAt || l.txDate,
+        });
+      }
+      for (const [i, r] of (seedData.receivables || []).entries()) {
+        memorySales.push({
+          id: 4 + i,
+          invoiceNo: r.invoiceNo,
+          customerId: null,
+          customerName: r.customerName,
+          customerPhone: r.customerPhone,
+          subtotal: r.totalAmount,
+          discount: 0,
+          tax: 0,
+          totalAmount: r.totalAmount,
+          paidAmount: r.paidAmount,
+          paymentStatus: r.paymentStatus as schema.PaymentStatus,
+          balanceDue: r.balanceDue,
+          paymentMethod: r.paymentMethod as schema.PaymentMethod,
+          notes: r.notes,
+          isBadDebt: r.isBadDebt || 0,
+          dueDate: null,
+          createdAt: r.createdAt,
+        });
+      }
     }
-    for (const l of seedData.payableLedger || []) {
-      memoryPayableLedger.push({
-        id: l.id,
-        partyId: l.partyId,
-        txDate: l.txDate,
-        txType: l.txType as schema.PayableTxType,
-        refNo: l.refNo || "",
-        description: l.description,
-        debit: l.debit || 0,
-        credit: l.credit || 0,
-        balance: l.balance || 0,
-        createdAt: l.createdAt || l.txDate,
-      });
+
+    if (memoryMonthlyReports.length === 0 && (seedData.monthlyReports || []).length > 0) {
+      for (const [i, mr] of (seedData.monthlyReports || []).entries()) {
+        const dailyDataStr = typeof mr.dailyDataJson === "string"
+          ? mr.dailyDataJson
+          : JSON.stringify(mr.dailyDataJson || []);
+        const expenseDataStr = typeof mr.expenseDataJson === "string"
+          ? mr.expenseDataJson
+          : JSON.stringify(mr.expenseDataJson || []);
+        memoryMonthlyReports.push({
+          id: mr.id ?? i + 1,
+          year: mr.year,
+          month: mr.month,
+          monthLabel: mr.monthLabel,
+          grossSales: mr.grossSales ?? 0,
+          grossProfit: mr.grossProfit ?? 0,
+          totalExpenses: mr.totalExpenses ?? 0,
+          netProfit: mr.netProfit ?? 0,
+          collectedCash: mr.collectedCash ?? 0,
+          receivables: mr.receivables ?? 0,
+          payables: mr.payables ?? 0,
+          repairRevenue: mr.repairRevenue ?? 0,
+          swapMargin: mr.swapMargin ?? 0,
+          dailyDataJson: dailyDataStr,
+          expenseDataJson: expenseDataStr,
+          status: (mr.status as schema.ReportStatus) ?? "CLOSED",
+          createdAt: mr.createdAt ?? Math.floor(Date.now() / 1000),
+          updatedAt: mr.updatedAt ?? Math.floor(Date.now() / 1000),
+        });
+      }
     }
-    for (const [i, r] of (seedData.receivables || []).entries()) {
-      memorySales.push({
-        id: 4 + i,
-        invoiceNo: r.invoiceNo,
-        customerId: null,
-        customerName: r.customerName,
-        customerPhone: r.customerPhone,
-        subtotal: r.totalAmount,
-        discount: 0,
-        tax: 0,
-        totalAmount: r.totalAmount,
-        paidAmount: r.paidAmount,
-        paymentStatus: r.paymentStatus as schema.PaymentStatus,
-        balanceDue: r.balanceDue,
-        paymentMethod: r.paymentMethod as schema.PaymentMethod,
-        notes: r.notes,
-        isBadDebt: r.isBadDebt || 0,
-        dueDate: null,
-        createdAt: r.createdAt,
-      });
+
+    if (memoryExpenses.length === 0 && (seedData.expenses || []).length > 0) {
+      for (const [i, exp] of (seedData.expenses || []).entries()) {
+        memoryExpenses.push({
+          id: exp.id ?? i + 1,
+          year: exp.year,
+          month: exp.month,
+          category: exp.category as schema.ExpenseCategory,
+          title: exp.title,
+          amount: exp.amount ?? 0,
+          expenseDate: exp.expenseDate,
+          paymentMethod: exp.paymentMethod ?? "CASH",
+          notes: exp.notes ?? "",
+          createdAt: exp.createdAt ?? Math.floor(Date.now() / 1000),
+        });
+      }
     }
   }
 
@@ -719,5 +891,7 @@ export const memoryStore = {
   payableLedger: memoryPayableLedger,
   purchases: memoryPurchases,
   purchaseItems: memoryPurchaseItems,
+  expenses: memoryExpenses,
+  monthlyReports: memoryMonthlyReports,
 };
 

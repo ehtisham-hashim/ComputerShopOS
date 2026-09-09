@@ -2,6 +2,7 @@ import React from "react";
 import { CheckCircle2, Trash2 } from "lucide-react";
 import { InventoryItem } from "../../db/schema";
 import { BuildSlot } from "./types";
+import { CustomDropdown } from "../ui/CustomDropdown";
 
 interface BuildSlotRowProps {
   slot: BuildSlot;
@@ -57,23 +58,22 @@ export const BuildSlotRow: React.FC<BuildSlotRowProps> = ({
             </div>
           </div>
         ) : (
-          <select
-            onChange={(e) => {
-              const it = items.find((i) => i.id === Number(e.target.value));
+          <CustomDropdown
+            value=""
+            onChange={(val) => {
+              const it = items.find((i) => i.id === Number(val));
               if (it) onSelectPart(slot.category, it);
             }}
-            defaultValue=""
-            className="tail-select text-xs"
-          >
-            <option value="" disabled>
-              Select compatible {slot.label}... ({matchingItems.length} in stock)
-            </option>
-            {matchingItems.map((it) => (
-              <option key={it.id} value={it.id}>
-                {it.name} — PKR {it.price.toLocaleString()} ({it.quantity} avail)
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: "", label: `Select compatible ${slot.label}... (${matchingItems.length} in stock)` },
+              ...matchingItems.map((it) => ({
+                value: String(it.id),
+                label: `${it.name} — PKR ${it.price.toLocaleString()} (${it.quantity} avail)`,
+              })),
+            ]}
+            className="w-full"
+            buttonClassName="w-full py-2 bg-white dark:bg-gray-900"
+          />
         )}
       </div>
     </div>

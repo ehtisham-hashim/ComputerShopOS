@@ -1,5 +1,5 @@
 import React from "react";
-import { DollarSign, TrendingUp, Wallet, Clock, Building2 } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Receipt, Clock, Building2 } from "lucide-react";
 import { ReportData } from "../../db/reportService";
 import { StatCard } from "../ui/StatCard";
 
@@ -8,43 +8,53 @@ interface ReportSummaryCardsProps {
 }
 
 export const ReportSummaryCards: React.FC<ReportSummaryCardsProps> = ({ report }) => {
+  const isProfitable = report.netProfit >= 0;
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Gross Sales Invoiced"
-          value={`PKR ${report.grossSales.toLocaleString()}`}
+          value={`Rs. ${report.grossSales.toLocaleString()}`}
           icon={DollarSign}
-          description={`${report.totalTransactions} invoices in period`}
+          description={`${report.totalTransactions} transactions in month`}
         />
         <StatCard
           title="Estimated Gross Profit"
-          value={`PKR ${report.grossProfit.toLocaleString()}`}
+          value={`Rs. ${report.grossProfit.toLocaleString()}`}
           icon={TrendingUp}
-          description={`${report.marginPercent}% estimated margin`}
+          description={`${report.marginPercent}% gross margin`}
         />
         <StatCard
-          title="Total Net Store Income"
-          value={`PKR ${report.totalNetIncome.toLocaleString()}`}
-          icon={Wallet}
-          description="Includes sales, repairs & swaps"
+          title="Total Operating Expenses"
+          value={`Rs. ${report.totalExpenses.toLocaleString()}`}
+          icon={Receipt}
+          variant={report.totalExpenses > 0 ? "warning" : "default"}
+          description="Rent, salaries, bills & overheads"
+        />
+        <StatCard
+          title="True Net Profit"
+          value={`Rs. ${report.netProfit.toLocaleString()}`}
+          icon={isProfitable ? TrendingUp : TrendingDown}
+          variant={isProfitable ? "default" : "warning"}
+          description={isProfitable ? "Gross Profit − Operating Expenses" : "Operating at a deficit this month"}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
-          title="Outstanding Receivables (Customer Dues)"
-          value={`PKR ${report.receivables.toLocaleString()}`}
+          title="Customer Receivables (Uncollected)"
+          value={`Rs. ${report.receivables.toLocaleString()}`}
           icon={Clock}
           variant={report.receivables > 0 ? "warning" : "default"}
-          description={report.receivables > 0 ? "Uncollected customer balances" : "Zero unpaid customer dues"}
+          description={report.receivables > 0 ? "Outstanding customer invoice dues" : "All customer accounts cleared"}
         />
         <StatCard
-          title="Total Payables (Supplier Debts)"
-          value={`PKR ${report.totalPayables.toLocaleString()}`}
+          title="Supplier Payables (Vendor Debts)"
+          value={`Rs. ${report.payables.toLocaleString()}`}
           icon={Building2}
-          variant={report.totalPayables > 0 ? "warning" : "default"}
-          description={report.totalPayables > 0 ? "Net balance owed to suppliers" : "All vendor accounts cleared"}
+          variant={report.payables > 0 ? "warning" : "default"}
+          description={report.payables > 0 ? "Net balance owed to suppliers" : "All vendor accounts settled"}
         />
       </div>
     </div>

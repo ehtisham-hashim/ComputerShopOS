@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Modal } from "../ui/Modal";
 import { DatePicker } from "../ui/DatePicker";
+import { CustomDropdown } from "../ui/CustomDropdown";
 import {
   PayableParty,
   InventoryItem,
@@ -310,21 +311,19 @@ export const NewPurchaseModal: React.FC<NewPurchaseModalProps> = ({
                   </button>
                 )}
               </div>
-              <select
+              <CustomDropdown
                 value={selectedPartyId}
-                onChange={(e) => setSelectedPartyId(e.target.value ? Number(e.target.value) : "")}
-                required
-                className="tail-input text-xs w-full font-medium"
-              >
-                <option value="" disabled>
-                  -- Select a supplier --
-                </option>
-                {parties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} (Balance: PKR {p.currentBalance.toLocaleString()})
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSelectedPartyId(val ? Number(val) : "")}
+                options={[
+                  { value: "", label: "-- Select a supplier --" },
+                  ...parties.map((p) => ({
+                    value: p.id,
+                    label: `${p.name} (Balance: PKR ${p.currentBalance.toLocaleString()})`,
+                  })),
+                ]}
+                className="w-full"
+                buttonClassName="w-full py-2 bg-white dark:bg-gray-900 font-medium"
+              />
             </div>
 
             {/* Purchase ID & Bill Ref */}
@@ -474,20 +473,20 @@ export const NewPurchaseModal: React.FC<NewPurchaseModalProps> = ({
                   {/* Restock Selector Quick Dropdown */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
                     <div className="md:col-span-12">
-                      <select
-                        value={row.inventoryId ?? ""}
-                        onChange={(e) => handleItemChange(row.id, "inventoryId", e.target.value)}
-                        className="tail-input text-xs w-full text-gray-500 dark:text-gray-400 py-1.5"
-                      >
-                        <option value="">
-                          ✨ + Enter New Catalog Hardware (or pick from existing to restock...)
-                        </option>
-                        {inventoryList.map((inv) => (
-                          <option key={inv.id} value={inv.id}>
-                            Restock: [{inv.title}] {inv.name} (In Stock: {inv.quantity}, Last Cost: PKR {inv.costPrice.toLocaleString()})
-                          </option>
-                        ))}
-                      </select>
+                      <CustomDropdown
+                        value={row.inventoryId ? String(row.inventoryId) : ""}
+                        onChange={(val) => handleItemChange(row.id, "inventoryId", val)}
+                        options={[
+                          { value: "", label: "✨ + Enter New Catalog Hardware (or pick from existing to restock...)" },
+                          ...inventoryList.map((inv) => ({
+                            value: String(inv.id),
+                            label: `Restock: [${inv.title}] ${inv.name} (In Stock: ${inv.quantity}, Last Cost: PKR ${inv.costPrice.toLocaleString()})`,
+                          })),
+                        ]}
+                        className="w-full"
+                        buttonClassName="w-full py-1.5 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900"
+                        size="sm"
+                      />
                     </div>
 
                     {/* Category */}
@@ -495,18 +494,14 @@ export const NewPurchaseModal: React.FC<NewPurchaseModalProps> = ({
                       <label className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400">
                         Category *
                       </label>
-                      <select
+                      <CustomDropdown
                         value={row.title}
-                        onChange={(e) => handleItemChange(row.id, "title", e.target.value)}
-                        className="tail-input text-xs w-full"
-                        required
-                      >
-                        {ItemTitles.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => handleItemChange(row.id, "title", val as ItemTitle)}
+                        options={ItemTitles.map((t) => ({ value: t, label: t }))}
+                        className="w-full"
+                        buttonClassName="w-full py-1.5 bg-white dark:bg-gray-900 font-bold"
+                        size="sm"
+                      />
                     </div>
 
                     {/* Item Name */}

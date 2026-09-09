@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { DocumentRecord, BrandType } from "../../db/schema";
 import { parseDocumentItems } from "../../db/documentsService";
-import { generateAndDownloadDocx } from "../../services/docx/docxGenerator";
+import { generateAndDownloadPdf } from "../../services/pdf/pdfGenerator";
 import { EmptyState } from "../ui/EmptyState";
 import { SearchInput } from "../ui/SearchInput";
 
@@ -46,9 +46,9 @@ export const DocHistoryTable: React.FC<DocHistoryTableProps> = ({
   const handleDownload = async (doc: DocumentRecord) => {
     try {
       setDownloadingId(doc.id);
-      await generateAndDownloadDocx(doc);
+      await generateAndDownloadPdf(doc);
     } catch (err) {
-      console.error("Failed to generate DOCX:", err);
+      console.error("Failed to generate PDF:", err);
     } finally {
       setDownloadingId(null);
     }
@@ -186,12 +186,12 @@ export const DocHistoryTable: React.FC<DocHistoryTableProps> = ({
                       {/* Actions */}
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Download DOCX */}
+                          {/* Download PDF */}
                           <button
                             type="button"
                             onClick={() => handleDownload(doc)}
                             disabled={isDownloading}
-                            title="Download .docx File"
+                            title="Export .pdf File"
                             className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-400 dark:hover:bg-brand-900/50 text-xs font-semibold transition-colors disabled:opacity-50"
                           >
                             {isDownloading ? (
@@ -199,7 +199,7 @@ export const DocHistoryTable: React.FC<DocHistoryTableProps> = ({
                             ) : (
                               <FileDown className="size-3.5" />
                             )}
-                            <span>DOCX</span>
+                            <span>PDF</span>
                           </button>
 
                           {/* Inspect / View */}

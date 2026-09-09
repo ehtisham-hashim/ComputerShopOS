@@ -43,7 +43,7 @@ const NO_BORDER_CONFIG = {
 
 const BLACK_BORDER = {
   style: BorderStyle.SINGLE,
-  size: 8,
+  size: 4,
   color: "000000",
 };
 
@@ -59,8 +59,8 @@ const BORDER_CONFIG = {
 const CELL_MARGINS = {
   top: 90,
   bottom: 90,
-  left: 120,
-  right: 120,
+  left: 110,
+  right: 110,
 };
 
 export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void> {
@@ -76,8 +76,8 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         data: assets.watermark,
         type: "png",
         transformation: {
-          width: 320,
-          height: 170,
+          width: brandConfig.watermarkDimensions.width,
+          height: brandConfig.watermarkDimensions.height,
         },
         floating: {
           horizontalPosition: {
@@ -86,7 +86,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
           },
           verticalPosition: {
             relative: VerticalPositionRelativeFrom.PAGE,
-            offset: 4800000, // Center of standard A4 page behind table
+            offset: 3600000, // Vertically centered directly behind the items table
           },
           wrap: {
             type: TextWrappingType.NONE,
@@ -105,8 +105,8 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         data: assets.header,
         type: "jpg",
         transformation: {
-          width: 595,
-          height: 110,
+          width: brandConfig.headerDimensions.width,
+          height: brandConfig.headerDimensions.height,
         },
       })
     );
@@ -114,13 +114,13 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
 
   const headerParagraph = new Paragraph({
     alignment: AlignmentType.CENTER,
-    spacing: { before: 0, after: 120 },
+    spacing: { before: 0, after: 100 },
     children: headerChildren,
   });
 
   // 3. Ref.NO & Date Row (Using TabStop to guarantee zero table borders in LibreOffice)
   const refDateParagraph = new Paragraph({
-    spacing: { before: 40, after: 80 },
+    spacing: { before: 20, after: 60 },
     tabStops: [
       {
         type: TabStopType.RIGHT,
@@ -128,17 +128,17 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
       },
     ],
     children: [
-      new TextRun({ text: "Ref.NO ", bold: true, size: 21 }),
+      new TextRun({ text: "Ref.NO ", bold: true, size: 24 }),
       new TextRun({
         text: doc.refNo,
         bold: true,
-        size: 21,
+        size: 24,
         underline: { type: UnderlineType.SINGLE },
       }),
       new TextRun({
         text: "\tDate: " + doc.date,
         bold: true,
-        size: 21,
+        size: 24,
       }),
     ],
   });
@@ -146,33 +146,33 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
   // 4. Customer Info Block
   const customerParagraphs = [
     new Paragraph({
-      spacing: { before: 20, after: 20 },
+      spacing: { before: 10, after: 10 },
       children: [
-        new TextRun({ text: "MS:              ", bold: true, size: 21 }),
-        new TextRun({ text: doc.customerName.toUpperCase(), bold: true, size: 21 }),
+        new TextRun({ text: "MS:              ", bold: true, size: 24 }),
+        new TextRun({ text: doc.customerName.toUpperCase(), bold: true, size: 24 }),
       ],
     }),
     new Paragraph({
-      spacing: { after: 140 },
+      spacing: { after: 90 },
       children: [
-        new TextRun({ text: "Address:      ", bold: true, size: 21 }),
-        new TextRun({ text: doc.customerAddress || "PWD ISB,", size: 21 }),
+        new TextRun({ text: "Address:      ", bold: true, size: 24 }),
+        new TextRun({ text: doc.customerAddress || "PWD ISB,", size: 24 }),
       ],
     }),
   ];
 
-  // 5. 5-Column Items Table
+  // 5. 5-Column Items Table (Matching LAPTOP BILL reference: 8%, 54%, 7%, 14%, 17%)
   const colWidths = {
-    sn: { size: 7, type: WidthType.PERCENTAGE },
-    desc: { size: 53, type: WidthType.PERCENTAGE },
-    qty: { size: 8, type: WidthType.PERCENTAGE },
-    price: { size: 16, type: WidthType.PERCENTAGE },
-    total: { size: 16, type: WidthType.PERCENTAGE },
+    sn: { size: 8, type: WidthType.PERCENTAGE },
+    desc: { size: 54, type: WidthType.PERCENTAGE },
+    qty: { size: 7, type: WidthType.PERCENTAGE },
+    price: { size: 14, type: WidthType.PERCENTAGE },
+    total: { size: 17, type: WidthType.PERCENTAGE },
   };
 
   const tableHeaderRow = new TableRow({
     tableHeader: true,
-    height: { value: 420, rule: HeightRule.ATLEAST },
+    height: { value: 460, rule: HeightRule.ATLEAST },
     children: [
       new TableCell({
         width: colWidths.sn,
@@ -183,7 +183,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: "S N", bold: true, size: 20 })],
+            children: [new TextRun({ text: "S N", bold: true, size: 22 })],
           }),
         ],
       }),
@@ -196,7 +196,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: "Description", bold: true, size: 20 })],
+            children: [new TextRun({ text: "Description", bold: true, size: 22 })],
           }),
         ],
       }),
@@ -209,7 +209,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: "Qty", bold: true, size: 20 })],
+            children: [new TextRun({ text: "Qty", bold: true, size: 22 })],
           }),
         ],
       }),
@@ -222,7 +222,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: "Unit price", bold: true, size: 20 })],
+            children: [new TextRun({ text: "Unit price", bold: true, size: 22 })],
           }),
         ],
       }),
@@ -235,7 +235,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         children: [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: "Total Amount", bold: true, size: 20 })],
+            children: [new TextRun({ text: "Total Amount", bold: true, size: 22 })],
           }),
         ],
       }),
@@ -247,12 +247,12 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
     const descLines = (item.description || "").split("\n");
     const descParagraphs = descLines.map((line, lIdx) =>
       new Paragraph({
-        spacing: { before: 30, after: 30 },
+        spacing: { before: 20, after: 20 },
         children: [
           new TextRun({
             text: line.trim(),
             bold: lIdx === 0,
-            size: lIdx === 0 ? 20 : 18,
+            size: lIdx === 0 ? 22 : 20,
           }),
         ],
       })
@@ -261,7 +261,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
     const qtyStr = item.qty < 10 ? "0" + item.qty : "" + item.qty;
 
     return new TableRow({
-      height: { value: 650, rule: HeightRule.ATLEAST },
+      height: { value: 520, rule: HeightRule.ATLEAST },
       children: [
         new TableCell({
           width: colWidths.sn,
@@ -271,7 +271,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: "" + (index + 1), size: 20 })],
+              children: [new TextRun({ text: "" + (index + 1), size: 22 })],
             }),
           ],
         }),
@@ -290,7 +290,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: qtyStr, size: 20 })],
+              children: [new TextRun({ text: qtyStr, size: 22 })],
             }),
           ],
         }),
@@ -302,7 +302,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
           children: [
             new Paragraph({
               alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: "" + item.unitPrice, size: 20 })],
+              children: [new TextRun({ text: "" + item.unitPrice, size: 22 })],
             }),
           ],
         }),
@@ -317,7 +317,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
               children: [
                 new TextRun({
                   text: item.totalAmount.toLocaleString() + "/.",
-                  size: 20,
+                  size: 22,
                 }),
               ],
             }),
@@ -328,13 +328,13 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
   });
 
   // Empty filler rows to maintain full-page proportion
-  const totalRowsTarget = 5;
+  const totalRowsTarget = brandConfig.targetEmptyRows;
   const emptyRowsCount = Math.max(0, totalRowsTarget - items.length);
   const emptyRows: TableRow[] = [];
   for (let i = 0; i < emptyRowsCount; i++) {
     emptyRows.push(
       new TableRow({
-        height: { value: 520, rule: HeightRule.ATLEAST },
+        height: { value: 480, rule: HeightRule.ATLEAST },
         children: [
           new TableCell({
             width: colWidths.sn,
@@ -373,7 +373,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
 
   // Summary Row (TOTAL AMOUNT)
   const totalRow = new TableRow({
-    height: { value: 450, rule: HeightRule.ATLEAST },
+    height: { value: 480, rule: HeightRule.ATLEAST },
     children: [
       new TableCell({
         columnSpan: 4,
@@ -386,7 +386,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
               new TextRun({
                 text: "TOTAL AMOUNT",
                 bold: true,
-                size: 21,
+                size: 23,
               }),
             ],
           }),
@@ -404,7 +404,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
               new TextRun({
                 text: doc.totalAmount.toLocaleString() + "/.",
                 bold: true,
-                size: 21,
+                size: 23,
               }),
             ],
           }),
@@ -420,15 +420,36 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
   });
 
   // 6. Terms & Sign-off Section
+  const termsHeadingText = brandConfig.termsHeading || "TERMS & CONDITIONS: -";
   const termsParagraphs = [
     new Paragraph({
-      spacing: { before: 200, after: 30 },
+      spacing: { before: 130, after: 20 },
       children: [
         new TextRun({
-          text: "TERMS & CONDITIONS: -",
+          text: termsHeadingText,
           bold: true,
-          size: 19,
+          size: 21,
           underline: { type: UnderlineType.SINGLE },
+        }),
+      ],
+    }),
+    new Paragraph({
+      spacing: { after: 15 },
+      children: [
+        new TextRun({
+          text: "PAYMENT MODE: " + (doc.paymentMode || "CASH").toUpperCase(),
+          bold: true,
+          size: 20,
+        }),
+      ],
+    }),
+    new Paragraph({
+      spacing: { after: 25 },
+      children: [
+        new TextRun({
+          text: (doc.warrantyTerms || "ONE WEEK CHECK WARRENTY").toUpperCase(),
+          bold: true,
+          size: 20,
         }),
       ],
     }),
@@ -436,112 +457,227 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
       spacing: { after: 20 },
       children: [
         new TextRun({
-          text: "PAYMENT MODE: " + (doc.paymentMode || "CASH").toUpperCase(),
-          bold: true,
-          size: 19,
-        }),
-      ],
-    }),
-    new Paragraph({
-      spacing: { after: 50 },
-      children: [
-        new TextRun({
-          text: (doc.warrantyTerms || "ONE WEEK CHECK WARRENTY").toUpperCase(),
-          bold: true,
-          size: 19,
-        }),
-      ],
-    }),
-    new Paragraph({
-      spacing: { after: 30 },
-      children: [
-        new TextRun({
           text: "Thank you and best regards,",
-          size: 19,
+          size: 20,
         }),
       ],
     }),
     new Paragraph({
-      spacing: { after: 60 },
+      spacing: { after: 35 },
       children: [
         new TextRun({
           text: "THIS IS A SYSTEM GENERATED INVOICE AND DOES NOT NEED ANY SIGNATURE",
           bold: true,
-          size: 17,
+          size: 18,
         }),
       ],
     }),
   ];
 
   // 7. Bottom Section:
-  // Left: Branch Details
-  // Right: Stamp ABOVE the Computer Graphic (Vertical Stack)
-  const rightChildren: Paragraph[] = [];
-  if (assets.stamp) {
-    rightChildren.push(
+  // For brands with full-width footer banner (Farhan Computers, Farhan Enterprises):
+  // Stamp above footer on right + full-width footer image banner at the bottom.
+  // For Tasnim Computers:
+  // Branch details on left + Stamp & PC graphic on right.
+  const bottomElements: (Paragraph | Table)[] = [];
+
+  if (brandConfig.hasFooterBanner && assets.footer) {
+    if (assets.stamp) {
+      bottomElements.push(
+        new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          spacing: { before: 30, after: 15 },
+          children: [
+            new ImageRun({
+              data: assets.stamp,
+              type: "png",
+              transformation: {
+                width: brandConfig.stampDimensions.width,
+                height: brandConfig.stampDimensions.height,
+              },
+            }),
+          ],
+        })
+      );
+    }
+
+    bottomElements.push(
       new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { after: 40 },
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 10, after: 0 },
         children: [
           new ImageRun({
-            data: assets.stamp,
-            type: "png",
+            data: assets.footer,
+            type: "jpg",
             transformation: {
-              width: 90,
-              height: 90,
+              width: brandConfig.footerDimensions!.width,
+              height: brandConfig.footerDimensions!.height,
             },
           }),
         ],
       })
     );
-  }
-  if (assets.graphic) {
-    rightChildren.push(
+  } else {
+    // Tasnim Computers layout: addresses on left with icons, stamp + PC graphic on right
+    const rightChildren: Paragraph[] = [];
+    if (assets.stamp) {
+      rightChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          spacing: { after: 12 },
+          children: [
+            new ImageRun({
+              data: assets.stamp,
+              type: "png",
+              transformation: {
+                width: brandConfig.stampDimensions.width,
+                height: brandConfig.stampDimensions.height,
+              },
+            }),
+          ],
+        })
+      );
+    }
+    if (assets.graphic) {
+      rightChildren.push(
+        new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          children: [
+            new ImageRun({
+              data: assets.graphic,
+              type: "png",
+              transformation: {
+                width: brandConfig.graphicDimensions?.width || 145,
+                height: brandConfig.graphicDimensions?.height || 94,
+              },
+            }),
+          ],
+        })
+      );
+    }
+
+    // Branch paragraphs with detailed styling
+    const branchLines = [
       new Paragraph({
-        alignment: AlignmentType.RIGHT,
+        spacing: { after: 12 },
         children: [
-          new ImageRun({
-            data: assets.graphic,
-            type: "png",
-            transformation: {
-              width: 140,
-              height: 90,
-            },
-          }),
+          new TextRun({ text: "Branch 1: ", bold: true, size: 18 }),
+          new TextRun({ text: "Anwar Chowk, Wah Cantt.", size: 18 }),
         ],
-      })
-    );
-  }
-
-  const branchParagraphs = brandConfig.addresses.map((addr) =>
-    new Paragraph({
-      spacing: { after: 30 },
-      children: [new TextRun({ text: addr, size: 16, bold: true })],
-    })
-  );
-
-  const bottomTable = new Table({
-    width: { size: 100, type: WidthType.PERCENTAGE },
-    borders: NO_BORDER_CONFIG,
-    rows: [
-      new TableRow({
+      }),
+      new Paragraph({
+        spacing: { after: 18 },
         children: [
-          new TableCell({
-            width: { size: 60, type: WidthType.PERCENTAGE },
-            borders: NO_BORDER_CONFIG,
-            verticalAlign: VerticalAlign.BOTTOM,
-            children: branchParagraphs,
-          }),
-          new TableCell({
-            width: { size: 40, type: WidthType.PERCENTAGE },
-            borders: NO_BORDER_CONFIG,
-            verticalAlign: VerticalAlign.BOTTOM,
-            children: rightChildren,
+          new TextRun({ text: "0345-5982628    ", size: 18 }),
+          ...(assets.phoneIcon
+            ? [
+                new ImageRun({
+                  data: assets.phoneIcon,
+                  type: "png",
+                  transformation: { width: 13, height: 13 },
+                }),
+              ]
+            : []),
+          new TextRun({ text: "  051-4265300", size: 18 }),
+        ],
+      }),
+      new Paragraph({
+        spacing: { after: 12 },
+        children: [
+          new TextRun({ text: "Branch 2: ", bold: true, size: 18 }),
+          new TextRun({ text: "Bilal Market NawabAbad, Near Barrier 2 WahCantt.", size: 18 }),
+        ],
+      }),
+      new Paragraph({
+        spacing: { after: 0 },
+        children: [
+          new TextRun({ text: "0301-5177866    ", size: 18 }),
+          ...(assets.emailIcon
+            ? [
+                new ImageRun({
+                  data: assets.emailIcon,
+                  type: "png",
+                  transformation: { width: 14, height: 11 },
+                }),
+              ]
+            : []),
+          new TextRun({
+            text: "  tcomwah@gmail.com",
+            size: 18,
+            color: "0000FF",
+            underline: { type: UnderlineType.SINGLE },
           }),
         ],
       }),
-    ],
-  });
+    ];
+
+    let leftCellContent: (Paragraph | Table)[];
+
+    if (assets.contactIcons) {
+      // Sub-table pairing the 4-icon strip on the left with branch text lines
+      leftCellContent = [
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: NO_BORDER_CONFIG,
+          rows: [
+            new TableRow({
+              children: [
+                new TableCell({
+                  width: { size: 8, type: WidthType.PERCENTAGE },
+                  borders: NO_BORDER_CONFIG,
+                  verticalAlign: VerticalAlign.CENTER,
+                  children: [
+                    new Paragraph({
+                      children: [
+                        new ImageRun({
+                          data: assets.contactIcons,
+                          type: "png",
+                          transformation: { width: 16, height: 82 },
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                new TableCell({
+                  width: { size: 92, type: WidthType.PERCENTAGE },
+                  borders: NO_BORDER_CONFIG,
+                  verticalAlign: VerticalAlign.CENTER,
+                  children: branchLines,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ];
+    } else {
+      leftCellContent = branchLines;
+    }
+
+    bottomElements.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: NO_BORDER_CONFIG,
+        rows: [
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 65, type: WidthType.PERCENTAGE },
+                borders: NO_BORDER_CONFIG,
+                verticalAlign: VerticalAlign.BOTTOM,
+                children: leftCellContent,
+              }),
+              new TableCell({
+                width: { size: 35, type: WidthType.PERCENTAGE },
+                borders: NO_BORDER_CONFIG,
+                verticalAlign: VerticalAlign.BOTTOM,
+                children: rightChildren,
+              }),
+            ],
+          }),
+        ],
+      })
+    );
+  }
 
   // Assemble full Word document
   const wordDoc = new Document({
@@ -563,11 +699,15 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
       {
         properties: {
           page: {
+            size: {
+              width: 11906,
+              height: 16838,
+            },
             margin: {
-              top: 450,
-              bottom: 400,
-              left: 700,
-              right: 700,
+              top: 500,
+              bottom: 300,
+              left: 450,
+              right: 400,
             },
           },
         },
@@ -577,7 +717,7 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
           ...customerParagraphs,
           mainTable,
           ...termsParagraphs,
-          bottomTable,
+          ...bottomElements,
         ],
       },
     ],

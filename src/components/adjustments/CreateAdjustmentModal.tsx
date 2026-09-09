@@ -4,6 +4,7 @@ import { Customer, InventoryItem, PaymentStatus, ItemTitle, ItemTitles } from ".
 import { createAdjustment, getNextTradeInSku } from "../../db/adjustmentsService";
 import { Modal } from "../ui/Modal";
 import { CustomSelect } from "../ui/Select";
+import { CustomDropdown } from "../ui/CustomDropdown";
 
 interface CreateAdjustmentModalProps {
   isOpen: boolean;
@@ -280,17 +281,13 @@ export const CreateAdjustmentModal: React.FC<CreateAdjustmentModalProps> = ({
               <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
                 Category *
               </label>
-              <select
+              <CustomDropdown
                 value={itemTakenCategory}
-                onChange={(e) => handleCategoryChange(e.target.value as ItemTitle)}
-                className="tail-input text-xs"
-              >
-                {ItemTitles.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => handleCategoryChange(val as ItemTitle)}
+                options={ItemTitles.map((t) => ({ value: t, label: t }))}
+                className="w-full"
+                buttonClassName="w-full py-2 bg-gray-50 dark:bg-gray-800"
+              />
             </div>
 
             <div className="sm:col-span-2">
@@ -326,17 +323,13 @@ export const CreateAdjustmentModal: React.FC<CreateAdjustmentModalProps> = ({
               <label className="block text-[11px] font-bold text-gray-600 dark:text-gray-400 mb-1">
                 Physical Condition
               </label>
-              <select
+              <CustomDropdown
                 value={itemTakenCondition}
-                onChange={(e) => setItemTakenCondition(e.target.value)}
-                className="tail-input text-xs"
-              >
-                {CONDITION_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setItemTakenCondition(val)}
+                options={CONDITION_OPTIONS.map((c) => ({ value: c, label: c }))}
+                className="w-full"
+                buttonClassName="w-full py-2 bg-gray-50 dark:bg-gray-800"
+              />
             </div>
 
             <div>
