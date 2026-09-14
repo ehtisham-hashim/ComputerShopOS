@@ -4,7 +4,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { saveAs } from "file-saver";
 import { DocumentRecord } from "../../db/schema";
-import { InvoiceA4Document, PaperSize } from "../../components/docGenerator/InvoiceA4Document";
+import { InvoiceA4Document, PaperSize, PrintLayoutMode } from "../../components/docGenerator/InvoiceA4Document";
 
 /**
  * Wait for all images inside an element to fully load
@@ -29,7 +29,8 @@ function waitForImages(element: HTMLElement): Promise<void> {
  */
 export async function generateAndDownloadPdf(
   doc: DocumentRecord,
-  paperSize: PaperSize = "a4"
+  paperSize: PaperSize = "a4",
+  printMode: PrintLayoutMode = "full"
 ): Promise<void> {
   const isA5 = paperSize === "a5";
   const isLetter = paperSize === "letter";
@@ -59,6 +60,7 @@ export async function generateAndDownloadPdf(
         React.createElement(InvoiceA4Document, {
           document: doc,
           paperSize: paperSize,
+          printMode: printMode,
         })
       );
       setTimeout(resolve, 80);
@@ -106,7 +108,8 @@ export async function generateAndDownloadPdf(
 
     const cleanRef = doc.refNo.replace(/[^a-zA-Z0-9_-]/g, "_");
     const cleanCust = doc.customerName.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `${doc.brand}_${cleanRef}_${cleanCust}_${paperSize.toUpperCase()}.pdf`;
+    const modeTag = printMode === "table_only" ? "_TABLE_ONLY" : "";
+    const filename = `${doc.brand}_${cleanRef}_${cleanCust}_${paperSize.toUpperCase()}${modeTag}.pdf`;
 
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -174,7 +177,8 @@ export async function generateAndDownloadPdf(
  */
 export async function printDocument(
   doc: DocumentRecord,
-  paperSize: PaperSize = "a4"
+  paperSize: PaperSize = "a4",
+  printMode: PrintLayoutMode = "full"
 ): Promise<void> {
   const isA5 = paperSize === "a5";
   const isLetter = paperSize === "letter";
@@ -198,6 +202,7 @@ export async function printDocument(
         React.createElement(InvoiceA4Document, {
           document: doc,
           paperSize: paperSize,
+          printMode: printMode,
         })
       );
       setTimeout(resolve, 80);

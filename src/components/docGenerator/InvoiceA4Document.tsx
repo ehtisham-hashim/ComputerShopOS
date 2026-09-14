@@ -30,18 +30,22 @@ import farhanEntFooter from "../../assets/brands/farhan_enterprises/footer.jpg";
 import farhanEntWm from "../../assets/brands/farhan_enterprises/watermark.png";
 
 export type PaperSize = "a4" | "a5" | "letter" | "legal";
+export type PrintLayoutMode = "full" | "table_only";
 
 interface InvoiceDocumentProps {
   document: DocumentRecord;
   paperSize?: PaperSize;
+  printMode?: PrintLayoutMode;
   className?: string;
 }
 
 export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
   document: doc,
   paperSize = "a4",
+  printMode = "full",
   className = "",
 }) => {
+  const isTableOnly = printMode === "table_only";
   const brandConfig = BRAND_CONFIGS[doc.brand] || BRAND_CONFIGS.tasnim_computers;
   const items: DocumentLineItem[] = parseDocumentItems(doc.itemsJson);
 
@@ -110,7 +114,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
             style={{
               width: pageWidth,
               minHeight: pageMinHeight,
-              padding: isFullBleedBrand ? 0 : pagePadding,
+              padding: isTableOnly ? pagePadding : (isFullBleedBrand ? 0 : pagePadding),
               boxSizing: "border-box",
               backgroundColor: "#ffffff",
               color: "#000000",
@@ -122,7 +126,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
             }}
           >
             {/* 1. CENTERED WATERMARK (100% Opacity - using native transparent PNG alpha) */}
-            {watermarkSrc && (
+            {!isTableOnly && watermarkSrc && (
               <div
                 style={{
                   position: "absolute",
@@ -156,7 +160,33 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
             {/* TOP CONTENT SECTION */}
             <div style={{ position: "relative", zIndex: 10, width: "100%" }}>
               {/* HEADER BANNER */}
-              {isFirstPage ? (
+              {isTableOnly ? (
+                isFirstPage ? (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: isA5 ? "32mm" : "40mm",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: "1.5px solid #000000",
+                      paddingBottom: "6px",
+                      marginBottom: "14px",
+                      fontSize: isA5 ? "11px" : "12px",
+                      fontWeight: 700,
+                      fontFamily: "Arial, Helvetica, sans-serif",
+                    }}
+                  >
+                    <span>Invoice #{doc.refNo} (Page {pageIndex + 1} of {pages.length})</span>
+                    <span>Date: {doc.date}</span>
+                  </div>
+                )
+              ) : isFirstPage ? (
                 <div style={{ width: "100%", marginBottom: isFullBleedBrand ? (isA5 ? "8px" : "12px") : (isA5 ? "12px" : "18px") }}>
                   {doc.brand === "tasnim_computers" ? (
                     // Tasnim Computers: Pure Flexbox Header with separate assets & CSS separator
@@ -325,7 +355,9 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
               {/* CONTENT SECTION (Padded to keep table & text perfectly aligned) */}
               <div
                 style={{
-                  padding: isFullBleedBrand
+                  padding: isTableOnly
+                    ? "0"
+                    : isFullBleedBrand
                     ? (isA5 ? "0 10mm" : "0 16mm")
                     : "0",
                   width: "100%",
@@ -497,7 +529,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
           </div>
 
             {/* UNIFIED BOTTOM SECTION (Terms & Conditions, Stamp & Footer - Only on Last Page) */}
-            {isLastPage && (
+            {isLastPage && !isTableOnly && (
               <div
                 style={{
                   position: "relative",
