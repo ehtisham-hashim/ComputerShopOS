@@ -50,7 +50,9 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
   const isLegal = paperSize === "legal";
   const isFullBleedBrand = doc.brand === "farhan_enterprises" || doc.brand === "farhan_computers";
 
-  const itemsPerPage = isA5 ? 5 : (isLetter ? 6 : (isLegal ? 8 : 7));
+  const itemsPerPage = doc.brand === "farhan_enterprises"
+    ? (isA5 ? 4 : (isLetter ? 5 : (isLegal ? 7 : 6)))
+    : (isA5 ? 5 : (isLetter ? 6 : (isLegal ? 8 : 7)));
   const isMultiPage = items.length > itemsPerPage;
 
   // Split into chunks if multi-page
@@ -99,18 +101,6 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
       {pages.map((pageItems, pageIndex) => {
         const isFirstPage = pageIndex === 0;
         const isLastPage = pageIndex === pages.length - 1;
-
-        // Ensure enough filler rows so the table spans comfortably down the page without leaving a huge void
-        const targetRowCount = isA5
-          ? (doc.brand === "farhan_enterprises" ? 4 : 5)
-          : isLetter
-          ? (doc.brand === "farhan_enterprises" ? 5 : 6)
-          : isLegal
-          ? (doc.brand === "farhan_enterprises" ? 7 : 8)
-          : (doc.brand === "farhan_enterprises" ? 6 : 7);
-        const emptyRowsCount = isLastPage
-          ? Math.max(0, targetRowCount - pageItems.length)
-          : 0;
 
         return (
           <div
@@ -473,31 +463,6 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       );
                     })}
 
-                    {/* Empty filler rows for balance */}
-                    {Array.from({ length: emptyRowsCount }).map((_, i) => (
-                      <tr
-                        key={`empty-${i}`}
-                        style={{
-                          height: isA5
-                            ? "32px"
-                            : isLetter
-                            ? doc.brand === "farhan_enterprises"
-                              ? "38px"
-                              : "42px"
-                            : doc.brand === "farhan_enterprises"
-                            ? "42px"
-                            : "48px",
-                          borderBottom: "1px solid #000000",
-                        }}
-                      >
-                        <td style={{ borderRight: "1px solid #000000" }}></td>
-                        <td style={{ borderRight: "1px solid #000000" }}></td>
-                        <td style={{ borderRight: "1px solid #000000" }}></td>
-                        <td style={{ borderRight: "1px solid #000000" }}></td>
-                        <td></td>
-                      </tr>
-                    ))}
-
                     {/* TOTAL AMOUNT ROW (Shown on last page) */}
                     {isLastPage && (
                       <tr style={{ borderTop: "1.5px solid #000000", backgroundColor: "#ffffff", fontWeight: 700 }}>
@@ -528,98 +493,82 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                   </tbody>
                 </table>
               </div>
-
-              {/* TERMS & CONDITIONS + STAMP (Only on Last Page) */}
-              {isLastPage && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginTop: isA5 ? "8px" : "12px",
-                    width: "100%",
-                  }}
-                >
-                  {/* Left: Terms & Conditions */}
-                  <div style={{ fontSize: isA5 ? "11px" : "13px", color: "#000000", lineHeight: "1.6", fontFamily: "Arial, Helvetica, sans-serif" }}>
-                    <div style={{ fontWeight: 700, textDecoration: "underline" }}>
-                      {brandConfig.termsHeading || "TERMS & CONDITIONS: -"}
-                    </div>
-                    <div style={{ fontWeight: 700 }}>
-                      PAYMENT MODE:&nbsp;{(doc.paymentMode || "CASH").toUpperCase()}
-                    </div>
-                    <div style={{ fontWeight: 700 }}>
-                      {(doc.warrantyTerms || "ONE WEEK CHECK WARRENTY").toUpperCase()}
-                    </div>
-                    <div style={{ color: "#374151", marginTop: "3px" }}>
-                      Thank you and best regards,
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: isA5 ? "10px" : "11.5px", color: "#111111", marginTop: "2px" }}>
-                      {brandConfig.defaultDisclaimer}
-                    </div>
-                  </div>
-
-                  {/* Right: Stamp for Tasnim Computers & Farhan Computers - Slightly below the table, slightly bigger */}
-                  {(doc.brand === "tasnim_computers" || doc.brand === "farhan_computers") && stampSrc && (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        alignItems: "center",
-                        paddingRight: isA5 ? "10px" : "20px",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <img
-                        src={stampSrc}
-                        alt="Stamp"
-                        style={{
-                          width: isA5 ? "92px" : "118px",
-                          height: isA5 ? "92px" : "118px",
-                          objectFit: "contain",
-                          border: "none",
-                          display: "block",
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
 
-            {/* BOTTOM FOOTER SECTION (Only on Last Page) */}
+            {/* UNIFIED BOTTOM SECTION (Terms & Conditions, Stamp & Footer - Only on Last Page) */}
             {isLastPage && (
               <div
                 style={{
                   position: "relative",
                   zIndex: 10,
                   width: "100%",
-                  marginTop: isFullBleedBrand
-                    ? (isA5 ? "8px" : "14px")
-                    : (isA5 ? "16px" : "24px"),
+                  marginTop: "auto",
                 }}
               >
-                {doc.brand === "farhan_enterprises" ? (
-                  // Farhan Enterprises Footer Banner with Uplifted Stamp
-                  <div>
+                {/* 1. TERMS & CONDITIONS + STAMP ROW (For all brands) */}
+                <div
+                  style={{
+                    padding: isFullBleedBrand
+                      ? (isA5 ? "0 10mm" : "0 16mm")
+                      : "0",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    marginBottom: doc.brand === "farhan_enterprises"
+                      ? (isA5 ? "6px" : "8px")
+                      : (isA5 ? "12px" : "18px"),
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
+                      width: "100%",
+                    }}
+                  >
+                    {/* Left: Terms & Conditions */}
+                    <div style={{ fontSize: isA5 ? "11px" : "13px", color: "#000000", lineHeight: "1.6", fontFamily: "Arial, Helvetica, sans-serif" }}>
+                      <div style={{ fontWeight: 700, textDecoration: "underline" }}>
+                        {brandConfig.termsHeading || "TERMS & CONDITIONS: -"}
+                      </div>
+                      <div style={{ fontWeight: 700 }}>
+                        PAYMENT MODE:&nbsp;{(doc.paymentMode || "CASH").toUpperCase()}
+                      </div>
+                      <div style={{ fontWeight: 700 }}>
+                        {(doc.warrantyTerms || (doc.brand === "farhan_enterprises" ? "1 YEAR OFFICIAL / CHECK WARRANTY" : "ONE WEEK CHECK WARRENTY")).toUpperCase()}
+                      </div>
+                      <div style={{ color: "#374151", marginTop: "3px" }}>
+                        Thank you and best regards,
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: isA5 ? "10px" : "11.5px", color: "#111111", marginTop: "2px" }}>
+                        {brandConfig.defaultDisclaimer}
+                      </div>
+                    </div>
+
+                    {/* Right: Stamp for All Brands */}
                     {stampSrc && (
                       <div
                         style={{
                           display: "flex",
                           justifyContent: "flex-end",
-                          paddingRight: isA5 ? "25px" : "40px",
-                          marginBottom: "8px",
-                          position: "relative",
-                          zIndex: 20,
+                          alignItems: "flex-end",
+                          paddingRight: doc.brand === "farhan_enterprises"
+                            ? (isA5 ? "25px" : "40px")
+                            : (isA5 ? "10px" : "20px"),
+                          flexShrink: 0,
                         }}
                       >
                         <img
                           src={stampSrc}
                           alt="Stamp"
                           style={{
-                            width: isA5 ? "75px" : "95px",
-                            height: isA5 ? "75px" : "95px",
+                            width: doc.brand === "farhan_enterprises"
+                              ? (isA5 ? "75px" : "95px")
+                              : (isA5 ? "92px" : "118px"),
+                            height: doc.brand === "farhan_enterprises"
+                              ? (isA5 ? "75px" : "95px")
+                              : (isA5 ? "92px" : "118px"),
                             objectFit: "contain",
                             border: "none",
                             display: "block",
@@ -627,6 +576,13 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                         />
                       </div>
                     )}
+                  </div>
+                </div>
+
+                {/* 2. FOOTER SECTION */}
+                {doc.brand === "farhan_enterprises" ? (
+                  // Farhan Enterprises Footer Banner
+                  <div style={{ width: "100%" }}>
                     <img
                       src={farhanEntFooter}
                       alt="Footer"

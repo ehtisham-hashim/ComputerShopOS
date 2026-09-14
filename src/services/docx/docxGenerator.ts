@@ -327,9 +327,8 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
     });
   });
 
-  // Empty filler rows to maintain full-page proportion
-  const totalRowsTarget = brandConfig.targetEmptyRows;
-  const emptyRowsCount = Math.max(0, totalRowsTarget - items.length);
+  // Dynamic rows: render exact items without empty filler rows
+  const emptyRowsCount = 0;
   const emptyRows: TableRow[] = [];
   for (let i = 0; i < emptyRowsCount; i++) {
     emptyRows.push(
