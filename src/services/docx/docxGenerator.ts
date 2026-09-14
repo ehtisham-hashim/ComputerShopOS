@@ -748,7 +748,33 @@ export async function generateAndDownloadDocx(doc: DocumentRecord): Promise<void
         return;
       }
     } catch (err) {
-      console.warn("Tauri native save dialog failed, fallback to browser saveAs:", err);
+      console.warn("Tauri native save dialog failed, fallback to browser save:", err);
+    }
+  }
+
+  // Modern browser File System Access API: Prompt user for destination file & folder
+  if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: filename,
+        types: [
+          {
+            description: "Word Document (*.docx)",
+            accept: {
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+            },
+          },
+        ],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        return;
+      }
+      console.warn("showSaveFilePicker failed, falling back to saveAs:", err);
     }
   }
 

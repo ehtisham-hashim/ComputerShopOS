@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { DollarSign } from "lucide-react";
-import { ExpenseCategory, ExpenseCategories } from "../../db/schema";
-import { createExpense } from "../../db/expenseService";
+import React, { useState, useEffect } from "react";
+import { DollarSign, Pencil } from "lucide-react";
+import { ExpenseCategory, ExpenseCategories, ExpenseRecord } from "../../db/schema";
+import { createExpense, updateExpense } from "../../db/expenseService";
 import { CustomDropdown } from "../ui/CustomDropdown";
 
 interface AddExpenseModalProps {
@@ -11,6 +11,7 @@ interface AddExpenseModalProps {
   selectedMonth: number;
   monthName: string;
   onExpenseAdded: () => void;
+  expenseToEdit?: ExpenseRecord | null;
 }
 
 export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
@@ -20,42 +21,65 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   selectedMonth,
   monthName,
   onExpenseAdded,
+  expenseToEdit,
 }) => {
-  const [title, setTitle] = useState<string>("" );
+  const [title, setTitle] = useState<string>("");
   const [category, setCategory] = useState<ExpenseCategory>("MISC");
   const [amount, setAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
   const [notes, setNotes] = useState<string>("");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
+  useEffect(() => {
+    if (expenseToEdit) {
+      setTitle(expenseToEdit.title);
+      setCategory((expenseToEdit.category as ExpenseCategory) || "MISC");
+      setAmount(String(expenseToEdit.amount));
+      setPaymentMethod(expenseToEdit.paymentMethod || "CASH");
+      setNotes(expenseToEdit.notes || "");
+    } else {
+      setTitle("");
+      setCategory("MISC");
+      setAmount("");
+      setPaymentMethod("CASH");
+      setNotes("");
+    }
+  }, [expenseToEdit, isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsedAmount = parseInt(amount, 10);
-    if (!title.trim() || isNaN(parsedAmount) || parsedAmount <= 0) return;
+    if (!title.trim() || isNaN(parsedAmount) || parsedAmount < 0) return;
 
     setSubmitting(true);
     try {
-      const dateUnix = Math.floor(new Date(selectedYear, selectedMonth - 1, new Date().getDate()).getTime() / 1000);
-      await createExpense({
-        year: selectedYear,
-        month: selectedMonth,
-        category,
-        title: title.trim(),
-        amount: parsedAmount,
-        expenseDate: dateUnix,
-        paymentMethod,
-        notes: notes.trim(),
-      });
-      setTitle("");
-      setAmount("");
-      setNotes("");
-      setCategory("MISC");
+      if (expenseToEdit) {
+        await updateExpense(expenseToEdit.id, {
+          title: title.trim(),
+          category,
+          amount: parsedAmount,
+          paymentMethod,
+          notes: notes.trim(),
+        });
+      } else {
+        const dateUnix = Math.floor(new Date(selectedYear, selectedMonth - 1, new Date().getDate()).getTime() / 1000);
+        await createExpense({
+          year: selectedYear,
+          month: selectedMonth,
+          category,
+          title: title.trim(),
+          amount: parsedAmount,
+          expenseDate: dateUnix,
+          paymentMethod,
+          notes: notes.trim(),
+        });
+      }
       onExpenseAdded();
       onClose();
     } catch (err) {
-      console.error("Failed to add expense:", err);
+      console.error("Failed to save expense:", err);
     } finally {
       setSubmitting(false);
     }
@@ -66,8 +90,17 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       <div className="w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-theme-xl overflow-hidden animate-in zoom-in-95">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
           <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-            <DollarSign className="size-4 text-brand-500" />
-            Add New Expense
+            {expenseToEdit ? (
+              <>
+                <Pencil className="size-4 text-brand-500" />
+                Edit Expense
+              </>
+            ) : (
+              <>
+                <DollarSign className="size-4 text-brand-500" />
+                Add New Expense
+              </>
+            )}
           </h3>
           <button
             onClick={onClose}
@@ -179,7 +212,11 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
               disabled={submitting}
               className="px-4 py-2 rounded-xl bg-brand-600 text-white font-bold hover:bg-brand-700 transition-colors shadow-sm"
             >
-              {submitting ? "Saving..." : "Save Expense"}
+              {submitting
+                ? "Saving..."
+                : expenseToEdit
+                ? "Update Expense"
+                : "Save Expense"}
             </button>
           </div>
         </form>

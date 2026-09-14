@@ -140,126 +140,156 @@ export async function createPurchase(input: CreatePurchaseInput): Promise<Purcha
   const createdLineItems: PurchaseItemRecord[] = [];
 
   if (isTauri && sqlDb) {
-    // 1. Insert Purchase
-    const pRes = await sqlDb.execute(
-      `INSERT INTO purchases (purchase_no, party_id, party_name, ref_no, purchase_date, total_amount, paid_amount, balance_due, status, notes, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [
-        purchaseNo,
-        input.partyId,
-        partyName,
-        refNo,
-        purchaseDate,
-        totalAmount,
-        paidAmount,
-        balanceDue,
-        status,
-        input.notes?.trim() || "",
-        now,
-      ]
-    );
-    createdPurchaseId = Number(pRes.lastInsertId) || 1;
+    await sqlDb.execute("BEGIN TRANSACTION;");
+    try {
+      // 1. Insert Purchase
+      const pRes = await sqlDb.execute(
+        `INSERT INTO purchases (purchase_no, party_id, party_name, ref_no, purchase_date, total_amount, paid_amount, balance_due, status, notes, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          purchaseNo,
+          input.partyId,
+          partyName,
+          refNo,
+          purchaseDate,
+          totalAmount,
+          paidAmount,
+          balanceDue,
+          status,
+          input.notes?.trim() || "",
+          now,
+        ]
+      );
+      createdPurchaseId = Number(pRes.lastInsertId) || 1;
 
-    // 2. Insert Line Items & update Inventory (if RECEIVED)
-    for (const item of preparedItems) {
-      let linkedInventoryId = item.inventoryId;
+      // 2. Insert Line Items & update Inventory (if RECEIVED)
+      for (const item of preparedItems) {
+        let linkedInventoryId = item.inventoryId;
 
-      if (status === "RECEIVED") {
-        if (linkedInventoryId) {
-          // Increment existing inventory item
-          await sqlDb.execute(
-            `UPDATE inventory 
-             SET quantity = quantity + $1, 
-                 cost_price = $2, 
-                 price = CASE WHEN $3 > 0 THEN $3 ELSE price END 
-             WHERE id = $4`,
-            [item.quantity, item.costPrice, item.sellPrice, linkedInventoryId]
-          );
-        } else {
-          // Check if item with same SKU or same title & name exists
-          const existing = inventoryList.find(
-            (inv) =>
-              (item.sku && inv.sku.toLowerCase() === item.sku.toLowerCase()) ||
-              (inv.title === item.title && inv.name.toLowerCase() === item.itemName.toLowerCase())
-          );
+        if (status === "RECEIVED") {
+          if (linkedInventoryId) {
+            // Fetch current inventory item to calculate moving weighted average cost
+            const curInv = await sqlDb.select<{ quantity: number; cost_price: number }[]>(
+              "SELECT quantity, cost_price FROM inventory WHERE id = $1",
+              [linkedInventoryId]
+            );
+            const curQty = Math.max(0, curInv?.[0]?.quantity ?? 0);
+            const curCost = Math.max(0, curInv?.[0]?.cost_price ?? 0);
+            const totalQty = curQty + item.quantity;
+            const weightedCost = totalQty > 0
+              ? Math.round((curQty * curCost + item.quantity * item.costPrice) / totalQty)
+              : item.costPrice;
 
-          if (existing) {
-            linkedInventoryId = existing.id;
             await sqlDb.execute(
               `UPDATE inventory 
                SET quantity = quantity + $1, 
                    cost_price = $2, 
                    price = CASE WHEN $3 > 0 THEN $3 ELSE price END 
                WHERE id = $4`,
-              [item.quantity, item.costPrice, item.sellPrice, existing.id]
+              [item.quantity, weightedCost, item.sellPrice, linkedInventoryId]
             );
           } else {
-            // Add new inventory item
-            linkedInventoryId = await addInventoryItem({
-              title: item.title,
-              name: item.itemName,
-              sku: item.sku,
-              quantity: item.quantity,
-              costPrice: item.costPrice,
-              price: item.sellPrice > 0 ? item.sellPrice : item.costPrice,
-              isSerialized: 0,
-            });
+            // Check if item with same SKU or same title & name exists
+            const existing = inventoryList.find(
+              (inv) =>
+                (item.sku && inv.sku.toLowerCase() === item.sku.toLowerCase()) ||
+                (inv.title === item.title && inv.name.toLowerCase() === item.itemName.toLowerCase())
+            );
+
+            if (existing) {
+              linkedInventoryId = existing.id;
+              const curInv = await sqlDb.select<{ quantity: number; cost_price: number }[]>(
+                "SELECT quantity, cost_price FROM inventory WHERE id = $1",
+                [existing.id]
+              );
+              const curQty = Math.max(0, curInv?.[0]?.quantity ?? 0);
+              const curCost = Math.max(0, curInv?.[0]?.cost_price ?? 0);
+              const totalQty = curQty + item.quantity;
+              const weightedCost = totalQty > 0
+                ? Math.round((curQty * curCost + item.quantity * item.costPrice) / totalQty)
+                : item.costPrice;
+
+              await sqlDb.execute(
+                `UPDATE inventory 
+                 SET quantity = quantity + $1, 
+                     cost_price = $2, 
+                     price = CASE WHEN $3 > 0 THEN $3 ELSE price END 
+                 WHERE id = $4`,
+                [item.quantity, weightedCost, item.sellPrice, existing.id]
+              );
+            } else {
+              // Add new inventory item
+              linkedInventoryId = await addInventoryItem({
+                title: item.title,
+                name: item.itemName,
+                sku: item.sku,
+                quantity: item.quantity,
+                costPrice: item.costPrice,
+                price: item.sellPrice > 0 ? item.sellPrice : item.costPrice,
+                isSerialized: 0,
+              });
+            }
           }
         }
+
+        const itemRes = await sqlDb.execute(
+          `INSERT INTO purchase_items (purchase_id, inventory_id, title, item_name, sku, quantity, cost_price, sell_price, total_cost)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            createdPurchaseId,
+            linkedInventoryId,
+            item.title,
+            item.itemName,
+            item.sku,
+            item.quantity,
+            item.costPrice,
+            item.sellPrice,
+            item.totalCost,
+          ]
+        );
+
+        createdLineItems.push({
+          id: Number(itemRes.lastInsertId) || 1,
+          purchaseId: createdPurchaseId,
+          inventoryId: linkedInventoryId,
+          title: item.title,
+          itemName: item.itemName,
+          sku: item.sku,
+          quantity: item.quantity,
+          costPrice: item.costPrice,
+          sellPrice: item.sellPrice,
+          totalCost: item.totalCost,
+        });
       }
 
-      const itemRes = await sqlDb.execute(
-        `INSERT INTO purchase_items (purchase_id, inventory_id, title, item_name, sku, quantity, cost_price, sell_price, total_cost)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          createdPurchaseId,
-          linkedInventoryId,
-          item.title,
-          item.itemName,
-          item.sku,
-          item.quantity,
-          item.costPrice,
-          item.sellPrice,
-          item.totalCost,
-        ]
-      );
+      // 3. Supplier Khata Ledger Entries
+      const itemsSummary = preparedItems.map((i) => `${i.itemName} (x${i.quantity})`).join(", ");
+      const purchaseDesc = `Purchase ${purchaseNo}: ${itemsSummary}`.slice(0, 200);
 
-      createdLineItems.push({
-        id: Number(itemRes.lastInsertId) || 1,
-        purchaseId: createdPurchaseId,
-        inventoryId: linkedInventoryId,
-        title: item.title,
-        itemName: item.itemName,
-        sku: item.sku,
-        quantity: item.quantity,
-        costPrice: item.costPrice,
-        sellPrice: item.sellPrice,
-        totalCost: item.totalCost,
-      });
-    }
-
-    // 3. Supplier Khata Ledger Entries
-    const itemsSummary = preparedItems.map((i) => `${i.itemName} (x${i.quantity})`).join(", ");
-    const purchaseDesc = `Purchase ${purchaseNo}: ${itemsSummary}`.slice(0, 200);
-
-    // Bill Credit
-    await sqlDb.execute(
-      `INSERT INTO payable_ledger (party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at)
-       VALUES ($1, $2, 'PURCHASE', $3, $4, 0, $5, 0, $6)`,
-      [input.partyId, purchaseDate, refNo, purchaseDesc, totalAmount, now]
-    );
-
-    // Upfront Payment Debit (if any)
-    if (paidAmount > 0) {
+      // Bill Credit
       await sqlDb.execute(
         `INSERT INTO payable_ledger (party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at)
-         VALUES ($1, $2, 'PAYMENT', $3, $4, $5, 0, 0, $6)`,
-        [input.partyId, purchaseDate, `PAY-${purchaseNo}`, `Payment for ${purchaseNo}`, paidAmount, now]
+         VALUES ($1, $2, 'PURCHASE', $3, $4, 0, $5, 0, $6)`,
+        [input.partyId, purchaseDate, refNo, purchaseDesc, totalAmount, now]
       );
-    }
 
-    // 4. Recalculate Supplier's Ledger & running balances
-    await recalculatePartyLedger(input.partyId);
+      // Upfront Payment Debit (if any)
+      if (paidAmount > 0) {
+        await sqlDb.execute(
+          `INSERT INTO payable_ledger (party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at)
+           VALUES ($1, $2, 'PAYMENT', $3, $4, $5, 0, 0, $6)`,
+          [input.partyId, purchaseDate, `PAY-${purchaseNo}`, `Payment for ${purchaseNo}`, paidAmount, now]
+        );
+      }
+
+      // 4. Recalculate Supplier's Ledger & running balances
+      await recalculatePartyLedger(input.partyId);
+
+      await sqlDb.execute("COMMIT;");
+    } catch (err) {
+      await sqlDb.execute("ROLLBACK;");
+      throw err;
+    }
   } else {
     // Browser Memory Store Fallback
     createdPurchaseId = memoryStore.purchases.length > 0
@@ -273,8 +303,13 @@ export async function createPurchase(input: CreatePurchaseInput): Promise<Purcha
         if (linkedInventoryId) {
           const inv = memoryStore.inventory.find((i) => i.id === linkedInventoryId);
           if (inv) {
+            const curQty = Math.max(0, inv.quantity || 0);
+            const curCost = Math.max(0, inv.costPrice || 0);
+            const totalQty = curQty + item.quantity;
+            inv.costPrice = totalQty > 0
+              ? Math.round((curQty * curCost + item.quantity * item.costPrice) / totalQty)
+              : item.costPrice;
             inv.quantity += item.quantity;
-            inv.costPrice = item.costPrice;
             if (item.sellPrice > 0) inv.price = item.sellPrice;
           }
         } else {
@@ -285,8 +320,13 @@ export async function createPurchase(input: CreatePurchaseInput): Promise<Purcha
           );
           if (existing) {
             linkedInventoryId = existing.id;
+            const curQty = Math.max(0, existing.quantity || 0);
+            const curCost = Math.max(0, existing.costPrice || 0);
+            const totalQty = curQty + item.quantity;
+            existing.costPrice = totalQty > 0
+              ? Math.round((curQty * curCost + item.quantity * item.costPrice) / totalQty)
+              : item.costPrice;
             existing.quantity += item.quantity;
-            existing.costPrice = item.costPrice;
             if (item.sellPrice > 0) existing.price = item.sellPrice;
           } else {
             linkedInventoryId = await addInventoryItem({
@@ -414,8 +454,9 @@ export async function getPurchases(partyId?: number): Promise<PurchaseWithItems[
       if (!pRows || pRows.length === 0) return [];
 
       const pIds = pRows.map((r) => Number(r.id));
+      const placeholders = pIds.map((_, idx) => `$${idx + 1}`).join(",");
       const iRows = await sqlDb.select<any[]>(
-        `SELECT * FROM purchase_items WHERE purchase_id IN (${pIds.map(() => "?").join(",")})`,
+        `SELECT * FROM purchase_items WHERE purchase_id IN (${placeholders})`,
         pIds
       );
 
@@ -543,38 +584,46 @@ export async function deletePurchase(purchaseId: number): Promise<void> {
   const { partyId, purchaseNo, refNo, status, items } = purchase;
 
   if (isTauri && sqlDb) {
-    // 1. If stock was received, revert inventory quantity
-    if (status === "RECEIVED") {
-      for (const it of items) {
-        if (it.inventoryId) {
-          await sqlDb.execute(
-            "UPDATE inventory SET quantity = MAX(0, quantity - $1) WHERE id = $2",
-            [it.quantity, it.inventoryId]
-          );
+    await sqlDb.execute("BEGIN TRANSACTION;");
+    try {
+      // 1. If stock was received, revert inventory quantity
+      if (status === "RECEIVED") {
+        for (const it of items) {
+          if (it.inventoryId) {
+            await sqlDb.execute(
+              "UPDATE inventory SET quantity = MAX(0, quantity - $1) WHERE id = $2",
+              [it.quantity, it.inventoryId]
+            );
+          }
         }
       }
+
+      // 2. Remove ledger entries referencing this purchase strictly by ref_no or exact payment description
+      await sqlDb.execute(
+        `DELETE FROM payable_ledger 
+         WHERE party_id = $1 
+           AND (ref_no = $2 OR ref_no = $3 OR ref_no = $4 OR description = $5)`,
+        [
+          partyId,
+          refNo,
+          purchaseNo,
+          `PAY-${purchaseNo}`,
+          `Payment for ${purchaseNo}`,
+        ]
+      );
+
+      // 3. Delete purchase items & purchase
+      await sqlDb.execute("DELETE FROM purchase_items WHERE purchase_id = $1", [purchaseId]);
+      await sqlDb.execute("DELETE FROM purchases WHERE id = $1", [purchaseId]);
+
+      // 4. Recalculate supplier's Khata
+      await recalculatePartyLedger(partyId);
+
+      await sqlDb.execute("COMMIT;");
+    } catch (err) {
+      await sqlDb.execute("ROLLBACK;");
+      throw err;
     }
-
-    // 2. Remove ledger entries referencing this purchase
-    await sqlDb.execute(
-      `DELETE FROM payable_ledger 
-       WHERE party_id = $1 
-         AND (ref_no = $2 OR ref_no = $3 OR ref_no = $4 OR description LIKE $5)`,
-      [
-        partyId,
-        refNo,
-        purchaseNo,
-        `PAY-${purchaseNo}`,
-        `%${purchaseNo}%`,
-      ]
-    );
-
-    // 3. Delete purchase items & purchase
-    await sqlDb.execute("DELETE FROM purchase_items WHERE purchase_id = $1", [purchaseId]);
-    await sqlDb.execute("DELETE FROM purchases WHERE id = $1", [purchaseId]);
-
-    // 4. Recalculate supplier's Khata
-    await recalculatePartyLedger(partyId);
   } else {
     // Memory store fallback
     if (status === "RECEIVED") {
@@ -595,10 +644,9 @@ export async function deletePurchase(purchaseId: number): Promise<void> {
           (l.refNo === refNo ||
             l.refNo === purchaseNo ||
             l.refNo === `PAY-${purchaseNo}` ||
-            l.description.includes(purchaseNo))
+            l.description === `Payment for ${purchaseNo}`)
         )
     );
-
     memoryStore.purchaseItems = memoryStore.purchaseItems.filter((it) => it.purchaseId !== purchaseId);
     memoryStore.purchases = memoryStore.purchases.filter((p) => p.id !== purchaseId);
 

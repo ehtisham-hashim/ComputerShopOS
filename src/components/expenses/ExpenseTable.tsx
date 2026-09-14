@@ -1,5 +1,5 @@
-import React from "react";
-import { Search, Tag, Trash2 } from "lucide-react";
+import React, { useState } from "react";
+import { Search, Tag, Trash2, Pencil, Check, X } from "lucide-react";
 import { ExpenseRecord, ExpenseCategories } from "../../db/schema";
 import { CustomDropdown } from "../ui/CustomDropdown";
 
@@ -10,6 +10,8 @@ interface ExpenseTableProps {
   categoryFilter: string;
   onCategoryFilterChange: (cat: string) => void;
   onDelete: (id: number) => void;
+  onEdit: (exp: ExpenseRecord) => void;
+  onQuickUpdateAmount?: (id: number, newAmount: number) => Promise<void>;
   onApplyRecurring: () => void;
   loading: boolean;
   monthName: string;
@@ -23,11 +25,46 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
   categoryFilter,
   onCategoryFilterChange,
   onDelete,
+  onEdit,
+  onQuickUpdateAmount,
   onApplyRecurring,
   loading,
   monthName,
   selectedYear,
 }) => {
+  const [editingAmountId, setEditingAmountId] = useState<number | null>(null);
+  const [editingAmountVal, setEditingAmountVal] = useState<string>("");
+  const [isSavingInline, setIsSavingInline] = useState<boolean>(false);
+
+  const startEditAmount = (exp: ExpenseRecord) => {
+    setEditingAmountId(exp.id);
+    setEditingAmountVal(String(exp.amount));
+  };
+
+  const cancelEditAmount = () => {
+    setEditingAmountId(null);
+    setEditingAmountVal("");
+  };
+
+  const saveInlineAmount = async (id: number) => {
+    const val = parseInt(editingAmountVal, 10);
+    if (isNaN(val) || val < 0) {
+      cancelEditAmount();
+      return;
+    }
+    setIsSavingInline(true);
+    try {
+      if (onQuickUpdateAmount) {
+        await onQuickUpdateAmount(id, val);
+      }
+      cancelEditAmount();
+    } catch (err) {
+      console.error("Failed to quick update expense amount:", err);
+    } finally {
+      setIsSavingInline(false);
+    }
+  };
+
   const filtered = expenses.filter((e) => {
     const matchesSearch =
       e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -110,17 +147,70 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
                   <td className="px-5 py-3 text-gray-400 max-w-xs truncate">
                     {exp.notes || "—"}
                   </td>
-                  <td className="px-5 py-3 text-right font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">
-                    Rs. {exp.amount.toLocaleString()}
+                  <td className="px-5 py-3 text-right whitespace-nowrap">
+                    {editingAmountId === exp.id ? (
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-xs text-gray-400 font-bold">Rs.</span>
+                        <input
+                          type="number"
+                          autoFocus
+                          min="0"
+                          value={editingAmountVal}
+                          onChange={(e) => setEditingAmountVal(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveInlineAmount(exp.id);
+                            if (e.key === "Escape") cancelEditAmount();
+                          }}
+                          disabled={isSavingInline}
+                          className="w-24 px-2 py-0.5 text-xs text-right font-bold border border-brand-500 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        />
+                        <button
+                          onClick={() => saveInlineAmount(exp.id)}
+                          disabled={isSavingInline}
+                          className="p-1 rounded text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                          title="Save amount (Enter)"
+                        >
+                          <Check className="size-3.5" />
+                        </button>
+                        <button
+                          onClick={cancelEditAmount}
+                          disabled={isSavingInline}
+                          className="p-1 rounded text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          title="Cancel (Esc)"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={() => startEditAmount(exp)}
+                        className="inline-flex items-center gap-1.5 cursor-pointer group py-0.5 px-1.5 rounded-lg hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors"
+                        title="Click to change amount value"
+                      >
+                        <span className="font-bold text-rose-600 dark:text-rose-400">
+                          Rs. {exp.amount.toLocaleString()}
+                        </span>
+                        <Pencil className="size-3 text-gray-300 opacity-0 group-hover:opacity-100 group-hover:text-rose-500 transition-opacity" />
+                      </div>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-center">
-                    <button
-                      onClick={() => onDelete(exp.id)}
-                      className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                      title="Delete Expense"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => onEdit(exp)}
+                        className="p-1 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/30 transition-colors"
+                        title="Edit Expense"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(exp.id)}
+                        className="p-1 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                        title="Delete Expense"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

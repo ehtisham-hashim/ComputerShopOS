@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { CheckCircle2 } from "lucide-react";
 import { ExpenseRecord } from "../db/schema";
-import { getExpensesByMonth, deleteExpense, applyRecurringExpenses } from "../db/expenseService";
+import {
+  getExpensesByMonth,
+  deleteExpense,
+  applyRecurringExpenses,
+  updateExpense,
+} from "../db/expenseService";
 import { ExpenseHeader, MONTH_NAMES } from "../components/expenses/ExpenseHeader";
 import { ExpenseSummaryCards } from "../components/expenses/ExpenseSummaryCards";
 import { ExpenseTable } from "../components/expenses/ExpenseTable";
@@ -16,6 +21,7 @@ export const ExpensesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -25,12 +31,18 @@ export const ExpensesPage: React.FC = () => {
 
   const loadExpenses = async () => {
     setLoading(true);
-    try { setExpenses(await getExpensesByMonth(selectedYear, selectedMonth)); }
-    catch (err) { console.error("Failed to load expenses:", err); }
-    finally { setLoading(false); }
+    try {
+      setExpenses(await getExpensesByMonth(selectedYear, selectedMonth));
+    } catch (err) {
+      console.error("Failed to load expenses:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { loadExpenses(); }, [selectedYear, selectedMonth]);
+  useEffect(() => {
+    loadExpenses();
+  }, [selectedYear, selectedMonth]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this expense?")) return;
@@ -38,7 +50,24 @@ export const ExpensesPage: React.FC = () => {
       await deleteExpense(id);
       showToast("Expense deleted");
       await loadExpenses();
-    } catch (err) { console.error("Failed to delete expense:", err); }
+    } catch (err) {
+      console.error("Failed to delete expense:", err);
+    }
+  };
+
+  const handleEdit = (exp: ExpenseRecord) => {
+    setEditingExpense(exp);
+    setShowAddModal(true);
+  };
+
+  const handleQuickUpdateAmount = async (id: number, newAmount: number) => {
+    try {
+      await updateExpense(id, { amount: newAmount });
+      showToast("Expense amount updated");
+      await loadExpenses();
+    } catch (err) {
+      console.error("Failed to update expense amount:", err);
+    }
   };
 
   const handleApplyRecurring = async () => {
@@ -46,7 +75,9 @@ export const ExpensesPage: React.FC = () => {
       const res = await applyRecurringExpenses(selectedYear, selectedMonth);
       showToast(`Applied ${res.applied} recurring overheads (${res.skipped} already existed)`);
       await loadExpenses();
-    } catch (err) { console.error("Failed to apply recurring expenses:", err); }
+    } catch (err) {
+      console.error("Failed to apply recurring expenses:", err);
+    }
   };
 
   const total = expenses.reduce((acc, e) => acc + e.amount, 0);
@@ -65,27 +96,58 @@ export const ExpensesPage: React.FC = () => {
       )}
 
       <ExpenseHeader
-        selectedYear={selectedYear} selectedMonth={selectedMonth}
-        onYearChange={setSelectedYear} onMonthChange={setSelectedMonth}
-        onApplyRecurring={handleApplyRecurring} onOpenAddModal={() => setShowAddModal(true)}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        onYearChange={setSelectedYear}
+        onMonthChange={setSelectedMonth}
+        onApplyRecurring={handleApplyRecurring}
+        onOpenAddModal={() => {
+          setEditingExpense(null);
+          setShowAddModal(true);
+        }}
       />
 
       <ExpenseSummaryCards
-        totalExpenseAmount={total} fixedOverheads={fixed}
-        variableExpenses={total - fixed} expenseCount={expenses.length} monthName={monthName}
+        totalExpenseAmount={total}
+        fixedOverheads={fixed}
+        variableExpenses={total - fixed}
+        expenseCount={expenses.length}
+        monthName={monthName}
       />
 
       <ExpenseTable
-        expenses={expenses} searchQuery={searchQuery} onSearchChange={setSearchQuery}
-        categoryFilter={categoryFilter} onCategoryFilterChange={setCategoryFilter}
-        onDelete={handleDelete} onApplyRecurring={handleApplyRecurring}
-        loading={loading} monthName={monthName} selectedYear={selectedYear}
+        expenses={expenses}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        categoryFilter={categoryFilter}
+        onCategoryFilterChange={setCategoryFilter}
+        onDelete={handleDelete}
+        onEdit={handleEdit}
+        onQuickUpdateAmount={handleQuickUpdateAmount}
+        onApplyRecurring={handleApplyRecurring}
+        loading={loading}
+        monthName={monthName}
+        selectedYear={selectedYear}
       />
 
       <AddExpenseModal
-        isOpen={showAddModal} onClose={() => setShowAddModal(false)}
-        selectedYear={selectedYear} selectedMonth={selectedMonth} monthName={monthName}
-        onExpenseAdded={() => { showToast("Expense recorded successfully"); loadExpenses(); }}
+        isOpen={showAddModal}
+        onClose={() => {
+          setShowAddModal(false);
+          setEditingExpense(null);
+        }}
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        monthName={monthName}
+        expenseToEdit={editingExpense}
+        onExpenseAdded={() => {
+          showToast(
+            editingExpense
+              ? "Expense updated successfully"
+              : "Expense recorded successfully"
+          );
+          loadExpenses();
+        }}
       />
     </div>
   );
