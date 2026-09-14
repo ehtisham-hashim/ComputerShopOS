@@ -4,7 +4,6 @@ import {
   Plus,
   Trash2,
   Save,
-  Download,
 } from "lucide-react";
 import {
   BrandType,
@@ -16,7 +15,6 @@ import {
 } from "../../db/schema";
 import { BRAND_CONFIGS } from "../../services/docx/brandConfigs";
 import { getNextDocRefNo, createDocument, parseDocumentItems } from "../../db/documentsService";
-import { generateAndDownloadDocx } from "../../services/docx/docxGenerator";
 import { Modal } from "../ui/Modal";
 import { CustomDropdown } from "../ui/CustomDropdown";
 
@@ -173,7 +171,7 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
     return dStr;
   };
 
-  const handleSubmit = async (downloadDocxAfterSave = true) => {
+  const handleSubmit = async () => {
     if (!customerName.trim()) {
       alert("Please enter customer name");
       return;
@@ -204,11 +202,7 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
         notes,
       };
 
-      const savedDoc = await createDocument(input);
-
-      if (downloadDocxAfterSave) {
-        await generateAndDownloadDocx(savedDoc);
-      }
+      await createDocument(input);
 
       await onSuccess();
       onClose();
@@ -567,21 +561,12 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => handleSubmit(false)}
-            disabled={isSubmitting}
-            className="tail-btn-secondary w-full sm:w-auto text-xs"
-          >
-            <Save className="size-3.5" />
-            <span>Save Record Only</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSubmit(true)}
+            onClick={handleSubmit}
             disabled={isSubmitting}
             className="tail-btn-primary w-full sm:w-auto text-xs"
           >
-            <Download className="size-3.5" />
-            <span>{isSubmitting ? "Generating..." : "Save & Download DOCX"}</span>
+            <Save className="size-3.5" />
+            <span>{isSubmitting ? "Saving..." : "Save Record"}</span>
           </button>
         </div>
       </div>
