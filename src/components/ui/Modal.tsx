@@ -11,11 +11,12 @@ interface ModalProps {
   icon?: React.ReactNode | LucideIcon | React.ElementType;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  bodyClassName?: string;
   children: React.ReactNode;
 }
 
 export const Modal: React.FC<ModalProps> = ({
-  isOpen, onClose, title, subtitle, description, icon, maxWidth, size = "lg", children,
+  isOpen, onClose, title, subtitle, description, icon, maxWidth, size = "lg", bodyClassName, children,
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -71,7 +72,9 @@ export const Modal: React.FC<ModalProps> = ({
             <X className="size-4.5" />
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">{children}</div>
+        <div className={`flex-1 min-h-0 ${bodyClassName !== undefined ? bodyClassName : "overflow-y-auto p-4 sm:p-6"}`}>
+          {children}
+        </div>
       </div>
     </div>,
     document.body

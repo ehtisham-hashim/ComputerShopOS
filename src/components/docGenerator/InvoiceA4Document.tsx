@@ -29,7 +29,7 @@ import farhanEntStamp from "../../assets/brands/farhan_enterprises/stamp.png";
 import farhanEntFooter from "../../assets/brands/farhan_enterprises/footer.jpg";
 import farhanEntWm from "../../assets/brands/farhan_enterprises/watermark.png";
 
-export type PaperSize = "a4" | "a5";
+export type PaperSize = "a4" | "a5" | "letter" | "legal";
 
 interface InvoiceDocumentProps {
   document: DocumentRecord;
@@ -46,8 +46,11 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
   const items: DocumentLineItem[] = parseDocumentItems(doc.itemsJson);
 
   const isA5 = paperSize === "a5";
+  const isLetter = paperSize === "letter";
+  const isLegal = paperSize === "legal";
   const isFullBleedBrand = doc.brand === "farhan_enterprises" || doc.brand === "farhan_computers";
-  const itemsPerPage = isA5 ? 5 : 7;
+
+  const itemsPerPage = isA5 ? 5 : (isLetter ? 6 : (isLegal ? 8 : 7));
   const isMultiPage = items.length > itemsPerPage;
 
   // Split into chunks if multi-page
@@ -61,9 +64,19 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
   }
 
   // Dimensions
-  const pageWidth = isA5 ? "148mm" : "210mm";
-  const pageMinHeight = isA5 ? "210mm" : "297mm";
-  const pagePadding = isA5 ? "8mm 10mm 8mm 10mm" : "12mm 16mm 14mm 16mm";
+  const pageWidth = isA5 ? "148mm" : (isLetter || isLegal ? "215.9mm" : "210mm");
+  const pageMinHeight = isA5
+    ? "210mm"
+    : isLetter
+    ? "279.4mm"
+    : isLegal
+    ? "355.6mm"
+    : "297mm";
+  const pagePadding = isA5
+    ? "8mm 10mm 8mm 10mm"
+    : isLetter
+    ? "10mm 16mm 12mm 16mm"
+    : "12mm 16mm 14mm 16mm";
 
   // Watermark selection
   const watermarkSrc =
@@ -90,6 +103,10 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
         // Ensure enough filler rows so the table spans comfortably down the page without leaving a huge void
         const targetRowCount = isA5
           ? (doc.brand === "farhan_enterprises" ? 4 : 5)
+          : isLetter
+          ? (doc.brand === "farhan_enterprises" ? 5 : 6)
+          : isLegal
+          ? (doc.brand === "farhan_enterprises" ? 7 : 8)
           : (doc.brand === "farhan_enterprises" ? 6 : 7);
         const emptyRowsCount = isLastPage
           ? Math.max(0, targetRowCount - pageItems.length)
@@ -462,7 +479,15 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       <tr
                         key={`empty-${i}`}
                         style={{
-                          height: isA5 ? "32px" : (doc.brand === "farhan_enterprises" ? "42px" : "48px"),
+                          height: isA5
+                            ? "32px"
+                            : isLetter
+                            ? doc.brand === "farhan_enterprises"
+                              ? "38px"
+                              : "42px"
+                            : doc.brand === "farhan_enterprises"
+                            ? "42px"
+                            : "48px",
                           borderBottom: "1px solid #000000",
                         }}
                       >
@@ -505,24 +530,60 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                 </table>
               </div>
 
-              {/* TERMS & CONDITIONS (Only on Last Page) */}
+              {/* TERMS & CONDITIONS + STAMP (Only on Last Page) */}
               {isLastPage && (
-                <div style={{ fontSize: isA5 ? "11px" : "13px", color: "#000000", lineHeight: "1.6", fontFamily: "Arial, Helvetica, sans-serif" }}>
-                  <div style={{ fontWeight: 700, textDecoration: "underline" }}>
-                    {brandConfig.termsHeading || "TERMS & CONDITIONS: -"}
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginTop: isA5 ? "8px" : "12px",
+                    width: "100%",
+                  }}
+                >
+                  {/* Left: Terms & Conditions */}
+                  <div style={{ fontSize: isA5 ? "11px" : "13px", color: "#000000", lineHeight: "1.6", fontFamily: "Arial, Helvetica, sans-serif" }}>
+                    <div style={{ fontWeight: 700, textDecoration: "underline" }}>
+                      {brandConfig.termsHeading || "TERMS & CONDITIONS: -"}
+                    </div>
+                    <div style={{ fontWeight: 700 }}>
+                      PAYMENT MODE:&nbsp;{(doc.paymentMode || "CASH").toUpperCase()}
+                    </div>
+                    <div style={{ fontWeight: 700 }}>
+                      {(doc.warrantyTerms || "ONE WEEK CHECK WARRENTY").toUpperCase()}
+                    </div>
+                    <div style={{ color: "#374151", marginTop: "3px" }}>
+                      Thank you and best regards,
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: isA5 ? "10px" : "11.5px", color: "#111111", marginTop: "2px" }}>
+                      {brandConfig.defaultDisclaimer}
+                    </div>
                   </div>
-                  <div style={{ fontWeight: 700 }}>
-                    PAYMENT MODE:&nbsp;{(doc.paymentMode || "CASH").toUpperCase()}
-                  </div>
-                  <div style={{ fontWeight: 700 }}>
-                    {(doc.warrantyTerms || "ONE WEEK CHECK WARRENTY").toUpperCase()}
-                  </div>
-                  <div style={{ color: "#374151", marginTop: "3px" }}>
-                    Thank you and best regards,
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: isA5 ? "10px" : "11.5px", color: "#111111", marginTop: "2px" }}>
-                    {brandConfig.defaultDisclaimer}
-                  </div>
+
+                  {/* Right: Stamp for Tasnim Computers - Slightly below the table, slightly bigger */}
+                  {doc.brand === "tasnim_computers" && stampSrc && (
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        alignItems: "center",
+                        paddingRight: isA5 ? "10px" : "20px",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <img
+                        src={stampSrc}
+                        alt="Stamp"
+                        style={{
+                          width: isA5 ? "92px" : "118px",
+                          height: isA5 ? "92px" : "118px",
+                          objectFit: "contain",
+                          border: "none",
+                          display: "block",
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -541,7 +602,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                 }}
               >
                 {doc.brand === "farhan_enterprises" ? (
-                  // Farhan Enterprises Footer
+                  // Farhan Enterprises Footer Banner with Uplifted Stamp
                   <div>
                     {stampSrc && (
                       <div
@@ -580,7 +641,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                     />
                   </div>
                 ) : doc.brand === "farhan_computers" ? (
-                  // Farhan Computers: Clean Vector Contact Grid + Un-squished PC + Uplifted Stamp
+                  // Farhan Computers: Clean Vector Contact Grid + Un-squished PC Graphic + Uplifted Stamp
                   <div
                     style={{
                       display: "flex",
@@ -660,7 +721,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       </div>
                     </div>
 
-                    {/* Right: Round FC Stamp stacked cleanly above Desktop PC graphic */}
+                    {/* Right: Uplifted Stamp above un-squished Desktop PC graphic */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isA5 ? "110px" : "150px", flexShrink: 0 }}>
                       {stampSrc && (
                         <img
@@ -692,7 +753,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                     </div>
                   </div>
                 ) : (
-                  // Tasnim Computers: Clean Left Grid Layout + Right Stamp/PC
+                  // Tasnim Computers: Clean Left Grid Layout + Right PC Graphic
                   <div
                     style={{
                       display: "flex",
@@ -787,23 +848,8 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       </div>
                     </div>
 
-                    {/* Right: Round TC Stamp stacked above Desktop PC graphic */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isA5 ? "110px" : "150px", flexShrink: 0 }}>
-                      {stampSrc && (
-                        <img
-                          src={stampSrc}
-                          alt="Stamp"
-                          style={{
-                            width: isA5 ? "78px" : "96px",
-                            height: isA5 ? "78px" : "96px",
-                            objectFit: "contain",
-                            border: "none",
-                            marginBottom: "-6px",
-                            position: "relative",
-                            zIndex: 10,
-                          }}
-                        />
-                      )}
+                    {/* Right: Desktop PC graphic */}
+                    <div style={{ display: "flex", justifyContent: "flex-end", width: isA5 ? "110px" : "150px", flexShrink: 0 }}>
                       <img
                         src={tasnimPc}
                         alt="PC Graphic"

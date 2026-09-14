@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   FileDown,
   Eye,
@@ -9,12 +10,172 @@ import {
   ShieldCheck,
   CreditCard,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 import { DocumentRecord, BrandType } from "../../db/schema";
 import { parseDocumentItems } from "../../db/documentsService";
 import { generateAndDownloadPdf } from "../../services/pdf/pdfGenerator";
+import { PaperSize } from "./InvoiceA4Document";
 import { EmptyState } from "../ui/EmptyState";
 import { SearchInput } from "../ui/SearchInput";
+
+const PAPER_SIZE_OPTIONS: { id: PaperSize; label: string; sub: string }[] = [
+  { id: "a4", label: "A4", sub: "210 × 297 mm" },
+  { id: "a5", label: "A5", sub: "148 × 210 mm" },
+  { id: "letter", label: "Letter", sub: "8.5 × 11 in" },
+  { id: "legal", label: "Legal", sub: "8.5 × 14 in" },
+];
+
+interface PdfDownloadButtonProps {
+  doc: DocumentRecord;
+  onDownload: (doc: DocumentRecord, size: PaperSize) => void;
+  onPreview: (doc: DocumentRecord, size: PaperSize) => void;
+  isDownloading: boolean;
+}
+
+const PdfDownloadButton: React.FC<PdfDownloadButtonProps> = ({
+  doc,
+  onDownload,
+  onPreview,
+  isDownloading,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const dropdownHeight = 220;
+    const dropdownWidth = 230;
+    const fitsBelow = window.innerHeight - rect.bottom > dropdownHeight + 8;
+    const left = Math.max(8, Math.min(rect.right - dropdownWidth, window.innerWidth - dropdownWidth - 12));
+
+    setCoords({
+      top: fitsBelow ? rect.bottom + 4 : Math.max(8, rect.top - dropdownHeight - 4),
+      left,
+    });
+  };
+
+  const toggle = () => {
+    if (isDownloading) return;
+    if (!isOpen) updatePosition();
+    setIsOpen(!isOpen);
+  };
+
+  useLayoutEffect(() => {
+    if (isOpen) updatePosition();
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleOutside = (e: MouseEvent) => {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target as Node) &&
+        buttonRef.current && !buttonRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    const handleScroll = () => setIsOpen(false);
+
+    document.addEventListener("mousedown", handleOutside);
+    window.addEventListener("scroll", handleScroll, true);
+    window.addEventListener("resize", handleScroll);
+    return () => {
+      document.removeEventListener("mousedown", handleOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, [isOpen]);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggle}
+        disabled={isDownloading}
+        title="Export PDF (Select Paper Size)"
+        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-400 dark:hover:bg-brand-900/50 text-xs font-semibold transition-colors disabled:opacity-50"
+      >
+        {isDownloading ? (
+          <Loader2 className="size-3.5 animate-spin" />
+        ) : (
+          <FileDown className="size-3.5" />
+        )}
+        <span>PDF</span>
+        <ChevronDown className={`size-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {isOpen &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: "fixed",
+              top: `${coords.top}px`,
+              left: `${coords.left}px`,
+              width: "230px",
+              zIndex: 99999,
+            }}
+            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-2xl p-1.5 animate-in fade-in zoom-in-95 duration-100"
+          >
+            <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-700/60 mb-1 flex items-center justify-between">
+              <span>Select Paper Format</span>
+              <span className="text-[9px] font-normal text-gray-400 lowercase">preview / save</span>
+            </div>
+            <div className="space-y-0.5">
+              {PAPER_SIZE_OPTIONS.map((opt) => (
+                <div
+                  key={opt.id}
+                  className="flex items-center justify-between rounded-lg p-0.5 hover:bg-brand-50 dark:hover:bg-brand-950/50 group transition-colors"
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOpen(false);
+                      onPreview(doc, opt.id);
+                    }}
+                    title={`Preview ${opt.label} (${opt.sub})`}
+                    className="flex items-center gap-2 flex-1 text-left px-2 py-1.5 rounded-md transition-colors"
+                  >
+                    <Eye className="size-3.5 text-gray-400 group-hover:text-brand-600 dark:group-hover:text-brand-400 shrink-0" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-brand-600 dark:group-hover:text-brand-400">
+                        {opt.label}
+                      </div>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
+                        {opt.sub}
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsOpen(false);
+                      onDownload(doc, opt.id);
+                    }}
+                    title={`Direct download ${opt.label}`}
+                    className="p-1.5 rounded-md text-gray-400 hover:text-brand-600 hover:bg-brand-100 dark:hover:bg-brand-900/60 dark:hover:text-brand-300 transition-colors shrink-0 mr-1"
+                  >
+                    <FileDown className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="mt-1 pt-1 border-t border-gray-100 dark:border-gray-700/60 px-2 py-0.5 text-[9.5px] text-gray-400 dark:text-gray-500 text-center">
+              Click format to preview & save
+            </div>
+          </div>,
+          document.body
+        )}
+    </>
+  );
+};
 
 interface DocHistoryTableProps {
   documents: DocumentRecord[];
@@ -22,7 +183,7 @@ interface DocHistoryTableProps {
   searchQuery: string;
   onSearchChange: (q: string) => void;
   isLoading: boolean;
-  onInspectDocument: (doc: DocumentRecord) => void;
+  onInspectDocument: (doc: DocumentRecord, paperSize?: PaperSize) => void;
   onDuplicateDocument: (doc: DocumentRecord) => void;
   onDeleteDocument: (id: number) => void;
   onCreateNew: () => void;
@@ -43,10 +204,10 @@ export const DocHistoryTable: React.FC<DocHistoryTableProps> = ({
 
   const brandDocs = documents.filter((d) => d.brand === activeBrand);
 
-  const handleDownload = async (doc: DocumentRecord) => {
+  const handleDownload = async (doc: DocumentRecord, size: PaperSize = "a4") => {
     try {
       setDownloadingId(doc.id);
-      await generateAndDownloadPdf(doc);
+      await generateAndDownloadPdf(doc, size);
     } catch (err) {
       console.error("Failed to generate PDF:", err);
     } finally {
@@ -186,26 +347,18 @@ export const DocHistoryTable: React.FC<DocHistoryTableProps> = ({
                       {/* Actions */}
                       <td className="px-5 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Download PDF */}
-                          <button
-                            type="button"
-                            onClick={() => handleDownload(doc)}
-                            disabled={isDownloading}
-                            title="Export .pdf File"
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 dark:bg-brand-950/40 dark:text-brand-400 dark:hover:bg-brand-900/50 text-xs font-semibold transition-colors disabled:opacity-50"
-                          >
-                            {isDownloading ? (
-                              <Loader2 className="size-3.5 animate-spin" />
-                            ) : (
-                              <FileDown className="size-3.5" />
-                            )}
-                            <span>PDF</span>
-                          </button>
+                          {/* Download PDF (with Paper Size Dropdown) */}
+                          <PdfDownloadButton
+                            doc={doc}
+                            onDownload={handleDownload}
+                            onPreview={(d, size) => onInspectDocument(d, size)}
+                            isDownloading={isDownloading}
+                          />
 
                           {/* Inspect / View */}
                           <button
                             type="button"
-                            onClick={() => onInspectDocument(doc)}
+                            onClick={() => onInspectDocument(doc, "a4")}
                             title="Quick Preview"
                             className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
                           >
