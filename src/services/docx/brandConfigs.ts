@@ -76,7 +76,7 @@ export const BRAND_CONFIGS: Record<BrandType, BrandConfig> = {
     headerDimensions: { width: 570, height: 112 },
     footerDimensions: { width: 570, height: 106 },
     watermarkDimensions: { width: 300, height: 300 },
-    stampDimensions: { width: 105, height: 105 },
+    stampDimensions: { width: 118, height: 118 },
     targetEmptyRows: 6,
   },
   farhan_enterprises: {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   FileText,
   FileDown,
@@ -39,6 +39,7 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
   initialPaperSize = "a4",
   onClose,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [paperSize, setPaperSize] = useState<PaperSize>(initialPaperSize);
@@ -68,7 +69,29 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
     setZoom((z) => Math.max(0.3, Number((z - 0.1).toFixed(2))));
   };
 
+  const pageWidthMm =
+    paperSize === "a5" ? 148 : paperSize === "letter" || paperSize === "legal" ? 215.9 : 210;
+  const pageHeightMm =
+    paperSize === "a5" ? 210 : paperSize === "letter" ? 279.4 : paperSize === "legal" ? 355.6 : 297;
+  const scaledWidthMm = pageWidthMm * zoom;
+  const scaledHeightMm = pageHeightMm * zoom;
+
   const handleFitPage = () => {
+    if (containerRef.current) {
+      const padY = 48;
+      const padX = 48;
+      const availableHeight = containerRef.current.clientHeight - padY;
+      const availableWidth = containerRef.current.clientWidth - padX;
+      const mmToPx = 3.779527559;
+      const docHeightPx = pageHeightMm * mmToPx;
+      const docWidthPx = pageWidthMm * mmToPx;
+      if (availableHeight > 100 && availableWidth > 100) {
+        const fit = Math.min(availableWidth / docWidthPx, availableHeight / docHeightPx);
+        const clampedFit = Math.min(1.2, Math.max(0.3, Number(fit.toFixed(2))));
+        setZoom(clampedFit);
+        return;
+      }
+    }
     setZoom(getFitZoom(paperSize));
   };
 
@@ -110,13 +133,6 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
   const isZoomSupported =
     typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("zoom", "1");
 
-  const pageWidthMm =
-    paperSize === "a5" ? 148 : paperSize === "letter" || paperSize === "legal" ? 215.9 : 210;
-  const pageHeightMm =
-    paperSize === "a5" ? 210 : paperSize === "letter" ? 279.4 : paperSize === "legal" ? 355.6 : 297;
-  const scaledWidthMm = pageWidthMm * zoom;
-  const scaledHeightMm = pageHeightMm * zoom;
-
   return (
     <Modal
       isOpen={doc !== null}
@@ -125,9 +141,10 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
       subtitle={`${brandConfig.displayName} Official Letterhead Invoice`}
       icon={FileText}
       maxWidth="4xl"
+      containerClassName="h-[90vh] max-h-[92vh]"
       bodyClassName="flex flex-col flex-1 min-h-0 overflow-hidden p-0"
     >
-      <div className="flex flex-col flex-1 min-h-0 h-[78vh] sm:h-[82vh] overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0 h-full overflow-hidden">
         {/* TOP TOOLBAR: PAPER FORMAT + ZOOM CONTROLS */}
         <div className="shrink-0 px-4 py-2 bg-gray-50 dark:bg-gray-800/90 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2.5">
           {/* Paper Format Selector */}
@@ -255,6 +272,7 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
 
         {/* MIDDLE PREVIEW CANVAS: CLEAN DEDICATED SCROLL VIEWPORT */}
         <div
+          ref={containerRef}
           onWheel={handleWheel}
           className="flex-1 min-h-0 overflow-auto bg-zinc-900/95 dark:bg-zinc-950 p-4 sm:p-8 flex justify-center items-start shadow-inner select-none cursor-default"
         >

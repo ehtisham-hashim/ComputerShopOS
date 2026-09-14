@@ -560,8 +560,8 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                     </div>
                   </div>
 
-                  {/* Right: Stamp for Tasnim Computers - Slightly below the table, slightly bigger */}
-                  {doc.brand === "tasnim_computers" && stampSrc && (
+                  {/* Right: Stamp for Tasnim Computers & Farhan Computers - Slightly below the table, slightly bigger */}
+                  {(doc.brand === "tasnim_computers" || doc.brand === "farhan_computers") && stampSrc && (
                     <div
                       style={{
                         display: "flex",
@@ -721,24 +721,8 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       </div>
                     </div>
 
-                    {/* Right: Uplifted Stamp above un-squished Desktop PC graphic */}
+                    {/* Right: Clean Desktop PC graphic (stamp uplifted next to terms) */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isA5 ? "110px" : "150px", flexShrink: 0 }}>
-                      {stampSrc && (
-                        <img
-                          src={stampSrc}
-                          alt="Stamp"
-                          style={{
-                            width: isA5 ? "78px" : "96px",
-                            height: isA5 ? "78px" : "96px",
-                            objectFit: "contain",
-                            border: "none",
-                            marginBottom: isA5 ? "8px" : "12px",
-                            position: "relative",
-                            zIndex: 20,
-                            display: "block",
-                          }}
-                        />
-                      )}
                       <img
                         src={tasnimPc}
                         alt="PC Graphic"

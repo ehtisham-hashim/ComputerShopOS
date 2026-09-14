@@ -11,12 +11,13 @@ interface ModalProps {
   icon?: React.ReactNode | LucideIcon | React.ElementType;
   maxWidth?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  containerClassName?: string;
   bodyClassName?: string;
   children: React.ReactNode;
 }
 
 export const Modal: React.FC<ModalProps> = ({
-  isOpen, onClose, title, subtitle, description, icon, maxWidth, size = "lg", bodyClassName, children,
+  isOpen, onClose, title, subtitle, description, icon, maxWidth, size = "lg", containerClassName, bodyClassName, children,
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -59,7 +60,7 @@ export const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-md dark:bg-black/60 p-3 sm:p-5 md:p-6 animate-in fade-in duration-150">
       <div className="absolute inset-0 w-full h-full" onClick={onClose} />
-      <div className={`relative z-10 w-full ${maxWidthClass} max-h-[90vh] flex flex-col rounded-2xl border border-gray-200 bg-white shadow-theme-xl dark:border-gray-800 dark:bg-gray-900 transition-all`}>
+      <div className={`relative z-10 w-full ${maxWidthClass} ${containerClassName || "max-h-[90vh]"} flex flex-col rounded-2xl border border-gray-200 bg-white shadow-theme-xl dark:border-gray-800 dark:bg-gray-900 transition-all`}>
         <div className="flex items-center justify-between border-b border-gray-100 p-4 sm:px-6 sm:py-4 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
             {icon && <div className="shrink-0">{renderIcon()}</div>}
