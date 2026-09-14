@@ -294,7 +294,8 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
         const saleIds = periodSales.map((s) => s.id);
         periodItems = await sqlDb.select<any[]>(
           `SELECT sale_id as saleId, inventory_id as inventoryId, item_name as itemName,
-                  quantity, unit_price as unitPrice, total_price as totalPrice
+                  quantity, unit_price as unitPrice, total_price as totalPrice,
+                  cost_price as costPrice
            FROM sale_items
            WHERE sale_id IN (${saleIds.map((_, idx) => `$${idx + 1}`).join(",")})`,
           saleIds
@@ -312,7 +313,9 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
   const periodRepairs = repairs.filter((r) => r.createdAt >= startOfMonth && r.createdAt < endOfMonth);
   const periodAdjustments = adjustments.filter((a) => a.createdAt >= startOfMonth && a.createdAt < endOfMonth);
 
-  const grossSales = periodSales.reduce((acc, s) => acc + Number(s.totalAmount || 0), 0);
+  // Exclude manual opening receivables (RCV-) from gross sales so old debts don't fake-inflate current sales
+  const actualSales = periodSales.filter((s) => !String(s.invoiceNo || "").startsWith("RCV-"));
+  const grossSales = actualSales.reduce((acc, s) => acc + Number(s.totalAmount || 0), 0);
   const collectedCash = periodSales.reduce((acc, s) => acc + Number(s.paidAmount || 0), 0);
   const receivables = periodSales.reduce((acc, s) => acc + Number(s.balanceDue || 0), 0);
 
@@ -321,7 +324,11 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
   const categoryMap = new Map<string, { count: number; revenue: number }>();
 
   periodItems.forEach((it) => {
-    const itemCost = invCostMap.get(it.inventoryId) || 0;
+    // Prefer the snapshot cost_price recorded at the time of sale; fallback to inventory cost_price
+    const itemCost =
+      it.costPrice !== undefined && it.costPrice !== null && Number(it.costPrice) > 0
+        ? Number(it.costPrice)
+        : invCostMap.get(it.inventoryId) || 0;
     cogs += itemCost * Number(it.quantity || 1);
 
     const curr = productMap.get(it.itemName) || { quantity: 0, revenue: 0 };
@@ -361,12 +368,17 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 
     const daySales = periodSales.filter((s) => s.createdAt >= dayStart && s.createdAt < dayEnd);
-    const daySalesTotal = daySales.reduce((acc, s) => acc + Number(s.totalAmount || 0), 0);
-    const daySaleIds = new Set(daySales.map((s) => s.id));
+    const dayActualSales = daySales.filter((s) => !String(s.invoiceNo || "").startsWith("RCV-"));
+    const daySalesTotal = dayActualSales.reduce((acc, s) => acc + Number(s.totalAmount || 0), 0);
+    const daySaleIds = new Set(dayActualSales.map((s) => s.id));
     const dayItems = periodItems.filter((it) => daySaleIds.has(it.saleId));
     let dayCogs = 0;
     dayItems.forEach((it) => {
-      dayCogs += (invCostMap.get(it.inventoryId) || 0) * Number(it.quantity || 1);
+      const itemCost =
+        it.costPrice !== undefined && it.costPrice !== null && Number(it.costPrice) > 0
+          ? Number(it.costPrice)
+          : invCostMap.get(it.inventoryId) || 0;
+      dayCogs += itemCost * Number(it.quantity || 1);
     });
     const dayGp = Math.max(0, daySalesTotal - dayCogs);
 

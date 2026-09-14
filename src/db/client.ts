@@ -184,10 +184,10 @@ const memorySales: schema.SaleRecord[] = [
 ];
 
 const memorySaleItems: schema.SaleLineItem[] = [
-  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 285000, totalPrice: 285000 },
-  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 32000, totalPrice: 32000 },
-  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 150000, totalPrice: 150000 },
-  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 120000, totalPrice: 120000 },
+  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 285000, costPrice: 250000, totalPrice: 285000 },
+  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 32000, costPrice: 26000, totalPrice: 32000 },
+  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 150000, costPrice: 125000, totalPrice: 150000 },
+  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 120000, costPrice: 105000, totalPrice: 120000 },
 ];
 
 const memoryRepairs: schema.RepairTicketRecord[] = [
@@ -346,6 +346,7 @@ export async function initDb(): Promise<void> {
           serial_number TEXT,
           quantity INTEGER NOT NULL DEFAULT 1,
           unit_price INTEGER NOT NULL DEFAULT 0,
+          cost_price INTEGER NOT NULL DEFAULT 0,
           total_price INTEGER NOT NULL DEFAULT 0
         )`,
         `CREATE TABLE IF NOT EXISTS repairs (
@@ -499,6 +500,7 @@ export async function initDb(): Promise<void> {
       try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN is_bad_debt INTEGER NOT NULL DEFAULT 0;"); } catch {}
       try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN due_date INTEGER;"); } catch {}
       try { await sqlDb.execute("ALTER TABLE adjustments ADD COLUMN item_taken_inventory_id INTEGER;"); } catch {}
+      try { await sqlDb.execute("ALTER TABLE sale_items ADD COLUMN cost_price INTEGER NOT NULL DEFAULT 0;"); } catch {}
 
       const indexQueries = [
         "CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)",

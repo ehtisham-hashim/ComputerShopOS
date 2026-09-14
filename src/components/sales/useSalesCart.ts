@@ -19,6 +19,7 @@ export function useSalesCart(items: InventoryItem[], initialCartItems?: Inventor
   }, [initialCartItems, items]);
 
   const addToCart = (item: InventoryItem) => {
+    if (item.quantity <= 0) return;
     setCart((prev) => {
       const exists = prev.find((c) => c.item.id === item.id);
       if (exists) {
@@ -29,7 +30,11 @@ export function useSalesCart(items: InventoryItem[], initialCartItems?: Inventor
   };
 
   const updateCartQty = (id: number, delta: number) => {
-    setCart((prev) => prev.map((c) => (c.item.id === id ? { ...c, quantity: c.quantity + delta } : c)).filter((c) => c.quantity > 0));
+    setCart((prev) =>
+      prev
+        .map((c) => (c.item.id === id ? { ...c, quantity: Math.min(c.item.quantity, c.quantity + delta) } : c))
+        .filter((c) => c.quantity > 0)
+    );
   };
 
   const removeFromCart = (id: number) => setCart((prev) => prev.filter((c) => c.item.id !== id));

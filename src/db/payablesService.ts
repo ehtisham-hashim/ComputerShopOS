@@ -156,13 +156,33 @@ export async function deletePayableParty(id: number): Promise<void> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    await sqlDb.execute("DELETE FROM payable_ledger WHERE party_id = $1", [id]);
-    await sqlDb.execute("DELETE FROM payable_parties WHERE id = $1", [id]);
-    return;
+    await sqlDb.execute("BEGIN TRANSACTION;");
+    try {
+      const purchases = await sqlDb.select<{ id: number }[]>(
+        "SELECT id FROM purchases WHERE party_id = $1",
+        [id]
+      );
+      for (const p of purchases) {
+        await sqlDb.execute("DELETE FROM purchase_items WHERE purchase_id = $1", [p.id]);
+      }
+      await sqlDb.execute("DELETE FROM purchases WHERE party_id = $1", [id]);
+      await sqlDb.execute("DELETE FROM payable_ledger WHERE party_id = $1", [id]);
+      await sqlDb.execute("DELETE FROM payable_parties WHERE id = $1", [id]);
+      await sqlDb.execute("COMMIT;");
+      return;
+    } catch (err) {
+      await sqlDb.execute("ROLLBACK;");
+      throw err;
+    }
   }
 
-  memoryStore.payableParties = memoryStore.payableParties.filter((p) => p.id !== id);
+  const purchaseIds = memoryStore.purchases.filter((p) => p.partyId === id).map((p) => p.id);
+  memoryStore.purchaseItems = memoryStore.purchaseItems.filter(
+    (pi) => !purchaseIds.includes(pi.purchaseId)
+  );
+  memoryStore.purchases = memoryStore.purchases.filter((p) => p.partyId !== id);
   memoryStore.payableLedger = memoryStore.payableLedger.filter((l) => l.partyId !== id);
+  memoryStore.payableParties = memoryStore.payableParties.filter((p) => p.id !== id);
 }
 
 export async function getPartyLedger(partyId: number): Promise<PayableLedgerEntry[]> {

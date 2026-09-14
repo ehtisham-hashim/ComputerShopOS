@@ -36,7 +36,9 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
   const subtotal = useMemo(() => cart.reduce((acc, c) => acc + c.item.price * c.quantity, 0), [cart]);
   const discount = parseInt(discountInput, 10) || 0;
   const totalAmount = Math.max(0, subtotal - discount);
-  const paidAmount = amountPaidInput !== "" ? parseInt(amountPaidInput, 10) || 0 : totalAmount;
+  const rawTendered = amountPaidInput !== "" ? parseInt(amountPaidInput, 10) || 0 : totalAmount;
+  const paidAmount = Math.max(0, Math.min(totalAmount, rawTendered));
+  const changeDue = Math.max(0, rawTendered - totalAmount);
   const balanceDue = Math.max(0, totalAmount - paidAmount);
   const paymentStatus: PaymentStatus = totalAmount === 0 || paidAmount >= totalAmount ? "PAID" : paidAmount > 0 ? "PARTIAL" : "UNPAID";
 
@@ -51,9 +53,21 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
     setIsProcessing(true);
     try {
       const invNo = await createSaleTransaction({
-        customerId: selectedCustomerId !== "walk-in" ? Number(selectedCustomerId) : undefined, customerName, customerPhone,
-        items: cart.map((c) => ({ inventoryId: c.item.id, itemName: c.item.name, quantity: c.quantity, unitPrice: c.item.price })),
-        subtotal, discount, totalAmount, paidAmount, paymentMethod,
+        customerId: selectedCustomerId !== "walk-in" ? Number(selectedCustomerId) : undefined,
+        customerName,
+        customerPhone,
+        items: cart.map((c) => ({
+          inventoryId: c.item.id,
+          itemName: c.item.name,
+          quantity: c.quantity,
+          unitPrice: c.item.price,
+          costPrice: c.item.costPrice,
+        })),
+        subtotal,
+        discount,
+        totalAmount,
+        paidAmount,
+        paymentMethod,
       });
       onSaleCompleted({ invoiceNo: invNo, customerName, totalAmount, paidAmount, balanceDue, paymentStatus });
       onClose();
@@ -75,7 +89,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
           <div className="lg:col-span-5 flex flex-col justify-between space-y-3">
             <div className="space-y-2">
               <div className="flex items-center justify-between"><span className="text-xs font-bold uppercase tracking-wider text-gray-500">Cart Items ({cart.reduce((a, b) => a + b.quantity, 0)})</span>{cart.length > 0 && <span className="font-mono text-xs font-bold text-brand-500">PKR {subtotal.toLocaleString()}</span>}</div>
-              <CartItemList cart={cart} onUpdateQty={onUpdateCartQty} onRemoveItem={onRemoveFromCart} onSelectSerial={() => {}} />
+              <CartItemList cart={cart} onUpdateQty={onUpdateCartQty} onRemoveItem={onRemoveFromCart} />
             </div>
 
             <div className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200/80 dark:border-gray-700/60 space-y-2.5 text-xs shadow-theme-xs">
@@ -88,6 +102,11 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
                 <div><label className="block text-[10px] font-bold text-gray-500 mb-0.5">Discount (PKR)</label><input type="number" value={discountInput} onChange={(e) => setDiscountInput(e.target.value)} placeholder="0" className="tail-input" /></div>
                 <div><label className="block text-[10px] font-bold text-gray-500 mb-0.5">Amount Tendered (PKR)</label><input type="number" value={amountPaidInput} onChange={(e) => setAmountPaidInput(e.target.value)} placeholder={totalAmount.toString()} className="tail-input font-bold" /></div>
               </div>
+              {changeDue > 0 && (
+                <div className="text-right text-[11px] font-bold text-success-600 dark:text-success-400">
+                  Change Due: PKR {changeDue.toLocaleString()}
+                </div>
+              )}
               <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700"><span className="font-bold text-gray-900 dark:text-white text-base">Total: PKR {totalAmount.toLocaleString()}</span><StatusBadge status={paymentStatus} /></div>
               <button onClick={handleCheckout} disabled={cart.length === 0 || isProcessing} className="w-full tail-btn-primary py-2.5 text-sm font-bold shadow-theme-sm">{isProcessing ? "Processing Sale..." : `Complete Sale • PKR ${totalAmount.toLocaleString()}`}</button>
             </div>

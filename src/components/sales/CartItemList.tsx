@@ -6,7 +6,6 @@ interface CartItemListProps {
   cart: CartItem[];
   onUpdateQty: (inventoryId: number, delta: number) => void;
   onRemoveItem: (inventoryId: number) => void;
-  onSelectSerial: (inventoryId: number, serial: string) => void;
 }
 
 export const CartItemList: React.FC<CartItemListProps> = ({

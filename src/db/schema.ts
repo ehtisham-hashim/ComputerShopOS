@@ -116,6 +116,7 @@ export const saleItems = sqliteTable("sale_items", {
   serialNumber: text("serial_number"),
   quantity: integer("quantity").notNull().default(1),
   unitPrice: integer("unit_price").notNull().default(0),
+  costPrice: integer("cost_price").notNull().default(0),
   totalPrice: integer("total_price").notNull().default(0),
 });
 
@@ -262,6 +263,7 @@ export interface CreateSaleInput {
     serialNumber?: string;
     quantity: number;
     unitPrice: number;
+    costPrice?: number;
   }[];
   subtotal: number;
   discount?: number;
