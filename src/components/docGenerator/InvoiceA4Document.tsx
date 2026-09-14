@@ -256,14 +256,14 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                               }}
                             />
                           </div>
+                          {/* Sales & Service Badge */}
                           <div
                             style={{
                               border: "1.5px solid #1F2937",
                               borderRadius: "9999px",
-                              height: isA5 ? "20px" : "24px",
-                              padding: isA5 ? "0 10px" : "0 16px",
+                              padding: isA5 ? "2px 10px" : "3.5px 14px",
                               boxSizing: "border-box",
-                              display: "flex",
+                              display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
                             }}
@@ -273,10 +273,9 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                                 fontSize: isA5 ? "10.5px" : "12px",
                                 fontWeight: 700,
                                 color: "#1F2937",
-                                lineHeight: 1,
+                                lineHeight: 1.2,
                                 fontFamily: "Arial, Helvetica, sans-serif",
                                 display: "inline-block",
-                                transform: "translateY(-1px)",
                               }}
                             >
                               Sales &amp; Service
