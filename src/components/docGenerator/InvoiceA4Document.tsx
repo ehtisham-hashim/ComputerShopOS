@@ -36,6 +36,7 @@ interface InvoiceDocumentProps {
   document: DocumentRecord;
   paperSize?: PaperSize;
   printMode?: PrintLayoutMode;
+  includeRefAndDate?: boolean;
   className?: string;
 }
 
@@ -43,9 +44,11 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
   document: doc,
   paperSize = "a4",
   printMode = "full",
+  includeRefAndDate,
   className = "",
 }) => {
   const isTableOnly = printMode === "table_only";
+  const showRefAndDate = includeRefAndDate !== undefined ? includeRefAndDate : !isTableOnly;
   const brandConfig = BRAND_CONFIGS[doc.brand] || BRAND_CONFIGS.tasnim_computers;
   const items: DocumentLineItem[] = parseDocumentItems(doc.itemsJson);
 
@@ -165,7 +168,9 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                   <div
                     style={{
                       width: "100%",
-                      height: isA5 ? "32mm" : "40mm",
+                      height: showRefAndDate
+                        ? (isA5 ? "30mm" : "38mm")
+                        : (isA5 ? "40mm" : "50mm"),
                     }}
                   />
                 ) : (
@@ -367,37 +372,39 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                 {/* METADATA ROW & CUSTOMER BLOCK (Page 1) */}
                 {isFirstPage && (
                   <>
-                    {/* Ref.NO & Date - Same Font, Clean Size */}
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        fontSize: isA5 ? "13px" : "15px",
-                        fontWeight: 700,
-                        marginBottom: isA5 ? "10px" : "14px",
-                        fontFamily: "Arial, Helvetica, sans-serif",
-                      }}
-                    >
-                      <div>
-                        <span>Ref.NO&nbsp;</span>
-                      <span
+                    {/* Ref.NO & Date - Hidden in letterhead pad mode because Ref & Date are pre-printed */}
+                    {showRefAndDate && (
+                      <div
                         style={{
-                          textDecoration: "underline",
-                          fontWeight: 700,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                           fontSize: isA5 ? "13px" : "15px",
+                          fontWeight: 700,
+                          marginBottom: isA5 ? "10px" : "14px",
+                          fontFamily: "Arial, Helvetica, sans-serif",
                         }}
                       >
-                        {doc.refNo}
-                      </span>
-                    </div>
-                    <div>
-                      <span>Date:&nbsp;</span>
-                      <span style={{ fontWeight: 700, fontSize: isA5 ? "13px" : "15px" }}>
-                        {doc.date}
-                      </span>
-                    </div>
-                  </div>
+                        <div>
+                          <span>Ref.NO&nbsp;</span>
+                          <span
+                            style={{
+                              textDecoration: "underline",
+                              fontWeight: 700,
+                              fontSize: isA5 ? "13px" : "15px",
+                            }}
+                          >
+                            {doc.refNo}
+                          </span>
+                        </div>
+                        <div>
+                          <span>Date:&nbsp;</span>
+                          <span style={{ fontWeight: 700, fontSize: isA5 ? "13px" : "15px" }}>
+                            {doc.date}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                   {/* Customer Info */}
                   <div

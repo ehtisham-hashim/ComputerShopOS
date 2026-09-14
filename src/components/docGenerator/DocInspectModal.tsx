@@ -44,6 +44,7 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
   const [isPrinting, setIsPrinting] = useState(false);
   const [paperSize, setPaperSize] = useState<PaperSize>(initialPaperSize);
   const [printMode, setPrintMode] = useState<PrintLayoutMode>("full");
+  const [includeRefAndDate, setIncludeRefAndDate] = useState(false);
   const [zoom, setZoom] = useState<number>(() => getFitZoom(initialPaperSize));
 
   useEffect(() => {
@@ -112,7 +113,7 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
-      await generateAndDownloadPdf(doc, paperSize, printMode);
+      await generateAndDownloadPdf(doc, paperSize, printMode, includeRefAndDate);
     } catch (err) {
       console.error("Failed to generate PDF:", err);
     } finally {
@@ -123,7 +124,7 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
   const handlePrint = async () => {
     try {
       setIsPrinting(true);
-      await printDocument(doc, paperSize, printMode);
+      await printDocument(doc, paperSize, printMode, includeRefAndDate);
     } catch (err) {
       console.error("Failed to print document:", err);
     } finally {
@@ -307,6 +308,35 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
           </div>
         </div>
 
+        {/* PRE-PRINTED LETTERHEAD PAD MODE INFO & REF/DATE TOGGLE */}
+        {printMode === "table_only" && (
+          <div className="shrink-0 px-4 py-1.5 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-900/60 text-[11px] text-amber-800 dark:text-amber-300 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-1.5">
+              <span>
+                <strong>Pre-printed Letterhead Mode:</strong> Shop header, footer, stamp, terms &amp; pre-printed Ref/Date are removed.
+              </span>
+              {paperSize !== "a5" && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectPaperSize("a5")}
+                  className="underline font-semibold ml-1 hover:text-amber-950 dark:hover:text-amber-100 cursor-pointer"
+                >
+                  Switch to A5 (Half A4)
+                </button>
+              )}
+            </div>
+            <label className="inline-flex items-center gap-1.5 cursor-pointer select-none font-medium">
+              <input
+                type="checkbox"
+                checked={includeRefAndDate}
+                onChange={(e) => setIncludeRefAndDate(e.target.checked)}
+                className="size-3.5 rounded text-brand-600 focus:ring-brand-500 border-gray-300 dark:border-gray-600"
+              />
+              <span>Print Ref &amp; Date anyway</span>
+            </label>
+          </div>
+        )}
+
         {/* MIDDLE PREVIEW CANVAS: CLEAN DEDICATED SCROLL VIEWPORT */}
         <div
           ref={containerRef}
@@ -336,7 +366,12 @@ export const DocInspectModal: React.FC<DocInspectModalProps> = ({
               }
               className="shadow-2xl rounded-sm bg-white"
             >
-              <InvoiceA4Document document={doc} paperSize={paperSize} printMode={printMode} />
+              <InvoiceA4Document
+                document={doc}
+                paperSize={paperSize}
+                printMode={printMode}
+                includeRefAndDate={includeRefAndDate}
+              />
             </div>
           </div>
         </div>

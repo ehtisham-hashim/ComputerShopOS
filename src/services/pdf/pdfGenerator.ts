@@ -30,7 +30,8 @@ function waitForImages(element: HTMLElement): Promise<void> {
 export async function generateAndDownloadPdf(
   doc: DocumentRecord,
   paperSize: PaperSize = "a4",
-  printMode: PrintLayoutMode = "full"
+  printMode: PrintLayoutMode = "full",
+  includeRefAndDate?: boolean
 ): Promise<void> {
   const isA5 = paperSize === "a5";
   const isLetter = paperSize === "letter";
@@ -61,6 +62,7 @@ export async function generateAndDownloadPdf(
           document: doc,
           paperSize: paperSize,
           printMode: printMode,
+          includeRefAndDate: includeRefAndDate,
         })
       );
       setTimeout(resolve, 80);
@@ -178,7 +180,8 @@ export async function generateAndDownloadPdf(
 export async function printDocument(
   doc: DocumentRecord,
   paperSize: PaperSize = "a4",
-  printMode: PrintLayoutMode = "full"
+  printMode: PrintLayoutMode = "full",
+  includeRefAndDate?: boolean
 ): Promise<void> {
   const isA5 = paperSize === "a5";
   const isLetter = paperSize === "letter";
@@ -203,6 +206,7 @@ export async function printDocument(
           document: doc,
           paperSize: paperSize,
           printMode: printMode,
+          includeRefAndDate: includeRefAndDate,
         })
       );
       setTimeout(resolve, 80);
