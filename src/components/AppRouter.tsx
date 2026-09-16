@@ -14,6 +14,7 @@ const SettingsPage = lazy(() => import("../pages/Settings").then((m) => ({ defau
 const DocGeneratorPage = lazy(() => import("../pages/DocGenerator").then((m) => ({ default: m.DocGeneratorPage })));
 const PayablesPage = lazy(() => import("../pages/Payables").then((m) => ({ default: m.PayablesPage })));
 const ExpensesPage = lazy(() => import("../pages/Expenses").then((m) => ({ default: m.ExpensesPage })));
+const SalariesPage = lazy(() => import("../pages/Salaries").then((m) => ({ default: m.SalariesPage })));
 const CategoriesPage = lazy(() => import("../pages/Categories").then((m) => ({ default: m.CategoriesPage })));
 
 const PageLoader = () => (
@@ -75,6 +76,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({
       )}
       {activeTab === "reports" && <ReportsPage />}
       {activeTab === "expenses" && <ExpensesPage />}
+      {activeTab === "salaries" && <SalariesPage />}
       {activeTab === "pc-builder" && (
         <PCBuilderPage items={items} onTransferToSales={(parts) => { setSalesInitialItems(parts); setActiveTab("sales"); }} />
       )}

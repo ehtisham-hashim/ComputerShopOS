@@ -106,6 +106,8 @@ export async function updateExpense(id: number, input: Partial<CreateExpenseInpu
     const params: any[] = [];
     let idx = 1;
 
+    if (input.year !== undefined) { sets.push(`year = $${idx++}`); params.push(input.year); }
+    if (input.month !== undefined) { sets.push(`month = $${idx++}`); params.push(input.month); }
     if (input.title !== undefined) { sets.push(`title = $${idx++}`); params.push(input.title); }
     if (input.category !== undefined) { sets.push(`category = $${idx++}`); params.push(input.category); }
     if (input.amount !== undefined) { sets.push(`amount = $${idx++}`); params.push(input.amount); }

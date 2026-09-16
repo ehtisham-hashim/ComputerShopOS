@@ -12,7 +12,15 @@ interface AddExpenseModalProps {
   monthName: string;
   onExpenseAdded: () => void;
   expenseToEdit?: ExpenseRecord | null;
+  initialCategory?: ExpenseCategory;
 }
+
+const formatDateToYMD = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   isOpen,
@@ -22,9 +30,19 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   monthName,
   onExpenseAdded,
   expenseToEdit,
+  initialCategory,
 }) => {
+  const getDefaultDateStr = () => {
+    const now = new Date();
+    if (now.getFullYear() === selectedYear && now.getMonth() + 1 === selectedMonth) {
+      return formatDateToYMD(now);
+    }
+    return formatDateToYMD(new Date(selectedYear, selectedMonth - 1, 1));
+  };
+
   const [title, setTitle] = useState<string>("");
-  const [category, setCategory] = useState<ExpenseCategory>("MISC");
+  const [category, setCategory] = useState<ExpenseCategory>(initialCategory || "MISC");
+  const [dateStr, setDateStr] = useState<string>(getDefaultDateStr());
   const [amount, setAmount] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("CASH");
   const [notes, setNotes] = useState<string>("");
@@ -33,18 +51,24 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   useEffect(() => {
     if (expenseToEdit) {
       setTitle(expenseToEdit.title);
-      setCategory((expenseToEdit.category as ExpenseCategory) || "MISC");
+      setCategory((expenseToEdit.category as ExpenseCategory) || initialCategory || "MISC");
       setAmount(String(expenseToEdit.amount));
       setPaymentMethod(expenseToEdit.paymentMethod || "CASH");
       setNotes(expenseToEdit.notes || "");
+      if (expenseToEdit.expenseDate) {
+        setDateStr(formatDateToYMD(new Date(expenseToEdit.expenseDate * 1000)));
+      } else {
+        setDateStr(getDefaultDateStr());
+      }
     } else {
       setTitle("");
-      setCategory("MISC");
+      setCategory(initialCategory || "MISC");
       setAmount("");
       setPaymentMethod("CASH");
       setNotes("");
+      setDateStr(getDefaultDateStr());
     }
-  }, [expenseToEdit, isOpen]);
+  }, [expenseToEdit, isOpen, initialCategory, selectedYear, selectedMonth]);
 
   if (!isOpen) return null;
 
@@ -55,19 +79,27 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
     setSubmitting(true);
     try {
+      const parts = dateStr.split("-").map(Number);
+      const targetYear = parts[0] || selectedYear;
+      const targetMonth = parts[1] || selectedMonth;
+      const targetDay = parts[2] || 1;
+      const dateUnix = Math.floor(new Date(targetYear, targetMonth - 1, targetDay, 12, 0, 0).getTime() / 1000);
+
       if (expenseToEdit) {
         await updateExpense(expenseToEdit.id, {
+          year: targetYear,
+          month: targetMonth,
           title: title.trim(),
           category,
           amount: parsedAmount,
+          expenseDate: dateUnix,
           paymentMethod,
           notes: notes.trim(),
         });
       } else {
-        const dateUnix = Math.floor(new Date(selectedYear, selectedMonth - 1, new Date().getDate()).getTime() / 1000);
         await createExpense({
-          year: selectedYear,
-          month: selectedMonth,
+          year: targetYear,
+          month: targetMonth,
           category,
           title: title.trim(),
           amount: parsedAmount,
@@ -89,19 +121,22 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
       <div className="w-full max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-theme-xl overflow-hidden animate-in zoom-in-95">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-          <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-            {expenseToEdit ? (
-              <>
-                <Pencil className="size-4 text-brand-500" />
-                Edit Expense
-              </>
-            ) : (
-              <>
-                <DollarSign className="size-4 text-brand-500" />
-                Add New Expense
-              </>
-            )}
-          </h3>
+          <div>
+            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+              {expenseToEdit ? (
+                <>
+                  <Pencil className="size-4 text-brand-500" />
+                  Edit Expense
+                </>
+              ) : (
+                <>
+                  <DollarSign className="size-4 text-brand-500" />
+                  Add New Expense
+                </>
+              )}
+            </h3>
+            <p className="text-[11px] text-gray-400 mt-0.5">Target Period: {monthName} {selectedYear}</p>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-sm"
@@ -175,13 +210,14 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
             <div>
               <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
-                Target Month
+                Expense Date *
               </label>
               <input
-                type="text"
-                disabled
-                value={`${monthName} ${selectedYear}`}
-                className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-500 cursor-not-allowed"
+                type="date"
+                required
+                value={dateStr}
+                onChange={(e) => setDateStr(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-gray-900 dark:text-white"
               />
             </div>
           </div>

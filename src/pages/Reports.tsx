@@ -105,6 +105,9 @@ export const ReportsPage: React.FC = () => {
             dailyData={report.dailyData}
             totalSales={report.grossSales}
             totalGrossProfit={report.grossProfit}
+            totalExpenses={report.totalExpenses}
+            totalPayables={report.payables}
+            totalNetProfit={report.netProfit}
           />
 
           {/* Revenue & Margin Visualizations */}

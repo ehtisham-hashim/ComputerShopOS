@@ -4,6 +4,7 @@ import { getInventoryItems } from "./inventoryService";
 import { getRepairTickets } from "./repairsService";
 import { getAdjustments } from "./adjustmentsService";
 import { getPayablesSummary } from "./payablesService";
+import { getPurchases } from "./purchaseService";
 import { DailyReportRow, ExpenseRecord, MonthlyReportDetail } from "./schema";
 
 export type { DailyReportRow, ExpenseRecord, MonthlyReportDetail };
@@ -139,6 +140,17 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
         try { dailyData = JSON.parse(snap.daily_data_json || "[]"); } catch {}
         try { expensesList = JSON.parse(snap.expense_data_json || "[]"); } catch {}
 
+        if (dailyData.length > 0) {
+          dailyData = dailyData.map((d) => ({
+            ...d,
+            expenses: Number(d.expenses || 0),
+            payables: Number(d.payables || 0),
+            netProfit: Number(d.netProfit ?? ((d.grossProfit || 0) - (d.expenses || 0))),
+            expenseItems: d.expenseItems || [],
+            payableItems: d.payableItems || [],
+          }));
+        }
+
         if (expensesList.length === 0) {
           expensesList = await getExpensesByMonth(year, month);
         }
@@ -204,6 +216,17 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
         expensesList = typeof snap.expenseDataJson === "string" ? JSON.parse(snap.expenseDataJson) : (snap.expenseDataJson || []);
       } catch {}
 
+      if (dailyData.length > 0) {
+        dailyData = dailyData.map((d) => ({
+          ...d,
+          expenses: Number(d.expenses || 0),
+          payables: Number(d.payables || 0),
+          netProfit: Number(d.netProfit ?? ((d.grossProfit || 0) - (d.expenses || 0))),
+          expenseItems: d.expenseItems || [],
+          payableItems: d.payableItems || [],
+        }));
+      }
+
       if (expensesList.length === 0) {
         expensesList = await getExpensesByMonth(year, month);
       }
@@ -261,13 +284,18 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
   const endOfMonth = Math.floor(new Date(year, month, 1, 0, 0, 0).getTime() / 1000);
   const daysInMonth = new Date(year, month, 0).getDate();
 
-  const [inventory, repairs, adjustments, payablesSum, expensesList] = await Promise.all([
+  const [inventory, repairs, adjustments, payablesSum, expensesList, allPurchases] = await Promise.all([
     getInventoryItems(),
     getRepairTickets(),
     getAdjustments(),
     getPayablesSummary(),
     getExpensesByMonth(year, month),
+    getPurchases(),
   ]);
+
+  const periodPurchases = allPurchases.filter(
+    (p) => p.purchaseDate >= startOfMonth && p.purchaseDate < endOfMonth
+  );
 
   const invCostMap = new Map<number, number>();
   const invCatMap = new Map<number, string>();
@@ -382,13 +410,49 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     });
     const dayGp = Math.max(0, daySalesTotal - dayCogs);
 
+    // Expenses for this day
+    const dayExpenses = expensesList.filter((e) => e.expenseDate >= dayStart && e.expenseDate < dayEnd);
+    const dayExpensesTotal = dayExpenses.reduce((acc, e) => acc + Number(e.amount || 0), 0);
+    const dayExpenseItems = dayExpenses.map((e) => ({
+      id: e.id,
+      title: e.title,
+      category: e.category,
+      amount: e.amount,
+      paymentMethod: e.paymentMethod,
+      notes: e.notes,
+    }));
+
+    // Purchases/Payables for this day
+    const dayPurchases = periodPurchases.filter((p) => p.purchaseDate >= dayStart && p.purchaseDate < dayEnd);
+    const dayPurchasesTotal = dayPurchases.reduce((acc, p) => acc + Number(p.totalAmount || 0), 0);
+    const dayPayableItems = dayPurchases.map((p) => ({
+      id: p.id,
+      purchaseNo: p.purchaseNo,
+      partyName: p.partyName,
+      totalAmount: p.totalAmount,
+      paidAmount: p.paidAmount,
+      balanceDue: p.balanceDue,
+    }));
+
+    const dayNet = dayGp - dayExpensesTotal;
+
+    const remarksParts: string[] = [];
+    if (daySales.length > 0) remarksParts.push(`${daySales.length} sale(s)`);
+    if (dayExpenses.length > 0) remarksParts.push(`${dayExpenses.length} exp (Rs. ${dayExpensesTotal.toLocaleString()})`);
+    if (dayPurchases.length > 0) remarksParts.push(`${dayPurchases.length} pur (Rs. ${dayPurchasesTotal.toLocaleString()})`);
+
     dailyData.push({
       day: d,
       date: dateStr,
       dayOfWeek,
       sales: daySalesTotal,
       grossProfit: dayGp,
-      remarks: daySales.length > 0 ? `${daySales.length} invoice(s)` : "",
+      expenses: dayExpensesTotal,
+      payables: dayPurchasesTotal,
+      netProfit: dayNet,
+      remarks: remarksParts.join(" • "),
+      expenseItems: dayExpenseItems,
+      payableItems: dayPayableItems,
     });
   }
 

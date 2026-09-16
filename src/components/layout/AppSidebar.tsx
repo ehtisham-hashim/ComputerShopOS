@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Boxes, ShoppingCart, FileText, Wrench, Users, Settings, ArrowLeftRight, BarChart3, Building2, Receipt, Tags } from "lucide-react";
+import { LayoutDashboard, Boxes, ShoppingCart, FileText, Wrench, Users, Settings, ArrowLeftRight, BarChart3, Building2, Receipt, Tags, Banknote } from "lucide-react";
 import { useSidebar } from "../../context/SidebarContext";
 import { NavTab } from "./navTypes";
 import { SidebarBrand } from "./SidebarBrand";
@@ -41,6 +41,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
     { id: "repairs", label: "Repairs & RMA", icon: Wrench, badge: activeRepairsCount > 0 ? `${activeRepairsCount}` : undefined, badgeType: "brand" },
     { id: "adjustments", label: "Swaps & Trade-Ins", icon: ArrowLeftRight },
     { id: "expenses", label: "Expenses & Bills", icon: Receipt },
+    { id: "salaries", label: "Salaries & Payroll", icon: Banknote },
     { id: "customers", label: "Customers (CRM)", icon: Users, badge: customersCount > 0 ? `${customersCount}` : undefined, badgeType: "neutral" },
     { id: "settings", label: "Settings & System", icon: Settings },
     { id: "reports", label: "Monthly Reports", icon: BarChart3 },

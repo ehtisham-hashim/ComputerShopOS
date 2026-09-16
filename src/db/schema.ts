@@ -533,13 +533,36 @@ export type NewMonthlyReportRecord = typeof monthlyReports.$inferInsert;
 
 // --- Monthly Reports & Expense Domain Interfaces ---
 
+export interface DailyReportExpenseItem {
+  id: number;
+  title: string;
+  category: string;
+  amount: number;
+  paymentMethod?: string;
+  notes?: string | null;
+}
+
+export interface DailyReportPayableItem {
+  id: number;
+  purchaseNo?: string;
+  partyName?: string;
+  totalAmount: number;
+  paidAmount: number;
+  balanceDue: number;
+}
+
 export interface DailyReportRow {
   day: number;
   date: string;
   dayOfWeek: string;
   sales: number;
   grossProfit: number;
+  expenses: number;
+  payables: number;
+  netProfit: number;
   remarks: string;
+  expenseItems?: DailyReportExpenseItem[];
+  payableItems?: DailyReportPayableItem[];
 }
 
 export interface ExpenseRecord {
