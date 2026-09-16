@@ -1,17 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { PackagePlus } from "lucide-react";
-import { ItemTitles, ItemTitle } from "../../db/schema";
+import { ItemTitles, ItemTitle, CategoryRecord } from "../../db/schema";
 import { addInventoryItem } from "../../db/inventoryService";
 import { Modal } from "../ui/Modal";
 import { CustomSelect } from "../ui/Select";
 
 interface AddProductModalProps {
   isOpen: boolean;
+  categories?: CategoryRecord[];
   onClose: () => void;
   onSuccess: () => Promise<void>;
 }
 
-export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClose, onSuccess }) => {
+export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, categories = [], onClose, onSuccess }) => {
+  const categoryOptions = useMemo(() => {
+    if (categories && categories.length > 0) {
+      return categories.map((c) => c.name);
+    }
+    return ItemTitles as string[];
+  }, [categories]);
+
   const [formData, setFormData] = useState<{
     title: ItemTitle;
     name: string;
@@ -22,7 +30,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
     isSerialized: boolean;
     serialNumbersText: string;
   }>({
-    title: "LAPTOP",
+    title: categoryOptions[0] || "LAPTOP",
     name: "",
     sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
     quantity: 1,
@@ -31,6 +39,12 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
     isSerialized: false,
     serialNumbersText: "",
   });
+
+  useEffect(() => {
+    if (categoryOptions.length > 0 && !categoryOptions.includes(formData.title)) {
+      setFormData((p) => ({ ...p, title: categoryOptions[0] }));
+    }
+  }, [categoryOptions]);
 
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,7 +91,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({ isOpen, onClos
       <form onSubmit={handleSubmit} className="space-y-4">
         {formError && <div className="rounded-xl border border-error-200 bg-error-50 p-3 text-xs font-semibold text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-400">{formError}</div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <CustomSelect label="Hardware Category" value={formData.title} onChange={(val) => setFormData((p) => ({ ...p, title: val as ItemTitle }))} options={ItemTitles.map((t) => ({ value: t, label: t }))} />
+          <CustomSelect label="Hardware Category" value={formData.title} onChange={(val) => setFormData((p) => ({ ...p, title: val as ItemTitle }))} options={categoryOptions.map((t) => ({ value: t, label: t }))} />
           <div><label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">SKU Code *</label><input type="text" required value={formData.sku} onChange={(e) => setFormData((p) => ({ ...p, sku: e.target.value }))} className="tail-input font-mono" /></div>
         </div>
         <div><label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">Product Name *</label><input type="text" required value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))} placeholder="e.g. ASUS ROG Strix RTX 4080 16GB" className="tail-input" /></div>

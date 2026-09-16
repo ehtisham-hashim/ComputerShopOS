@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ArrowLeftRight, PackagePlus, TrendingUp, ShieldCheck } from "lucide-react";
 import { Customer, InventoryItem, PaymentStatus, ItemTitle, ItemTitles } from "../../db/schema";
 import { createAdjustment, getNextTradeInSku } from "../../db/adjustmentsService";
+import { getCategories } from "../../db/categoryService";
 import { Modal } from "../ui/Modal";
 import { CustomSelect } from "../ui/Select";
 import { CustomDropdown } from "../ui/CustomDropdown";
@@ -54,10 +55,17 @@ export const CreateAdjustmentModal: React.FC<CreateAdjustmentModalProps> = ({
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categoryList, setCategoryList] = useState<string[]>(() => [...ItemTitles]);
 
-  // Initialize trade-in SKU when modal opens
+  // Initialize trade-in SKU and categories when modal opens
   useEffect(() => {
     if (isOpen) {
+      getCategories().then((cats) => {
+        if (cats && cats.length > 0) {
+          setCategoryList(cats.map((c) => c.name));
+        }
+      }).catch((e) => console.error("Error loading categories:", e));
+
       setSelectedCustomerId("");
       setCustomerName("");
       setCustomerPhone("");
@@ -284,7 +292,7 @@ export const CreateAdjustmentModal: React.FC<CreateAdjustmentModalProps> = ({
               <CustomDropdown
                 value={itemTakenCategory}
                 onChange={(val) => handleCategoryChange(val as ItemTitle)}
-                options={ItemTitles.map((t) => ({ value: t, label: t }))}
+                options={categoryList.map((t) => ({ value: t, label: t }))}
                 className="w-full"
                 buttonClassName="w-full py-2 bg-gray-50 dark:bg-gray-800"
               />

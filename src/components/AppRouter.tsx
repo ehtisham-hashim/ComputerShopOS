@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { NavTab } from "./layout/navTypes";
-import { InventoryItem } from "../db/schema";
+import { InventoryItem, CategoryRecord } from "../db/schema";
 
 const DashboardPage = lazy(() => import("../pages/Dashboard").then((m) => ({ default: m.DashboardPage })));
 const InventoryPage = lazy(() => import("../pages/Inventory").then((m) => ({ default: m.InventoryPage })));
@@ -14,6 +14,7 @@ const SettingsPage = lazy(() => import("../pages/Settings").then((m) => ({ defau
 const DocGeneratorPage = lazy(() => import("../pages/DocGenerator").then((m) => ({ default: m.DocGeneratorPage })));
 const PayablesPage = lazy(() => import("../pages/Payables").then((m) => ({ default: m.PayablesPage })));
 const ExpensesPage = lazy(() => import("../pages/Expenses").then((m) => ({ default: m.ExpensesPage })));
+const CategoriesPage = lazy(() => import("../pages/Categories").then((m) => ({ default: m.CategoriesPage })));
 
 const PageLoader = () => (
   <div className="flex h-64 w-full items-center justify-center">
@@ -25,6 +26,7 @@ interface AppRouterProps {
   activeTab: NavTab;
   setActiveTab: (tab: NavTab) => void;
   items: InventoryItem[];
+  categories?: CategoryRecord[];
   isLoading: boolean;
   fetchItems: () => Promise<void>;
   salesInitialItems: InventoryItem[];
@@ -35,6 +37,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({
   activeTab,
   setActiveTab,
   items,
+  categories = [],
   isLoading,
   fetchItems,
   salesInitialItems,
@@ -53,13 +56,16 @@ export const AppRouter: React.FC<AppRouterProps> = ({
         />
       )}
       {activeTab === "sales" && (
-        <SalesPage items={items} onSaleComplete={fetchItems} initialCartItems={salesInitialItems} />
+        <SalesPage items={items} categories={categories} onSaleComplete={fetchItems} initialCartItems={salesInitialItems} />
       )}
       {activeTab === "doc-generator" && (
         <DocGeneratorPage items={items} />
       )}
       {activeTab === "inventory" && (
-        <InventoryPage items={items} isLoading={isLoading} onRefresh={fetchItems} />
+        <InventoryPage items={items} categories={categories} isLoading={isLoading} onRefresh={fetchItems} />
+      )}
+      {activeTab === "categories" && (
+        <CategoriesPage categories={categories} items={items} onRefresh={fetchItems} />
       )}
       {activeTab === "repairs" && (
         <RepairsPage items={items} onRefreshInventory={fetchItems} />

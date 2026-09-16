@@ -1,10 +1,11 @@
 import React from "react";
 import { Tag, Barcode, Eye, Trash2, RefreshCw, Package } from "lucide-react";
-import { InventoryItem, ItemTitles } from "../../db/schema";
+import { InventoryItem, ItemTitles, CategoryRecord } from "../../db/schema";
 import { SearchInput } from "../ui/SearchInput";
 
 interface InventoryTableProps {
   items: InventoryItem[];
+  categories?: CategoryRecord[];
   searchQuery: string;
   onSearchChange: (q: string) => void;
   selectedTitleFilter: string;
@@ -17,9 +18,28 @@ interface InventoryTableProps {
 }
 
 export const InventoryTable: React.FC<InventoryTableProps> = ({
-  items, searchQuery, onSearchChange, selectedTitleFilter, onTitleFilterChange,
+  items, categories = [], searchQuery, onSearchChange, selectedTitleFilter, onTitleFilterChange,
   isLoading, onAdjustQuantity, onViewSerials, onInspectItem, onDeleteItem,
 }) => {
+  const categoryList = React.useMemo(() => {
+    const list: string[] = [];
+    if (categories && categories.length > 0) {
+      categories.forEach((c) => {
+        if (!list.includes(c.name)) list.push(c.name);
+      });
+    } else {
+      ItemTitles.forEach((t) => {
+        if (!list.includes(t)) list.push(t);
+      });
+    }
+    items.forEach((it) => {
+      if (it.title && !list.includes(it.title)) {
+        list.push(it.title);
+      }
+    });
+    return list;
+  }, [categories, items]);
+
   const filtered = items.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.sku.toLowerCase().includes(searchQuery.toLowerCase());
     return (selectedTitleFilter === "ALL" || item.title === selectedTitleFilter) && matchesSearch;
@@ -31,7 +51,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
         <SearchInput value={searchQuery} onChange={onSearchChange} placeholder="Search by name, SKU..." className="flex-1 max-w-md" />
         <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
           <button onClick={() => onTitleFilterChange("ALL")} className={`rounded-lg px-3 py-1.5 font-medium transition-colors shrink-0 ${selectedTitleFilter === "ALL" ? "bg-brand-500 text-white font-semibold shadow-theme-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"}`}>All Items ({items.length})</button>
-          {ItemTitles.map((title) => {
+          {categoryList.map((title) => {
             const count = items.filter((i) => i.title === title).length;
             if (count === 0) return null;
             return (<button key={title} onClick={() => onTitleFilterChange(title)} className={`rounded-lg px-3 py-1.5 font-medium transition-colors shrink-0 ${selectedTitleFilter === title ? "bg-brand-500 text-white font-semibold shadow-theme-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"}`}>{title} ({count})</button>);

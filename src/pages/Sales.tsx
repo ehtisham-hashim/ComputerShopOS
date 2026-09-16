@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ShoppingCart, Plus } from "lucide-react";
-import { InventoryItem, SaleRecord, Customer, SaleLineItem } from "../db/schema";
+import { InventoryItem, SaleRecord, Customer, SaleLineItem, CategoryRecord } from "../db/schema";
 import { getRecentSales, deleteSale, getAllSaleItems, toggleSaleBadDebt } from "../db/posService";
 import { getCustomers } from "../db/customerService";
 import { getStoreSettings, StoreSettings } from "../db/settingsService";
@@ -18,11 +18,12 @@ import { useSalesCart } from "../components/sales/useSalesCart";
 
 interface SalesPageProps {
   items: InventoryItem[];
+  categories?: CategoryRecord[];
   onSaleComplete?: () => Promise<void>;
   initialCartItems?: InventoryItem[];
 }
 
-export const SalesPage: React.FC<SalesPageProps> = ({ items, onSaleComplete, initialCartItems }) => {
+export const SalesPage: React.FC<SalesPageProps> = ({ items, categories = [], onSaleComplete, initialCartItems }) => {
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [saleItems, setSaleItems] = useState<SaleLineItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -161,6 +162,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, onSaleComplete, ini
         isOpen={isSaleModalOpen}
         onClose={() => setIsSaleModalOpen(false)}
         items={items}
+        categories={categories}
         customers={customers}
         cart={cart}
         onAddToCart={addToCart}

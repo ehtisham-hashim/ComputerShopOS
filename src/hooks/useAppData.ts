@@ -1,13 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
-import { InventoryItem } from "../db/schema";
+import { InventoryItem, CategoryRecord } from "../db/schema";
 import { getInventoryItems } from "../db/inventoryService";
 import { getCustomers } from "../db/customerService";
 import { getRepairTickets } from "../db/repairsService";
 import { getPayablesSummary } from "../db/payablesService";
+import { getCategories } from "../db/categoryService";
 import { initDb } from "../db/client";
 
 export function useAppData(isAuthenticated: boolean) {
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [customersCount, setCustomersCount] = useState<number>(0);
   const [activeRepairsCount, setActiveRepairsCount] = useState<number>(0);
   const [payablesCount, setPayablesCount] = useState<number>(0);
@@ -41,6 +43,12 @@ export function useAppData(isAuthenticated: boolean) {
       } catch (e) {
         console.error("Failed to load payables summary:", e);
       }
+      try {
+        const cats = await getCategories();
+        setCategories(cats);
+      } catch (e) {
+        console.error("Failed to load categories:", e);
+      }
     } catch (err) {
       console.error("Database error:", err);
     } finally {
@@ -56,5 +64,15 @@ export function useAppData(isAuthenticated: boolean) {
 
   const lowStockCount = items.filter((i) => i.quantity <= 5).length;
 
-  return { items, customersCount, activeRepairsCount, payablesCount, lowStockCount, isLoading, fetchItems };
+  return {
+    items,
+    categories,
+    categoriesCount: categories.length,
+    customersCount,
+    activeRepairsCount,
+    payablesCount,
+    lowStockCount,
+    isLoading,
+    fetchItems,
+  };
 }

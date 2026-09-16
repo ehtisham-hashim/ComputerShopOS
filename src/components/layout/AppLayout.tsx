@@ -7,6 +7,7 @@ interface AppLayoutProps {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   inventoryCount: number;
+  categoriesCount?: number;
   lowStockCount?: number;
   activeRepairsCount?: number;
   customersCount?: number;
@@ -20,6 +21,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   activeTab,
   onSelectTab,
   inventoryCount,
+  categoriesCount,
   lowStockCount,
   activeRepairsCount,
   customersCount,
@@ -36,6 +38,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
         activeTab={activeTab}
         onSelectTab={onSelectTab}
         inventoryCount={inventoryCount}
+        categoriesCount={categoriesCount}
         lowStockCount={lowStockCount}
         activeRepairsCount={activeRepairsCount}
         customersCount={customersCount}

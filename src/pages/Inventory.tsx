@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Boxes, Plus } from "lucide-react";
-import { InventoryItem, InventorySerial } from "../db/schema";
+import { InventoryItem, InventorySerial, CategoryRecord } from "../db/schema";
 import { updateItemQuantity, deleteInventoryItem, getItemSerials } from "../db/inventoryService";
 import { PageHeader } from "../components/ui/PageHeader";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
@@ -12,11 +12,12 @@ import { ProductInspectModal } from "../components/inventory/ProductInspectModal
 
 interface InventoryPageProps {
   items: InventoryItem[];
+  categories?: CategoryRecord[];
   isLoading: boolean;
   onRefresh: () => Promise<void>;
 }
 
-export const InventoryPage: React.FC<InventoryPageProps> = ({ items, isLoading, onRefresh }) => {
+export const InventoryPage: React.FC<InventoryPageProps> = ({ items, categories = [], isLoading, onRefresh }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTitleFilter, setSelectedTitleFilter] = useState("ALL");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,12 +67,12 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ items, isLoading, 
       </PageHeader>
       <InventoryStats items={items} />
       <InventoryTable
-        items={items} searchQuery={searchQuery} onSearchChange={setSearchQuery}
+        items={items} categories={categories} searchQuery={searchQuery} onSearchChange={setSearchQuery}
         selectedTitleFilter={selectedTitleFilter} onTitleFilterChange={setSelectedTitleFilter}
         isLoading={isLoading} onAdjustQuantity={handleAdjustQuantity} onViewSerials={handleViewSerials}
         onInspectItem={setInspectItem} onDeleteItem={async (id) => setDeleteTargetId(id)}
       />
-      <AddProductModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={onRefresh} />
+      <AddProductModal isOpen={isModalOpen} categories={categories} onClose={() => setIsModalOpen(false)} onSuccess={onRefresh} />
       <SerialViewerModal item={activeSerialItem} serials={activeSerials} loading={loadingSerials} onClose={() => setActiveSerialItem(null)} />
       <ProductInspectModal item={inspectItem} onClose={() => setInspectItem(null)} />
       <ConfirmModal

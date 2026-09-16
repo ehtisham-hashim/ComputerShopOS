@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { ShoppingCart, CreditCard, Banknote, Split } from "lucide-react";
-import { InventoryItem, Customer, PaymentMethod, PaymentStatus } from "../../db/schema";
+import { InventoryItem, Customer, PaymentMethod, PaymentStatus, CategoryRecord } from "../../db/schema";
 import { createSaleTransaction } from "../../db/posService";
 import { Modal } from "../ui/Modal";
 import { CustomSelect } from "../ui/Select";
@@ -13,6 +13,7 @@ interface NewSaleModalProps {
   isOpen: boolean;
   onClose: () => void;
   items: InventoryItem[];
+  categories?: CategoryRecord[];
   customers: Customer[];
   cart: CartItem[];
   onAddToCart: (item: InventoryItem) => void;
@@ -22,7 +23,7 @@ interface NewSaleModalProps {
 }
 
 export const NewSaleModal: React.FC<NewSaleModalProps> = ({
-  isOpen, onClose, items, customers, cart, onAddToCart, onUpdateCartQty, onRemoveFromCart, onSaleCompleted,
+  isOpen, onClose, items, categories = [], customers, cart, onAddToCart, onUpdateCartQty, onRemoveFromCart, onSaleCompleted,
 }) => {
   const [catalogSearch, setCatalogSearch] = useState("");
   const [selectedCustomerId, setSelectedCustomerId] = useState("walk-in");
@@ -84,7 +85,7 @@ export const NewSaleModal: React.FC<NewSaleModalProps> = ({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 pt-1">
-          <div className="lg:col-span-7"><CatalogPicker items={items} search={catalogSearch} onSearchChange={setCatalogSearch} onAddToCart={onAddToCart} /></div>
+          <div className="lg:col-span-7"><CatalogPicker items={items} categories={categories} search={catalogSearch} onSearchChange={setCatalogSearch} onAddToCart={onAddToCart} /></div>
 
           <div className="lg:col-span-5 flex flex-col justify-between space-y-3">
             <div className="space-y-2">

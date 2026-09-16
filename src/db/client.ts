@@ -280,6 +280,12 @@ const memoryPurchases: schema.PurchaseRecord[] = [];
 const memoryPurchaseItems: schema.PurchaseItemRecord[] = [];
 const memoryExpenses: schema.Expense[] = [];
 const memoryMonthlyReports: schema.MonthlyReportRecord[] = [];
+const memoryCategories: schema.CategoryRecord[] = schema.DefaultCategories.map((c, idx) => ({
+  id: idx + 1,
+  name: c.name,
+  description: c.description,
+  createdAt: Math.floor(Date.now() / 1000),
+}));
 
 export async function initDb(): Promise<void> {
   if (isInitialized) return;
@@ -491,6 +497,12 @@ export async function initDb(): Promise<void> {
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
           updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )`,
+        `CREATE TABLE IF NOT EXISTS categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          description TEXT DEFAULT '',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
       ];
 
       for (const q of tableQueries) {
@@ -529,11 +541,27 @@ export async function initDb(): Promise<void> {
         "CREATE INDEX IF NOT EXISTS idx_expenses_year_month ON expenses(year, month)",
         "CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)",
         "CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)",
+        "CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name)",
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_monthly_reports_year_month ON monthly_reports(year, month)",
       ];
 
       for (const idx of indexQueries) {
         try { await sqlDb.execute(idx); } catch {}
+      }
+
+      try {
+        const existingCats = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM categories");
+        const catCnt = existingCats?.[0]?.cnt ?? existingCats?.[0]?.["COUNT(*)"] ?? 0;
+        if (catCnt === 0) {
+          for (const defCat of schema.DefaultCategories) {
+            await sqlDb.execute(
+              "INSERT OR IGNORE INTO categories (name, description, created_at) VALUES (?, ?, ?)",
+              [defCat.name, defCat.description, Math.floor(Date.now() / 1000)]
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("Categories seed check:", err);
       }
 
       try {
@@ -895,5 +923,6 @@ export const memoryStore = {
   purchaseItems: memoryPurchaseItems,
   expenses: memoryExpenses,
   monthlyReports: memoryMonthlyReports,
+  categories: memoryCategories,
 };
 

@@ -1,19 +1,39 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Plus, Tag } from "lucide-react";
-import { InventoryItem, ItemTitles } from "../../db/schema";
+import { InventoryItem, ItemTitles, CategoryRecord } from "../../db/schema";
 import { SearchInput } from "../ui/SearchInput";
 
 interface CatalogPickerProps {
   items: InventoryItem[];
+  categories?: CategoryRecord[];
   search: string;
   onSearchChange: (v: string) => void;
   onAddToCart: (item: InventoryItem) => void;
 }
 
 export const CatalogPicker: React.FC<CatalogPickerProps> = ({
-  items, search, onSearchChange, onAddToCart,
+  items, categories = [], search, onSearchChange, onAddToCart,
 }) => {
   const [selectedCat, setSelectedCat] = useState<string>("ALL");
+
+  const categoryList = useMemo(() => {
+    const list: string[] = [];
+    if (categories && categories.length > 0) {
+      categories.forEach((c) => {
+        if (!list.includes(c.name)) list.push(c.name);
+      });
+    } else {
+      ItemTitles.forEach((t) => {
+        if (!list.includes(t)) list.push(t);
+      });
+    }
+    items.forEach((it) => {
+      if (it.title && !list.includes(it.title)) {
+        list.push(it.title);
+      }
+    });
+    return list;
+  }, [categories, items]);
 
   const filtered = items.filter((i) => {
     const matchCat = selectedCat === "ALL" || i.title === selectedCat;
@@ -27,7 +47,7 @@ export const CatalogPicker: React.FC<CatalogPickerProps> = ({
         <SearchInput value={search} onChange={onSearchChange} placeholder="Search catalog by name, SKU, or type..." />
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-thin">
           <button type="button" onClick={() => setSelectedCat("ALL")} className={`px-2.5 py-1 rounded-lg font-bold shrink-0 transition-colors ${selectedCat === "ALL" ? "bg-brand-500 text-white shadow-theme-xs" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200"}`}>All ({items.length})</button>
-          {ItemTitles.map((cat) => {
+          {categoryList.map((cat) => {
             const count = items.filter((i) => i.title === cat).length;
             if (count === 0) return null;
             return (
