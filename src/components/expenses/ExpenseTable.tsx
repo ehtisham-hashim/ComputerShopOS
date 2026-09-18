@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Search, Tag, Trash2, Pencil, Check, X } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Search, Tag, Trash2, Pencil, Check, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { ExpenseRecord, ExpenseCategories } from "../../db/schema";
 import { CustomDropdown } from "../ui/CustomDropdown";
 
@@ -73,6 +73,18 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
     return matchesSearch && matchesCategory;
   });
 
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, categoryFilter, selectedYear, monthName]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paginatedExpenses = useMemo(() => {
+    return filtered.slice((page - 1) * pageSize, page * pageSize);
+  }, [filtered, page, pageSize]);
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden shadow-theme-xs">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b border-gray-100 dark:border-gray-800">
@@ -128,7 +140,7 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
-              {filtered.map((exp) => (
+              {paginatedExpenses.map((exp) => (
                 <tr key={exp.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
                   <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
                     {new Date(exp.expenseDate * 1000).toLocaleDateString()}
@@ -216,6 +228,37 @@ export const ExpenseTable: React.FC<ExpenseTableProps> = ({
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-5 py-3 text-xs text-gray-500">
+          <div>
+            Showing {(page - 1) * pageSize + 1} to{" "}
+            {Math.min(page * pageSize, filtered.length)} of {filtered.length} expenses
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+              title="Previous page"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="p-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+              title="Next page"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
         </div>
       )}
     </div>

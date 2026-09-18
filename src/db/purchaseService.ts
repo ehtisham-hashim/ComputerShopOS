@@ -26,18 +26,12 @@ export async function getNextPurchaseNo(): Promise<string> {
 
   if (isTauri && sqlDb) {
     try {
-      const rows = await sqlDb.select<{ purchase_no: string }[]>(
-        `SELECT purchase_no FROM purchases WHERE purchase_no LIKE $1`,
+      const rows = await sqlDb.select<{ max_seq: number | null }[]>(
+        `SELECT MAX(CAST(SUBSTR(purchase_no, 10) AS INTEGER)) as max_seq FROM purchases WHERE purchase_no LIKE $1`,
         [`${prefixYear}%`]
       );
-      for (const row of rows) {
-        const parts = (row.purchase_no || "").split("-");
-        if (parts.length >= 3) {
-          const num = parseInt(parts[2], 10);
-          if (!isNaN(num) && num > maxSeq) {
-            maxSeq = num;
-          }
-        }
+      if (rows && rows[0] && rows[0].max_seq != null) {
+        maxSeq = Number(rows[0].max_seq) || 0;
       }
     } catch (e) {
       console.error("Failed to query purchase sequence in SQLite:", e);
@@ -56,29 +50,8 @@ export async function getNextPurchaseNo(): Promise<string> {
     }
   }
 
-  let candidate = maxSeq + 1;
-  let finalPurchaseNo = `${prefixYear}${String(candidate).padStart(3, "0")}`;
-
-  if (isTauri && sqlDb) {
-    while (true) {
-      try {
-        const check = await sqlDb.select<{ count: number }[]>(
-          `SELECT COUNT(*) as count FROM purchases WHERE purchase_no = $1`,
-          [finalPurchaseNo]
-        );
-        if (check && check[0] && check[0].count > 0) {
-          candidate++;
-          finalPurchaseNo = `${prefixYear}${String(candidate).padStart(3, "0")}`;
-        } else {
-          break;
-        }
-      } catch {
-        break;
-      }
-    }
-  }
-
-  return finalPurchaseNo;
+  const candidate = maxSeq + 1;
+  return `${prefixYear}${String(candidate).padStart(3, "0")}`;
 }
 
 /**
@@ -282,12 +255,12 @@ export async function createPurchase(input: CreatePurchaseInput): Promise<Purcha
         );
       }
 
+      await sqlDb.execute("COMMIT;");
+
       // 4. Recalculate Supplier's Ledger & running balances
       await recalculatePartyLedger(input.partyId);
-
-      await sqlDb.execute("COMMIT;");
     } catch (err) {
-      await sqlDb.execute("ROLLBACK;");
+      await sqlDb.execute("ROLLBACK;").catch(() => {});
       throw err;
     }
   } else {
@@ -616,12 +589,12 @@ export async function deletePurchase(purchaseId: number): Promise<void> {
       await sqlDb.execute("DELETE FROM purchase_items WHERE purchase_id = $1", [purchaseId]);
       await sqlDb.execute("DELETE FROM purchases WHERE id = $1", [purchaseId]);
 
+      await sqlDb.execute("COMMIT;");
+
       // 4. Recalculate supplier's Khata
       await recalculatePartyLedger(partyId);
-
-      await sqlDb.execute("COMMIT;");
     } catch (err) {
-      await sqlDb.execute("ROLLBACK;");
+      await sqlDb.execute("ROLLBACK;").catch(() => {});
       throw err;
     }
   } else {

@@ -1,5 +1,5 @@
-import React from "react";
-import { User, Smartphone, Package, Eye, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { User, Smartphone, Package, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { RepairTicketRecord, RepairStatus, RepairPartUsed } from "../../db/schema";
 import { SearchInput } from "../ui/SearchInput";
 import { RepairStatusDropdown } from "./RepairStatusDropdown";
@@ -20,10 +20,20 @@ export const RepairTable: React.FC<RepairTableProps> = ({
   tickets, searchQuery, onSearchChange, statusFilter, onStatusFilterChange,
   isLoading, onStatusChange, onInspectTicket, onDeleteTicket,
 }) => {
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter]);
+
   const filtered = tickets.filter((t) => {
     const matchesSearch = t.ticketNo.toLowerCase().includes(searchQuery.toLowerCase()) || t.customerName.toLowerCase().includes(searchQuery.toLowerCase()) || t.device.toLowerCase().includes(searchQuery.toLowerCase());
     return (statusFilter === "ALL" || t.status === statusFilter) && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="tail-card space-y-4">
@@ -48,7 +58,7 @@ export const RepairTable: React.FC<RepairTableProps> = ({
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} className="py-12 text-center text-gray-400 text-xs">No repair tickets found.</td></tr>
             ) : (
-              filtered.map((ticket) => {
+              paginated.map((ticket) => {
                 let parsedParts: RepairPartUsed[] = [];
                 try { parsedParts = JSON.parse(ticket.partsUsed || "[]"); } catch {}
                 return (
@@ -70,6 +80,33 @@ export const RepairTable: React.FC<RepairTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-4 py-3 text-xs text-gray-500">
+          <span>
+            Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} tickets
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <ChevronLeft className="size-3.5 inline mr-1" /> Prev
+            </button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Next <ChevronRight className="size-3.5 inline ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

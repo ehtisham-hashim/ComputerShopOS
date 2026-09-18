@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { InventoryItem, CategoryRecord } from "../db/schema";
 import { getInventoryItems } from "../db/inventoryService";
-import { getCustomers } from "../db/customerService";
-import { getRepairTickets } from "../db/repairsService";
+import { getCustomersCount } from "../db/customerService";
+import { getActiveRepairsCount } from "../db/repairsService";
 import { getPayablesSummary } from "../db/payablesService";
 import { getCategories } from "../db/categoryService";
 import { initDb } from "../db/client";
@@ -26,16 +26,16 @@ export function useAppData(isAuthenticated: boolean) {
         console.error("Failed to load inventory:", e);
       }
       try {
-        const custs = await getCustomers();
-        setCustomersCount(custs.length);
+        const count = await getCustomersCount();
+        setCustomersCount(count);
       } catch (e) {
-        console.error("Failed to load customers:", e);
+        console.error("Failed to load customers count:", e);
       }
       try {
-        const repairTickets = await getRepairTickets();
-        setActiveRepairsCount(repairTickets.filter((t) => t.status !== "DELIVERED").length);
+        const count = await getActiveRepairsCount();
+        setActiveRepairsCount(count);
       } catch (e) {
-        console.error("Failed to load repair tickets:", e);
+        console.error("Failed to load repair tickets count:", e);
       }
       try {
         const pSummary = await getPayablesSummary();

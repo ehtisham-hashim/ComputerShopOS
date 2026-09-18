@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   DollarSign,
@@ -11,6 +11,8 @@ import {
   Coins,
   CheckCircle2,
   Plus,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { SaleRecord } from "../../db/schema";
 import { toggleSaleBadDebt } from "../../db/posService";
@@ -74,6 +76,18 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = ({
       return true;
     });
   }, [receivableSales, search, statusFilter]);
+
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
+
+  const totalPages = Math.ceil(filteredSales.length / pageSize) || 1;
+  const paginatedSales = useMemo(() => {
+    return filteredSales.slice((page - 1) * pageSize, page * pageSize);
+  }, [filteredSales, page, pageSize]);
 
   const handleToggleBadDebt = async (sale: SaleRecord) => {
     try {
@@ -251,7 +265,7 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60 font-mono">
-                {filteredSales.map((sale) => {
+                {paginatedSales.map((sale) => {
                   const dateStr = new Date(sale.createdAt * 1000)
                     .toISOString()
                     .split("T")[0];
@@ -350,6 +364,37 @@ export const ReceivablesTable: React.FC<ReceivablesTableProps> = ({
             </table>
           )}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-4 py-3 text-xs text-gray-500">
+            <div>
+              Showing {(page - 1) * pageSize + 1} to{" "}
+              {Math.min(page * pageSize, filteredSales.length)} of {filteredSales.length} receivables
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+                title="Previous page"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+                title="Next page"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

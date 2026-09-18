@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ShoppingBag,
   Banknote,
@@ -13,6 +13,8 @@ import {
   MapPin,
   ArrowLeft,
   Eye,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { PayableParty, PayableLedgerEntry, PayableTxType } from "../../db/schema";
 import { deleteLedgerEntry, deletePayableParty } from "../../db/payablesService";
@@ -77,6 +79,18 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
       return true;
     });
   }, [ledger, search, typeFilter, dateFrom, dateTo]);
+
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [party?.id, search, typeFilter, dateFrom, dateTo]);
+
+  const totalPages = Math.ceil(filteredEntries.length / pageSize) || 1;
+  const paginatedEntries = useMemo(() => {
+    return filteredEntries.slice((page - 1) * pageSize, page * pageSize);
+  }, [filteredEntries, page, pageSize]);
 
   const handleDeleteEntry = async () => {
     if (deleteEntryId === null) return;
@@ -383,7 +397,7 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60 font-mono">
-              {filteredEntries.map((entry) => {
+              {paginatedEntries.map((entry) => {
                 const dateFormatted = new Date(entry.txDate * 1000)
                   .toISOString()
                   .split("T")[0];
@@ -452,6 +466,37 @@ export const SupplierLedgerPane: React.FC<SupplierLedgerPaneProps> = ({
           </table>
         )}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-4 py-2 text-xs text-gray-500">
+          <div>
+            Showing {(page - 1) * pageSize + 1} to{" "}
+            {Math.min(page * pageSize, filteredEntries.length)} of {filteredEntries.length} entries
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="p-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+              title="Previous page"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <span className="font-medium text-gray-700 dark:text-gray-300">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="p-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+              title="Next page"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Summary Bar */}
       <div className="p-3 bg-gray-50 dark:bg-gray-800/60 border-t border-gray-200 dark:border-gray-800 text-xs font-mono flex flex-wrap items-center justify-between gap-4">

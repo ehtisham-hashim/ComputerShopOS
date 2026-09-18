@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ShoppingCart, Plus } from "lucide-react";
-import { InventoryItem, SaleRecord, Customer, SaleLineItem, CategoryRecord } from "../db/schema";
-import { getRecentSales, deleteSale, getAllSaleItems, toggleSaleBadDebt } from "../db/posService";
+import { InventoryItem, SaleRecord, Customer, CategoryRecord } from "../db/schema";
+import { getRecentSales, deleteSale, toggleSaleBadDebt } from "../db/posService";
 import { getCustomers } from "../db/customerService";
 import { getStoreSettings, StoreSettings } from "../db/settingsService";
 import { PageHeader } from "../components/ui/PageHeader";
@@ -25,7 +25,6 @@ interface SalesPageProps {
 
 export const SalesPage: React.FC<SalesPageProps> = ({ items, categories = [], onSaleComplete, initialCartItems }) => {
   const [sales, setSales] = useState<SaleRecord[]>([]);
-  const [saleItems, setSaleItems] = useState<SaleLineItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -44,14 +43,12 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, categories = [], on
   const fetchSalesData = async (showLoader = false) => {
     if (showLoader) setIsLoading(true);
     try {
-      const [s, its, c, cfg] = await Promise.all([
-        getRecentSales(500),
-        getAllSaleItems(),
+      const [s, c, cfg] = await Promise.all([
+        getRecentSales(100),
         getCustomers(),
         getStoreSettings(),
       ]);
       setSales(s);
-      setSaleItems(its);
       setCustomers(c);
       setStoreSettings(cfg);
       return s;
@@ -145,7 +142,6 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, categories = [], on
 
       <SalesTable
         sales={sales}
-        saleItems={saleItems}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         statusFilter={statusFilter}

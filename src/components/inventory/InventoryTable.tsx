@@ -1,5 +1,5 @@
-import React from "react";
-import { Tag, Barcode, Eye, Trash2, RefreshCw, Package } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { Tag, Barcode, Eye, Trash2, RefreshCw, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { InventoryItem, ItemTitles, CategoryRecord } from "../../db/schema";
 import { SearchInput } from "../ui/SearchInput";
 
@@ -21,7 +21,14 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   items, categories = [], searchQuery, onSearchChange, selectedTitleFilter, onTitleFilterChange,
   isLoading, onAdjustQuantity, onViewSerials, onInspectItem, onDeleteItem,
 }) => {
-  const categoryList = React.useMemo(() => {
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, selectedTitleFilter]);
+
+  const categoryList = useMemo(() => {
     const list: string[] = [];
     if (categories && categories.length > 0) {
       categories.forEach((c) => {
@@ -40,10 +47,23 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
     return list;
   }, [categories, items]);
 
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const it of items) {
+      if (it.title) {
+        map.set(it.title, (map.get(it.title) || 0) + 1);
+      }
+    }
+    return map;
+  }, [items]);
+
   const filtered = items.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.sku.toLowerCase().includes(searchQuery.toLowerCase());
     return (selectedTitleFilter === "ALL" || item.title === selectedTitleFilter) && matchesSearch;
   });
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="tail-card space-y-4">
@@ -52,7 +72,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
         <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
           <button onClick={() => onTitleFilterChange("ALL")} className={`rounded-lg px-3 py-1.5 font-medium transition-colors shrink-0 ${selectedTitleFilter === "ALL" ? "bg-brand-500 text-white font-semibold shadow-theme-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"}`}>All Items ({items.length})</button>
           {categoryList.map((title) => {
-            const count = items.filter((i) => i.title === title).length;
+            const count = categoryCounts.get(title) || 0;
             if (count === 0) return null;
             return (<button key={title} onClick={() => onTitleFilterChange(title)} className={`rounded-lg px-3 py-1.5 font-medium transition-colors shrink-0 ${selectedTitleFilter === title ? "bg-brand-500 text-white font-semibold shadow-theme-xs" : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"}`}>{title} ({count})</button>);
           })}
@@ -69,7 +89,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
             ) : filtered.length === 0 ? (
               <tr><td colSpan={7} className="py-12 text-center text-gray-400 text-xs"><Package className="size-8 mx-auto mb-2 text-gray-400 opacity-60" />No inventory products found</td></tr>
             ) : (
-              filtered.map((item) => (
+              paginated.map((item) => (
                 <tr key={item.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
                   <td className="py-3.5 px-4"><span className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[11px] font-bold text-gray-700 dark:text-gray-300"><Tag className="size-3" />{item.title}</span></td>
                   <td className="py-3.5 px-4"><div className="flex items-center gap-2"><span className="font-semibold text-gray-900 dark:text-white max-w-[200px] truncate block" title={item.name}>{item.name}</span>{item.isSerialized === 1 && <button type="button" onClick={() => onViewSerials(item)} className="rounded bg-brand-500/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-brand-500/20 dark:text-brand-400 shrink-0">SN</button>}</div></td>
@@ -84,6 +104,33 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-4 py-3 text-xs text-gray-500">
+          <span>
+            Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} products
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <ChevronLeft className="size-3.5 inline mr-1" /> Prev
+            </button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Next <ChevronRight className="size-3.5 inline ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

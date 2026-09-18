@@ -11,6 +11,8 @@ import {
   CreditCard,
   Plus,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { DocumentRecord, BrandType } from "../../db/schema";
 import { parseDocumentItems } from "../../db/documentsService";
@@ -201,8 +203,17 @@ export const DocHistoryTable: React.FC<DocHistoryTableProps> = ({
   onCreateNew,
 }) => {
   const [downloadingId, setDownloadingId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
 
   const brandDocs = documents.filter((d) => d.brand === activeBrand);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, activeBrand]);
+
+  const totalPages = Math.ceil(brandDocs.length / pageSize) || 1;
+  const paginatedDocs = brandDocs.slice((page - 1) * pageSize, page * pageSize);
 
   const handleDownload = async (doc: DocumentRecord, size: PaperSize = "a4") => {
     try {
@@ -281,7 +292,7 @@ export const DocHistoryTable: React.FC<DocHistoryTableProps> = ({
                   </td>
                 </tr>
               ) : (
-                brandDocs.map((doc) => {
+                paginatedDocs.map((doc) => {
                   const items = parseDocumentItems(doc.itemsJson);
                   const isDownloading = downloadingId === doc.id;
 
@@ -393,6 +404,37 @@ export const DocHistoryTable: React.FC<DocHistoryTableProps> = ({
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-5 py-3 text-xs text-gray-500">
+            <div>
+              Showing {(page - 1) * pageSize + 1} to{" "}
+              {Math.min(page * pageSize, brandDocs.length)} of {brandDocs.length} documents
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+                title="Previous page"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <span className="font-medium text-gray-700 dark:text-gray-300">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+                title="Next page"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -168,3 +168,21 @@ export async function deleteCustomer(id: number): Promise<void> {
     memoryStore.customers.splice(idx, 1);
   }
 }
+
+export async function getCustomersCount(): Promise<number> {
+  const isTauri = isTauriEnvironment();
+  const sqlDb = await getSqlDb();
+
+  if (isTauri && sqlDb) {
+    try {
+      const rows = await sqlDb.select<{ count: number }[]>(
+        "SELECT COUNT(*) as count FROM customers"
+      );
+      return Number(rows[0]?.count ?? 0);
+    } catch (e) {
+      console.error("Failed to query customers count:", e);
+    }
+  }
+
+  return memoryStore.customers.length;
+}

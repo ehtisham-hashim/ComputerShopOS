@@ -298,6 +298,9 @@ export async function initDb(): Promise<void> {
       try { await sqlDb.execute("PRAGMA synchronous = NORMAL;"); } catch {}
       try { await sqlDb.execute("PRAGMA foreign_keys = ON;"); } catch {}
       try { await sqlDb.execute("PRAGMA busy_timeout = 5000;"); } catch {}
+      try { await sqlDb.execute("PRAGMA temp_store = MEMORY;"); } catch {}
+      try { await sqlDb.execute("PRAGMA cache_size = -8000;"); } catch {}
+      try { await sqlDb.execute("PRAGMA wal_checkpoint(TRUNCATE);"); } catch {}
 
       const tableQueries = [
         `CREATE TABLE IF NOT EXISTS customers (
@@ -515,6 +518,13 @@ export async function initDb(): Promise<void> {
       try { await sqlDb.execute("ALTER TABLE sale_items ADD COLUMN cost_price INTEGER NOT NULL DEFAULT 0;"); } catch {}
 
       const indexQueries = [
+        "CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id)",
+        "CREATE INDEX IF NOT EXISTS idx_sale_items_inventory_id ON sale_items(inventory_id)",
+        "CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_sales_customer_id ON sales(customer_id)",
+        "CREATE INDEX IF NOT EXISTS idx_inventory_serials_inv_status ON inventory_serials(inventory_id, status)",
+        "CREATE INDEX IF NOT EXISTS idx_repairs_created_at ON repairs(created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_repairs_status ON repairs(status)",
         "CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)",
         "CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)",
         "CREATE INDEX IF NOT EXISTS idx_inventory_sku ON inventory(sku)",

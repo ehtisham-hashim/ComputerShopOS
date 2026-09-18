@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { Eye, Printer, Trash2, Banknote, Package, AlertTriangle } from "lucide-react";
+import React, { useMemo, useState, useEffect } from "react";
+import { Eye, Printer, Trash2, Banknote, Package, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { SaleRecord, SaleLineItem } from "../../db/schema";
 import { SearchInput } from "../ui/SearchInput";
 import { StatusBadge } from "../ui/StatusBadge";
@@ -33,8 +33,16 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   onCollectPayment,
   onToggleBadDebt,
 }) => {
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, statusFilter]);
+
   // ponytail: pre-aggregate sale items once into a Map instead of O(N*M) linear scan per row
   const itemsBySaleId = useMemo(() => {
+    if (!saleItems || saleItems.length === 0) return new Map<number, string>();
     const map = new Map<number, string>();
     for (const it of saleItems) {
       const sid = Number(it.saleId);
@@ -61,6 +69,9 @@ export const SalesTable: React.FC<SalesTableProps> = ({
     if (statusFilter === "PAID") return s.paymentStatus === "PAID";
     return s.paymentStatus === statusFilter;
   });
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="tail-card space-y-4">
@@ -122,7 +133,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                 </td>
               </tr>
             ) : (
-              filtered.map((s) => {
+              paginated.map((s) => {
                 const summary = itemsBySaleId.get(s.id);
                 const isBad = s.isBadDebt === 1;
 
@@ -235,6 +246,32 @@ export const SalesTable: React.FC<SalesTableProps> = ({
           </tbody>
         </table>
       </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-4 py-3 text-xs text-gray-500">
+          <span>
+            Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} entries
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <ChevronLeft className="size-3.5 inline mr-1" /> Prev
+            </button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Next <ChevronRight className="size-3.5 inline ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

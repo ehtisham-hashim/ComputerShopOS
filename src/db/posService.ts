@@ -14,18 +14,12 @@ export async function getNextSequenceInvoiceNo(prefix: "INV" | "RCV" = "INV"): P
 
   if (isTauri && sqlDb) {
     try {
-      const rows = await sqlDb.select<{ invoice_no: string }[]>(
-        `SELECT invoice_no FROM sales WHERE invoice_no LIKE $1`,
+      const rows = await sqlDb.select<{ max_seq: number | null }[]>(
+        `SELECT MAX(CAST(SUBSTR(invoice_no, 10) AS INTEGER)) as max_seq FROM sales WHERE invoice_no LIKE $1`,
         [`${prefixYear}%`]
       );
-      for (const row of rows) {
-        const parts = (row.invoice_no || "").split("-");
-        if (parts.length >= 3) {
-          const num = parseInt(parts[2], 10);
-          if (!isNaN(num) && num > maxSeq) {
-            maxSeq = num;
-          }
-        }
+      if (rows && rows[0] && rows[0].max_seq != null) {
+        maxSeq = Number(rows[0].max_seq) || 0;
       }
     } catch (e) {
       console.error("Failed to query invoice sequence in SQLite:", e);
@@ -44,29 +38,8 @@ export async function getNextSequenceInvoiceNo(prefix: "INV" | "RCV" = "INV"): P
     }
   }
 
-  let candidate = maxSeq + 1;
-  let finalInvoiceNo = `${prefixYear}${String(candidate).padStart(3, "0")}`;
-
-  if (isTauri && sqlDb) {
-    while (true) {
-      try {
-        const check = await sqlDb.select<{ count: number }[]>(
-          `SELECT COUNT(*) as count FROM sales WHERE invoice_no = $1`,
-          [finalInvoiceNo]
-        );
-        if (check && check[0] && check[0].count > 0) {
-          candidate++;
-          finalInvoiceNo = `${prefixYear}${String(candidate).padStart(3, "0")}`;
-        } else {
-          break;
-        }
-      } catch {
-        break;
-      }
-    }
-  }
-
-  return finalInvoiceNo;
+  const candidate = maxSeq + 1;
+  return `${prefixYear}${String(candidate).padStart(3, "0")}`;
 }
 
 export async function createSaleTransaction(input: CreateSaleInput): Promise<string> {
@@ -98,6 +71,36 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
       input.customerAddress || ""
     );
   }
+
+  // Pre-resolve costs before write-transaction to prevent pool lock contention
+  const resolvedItems = await Promise.all(
+    input.items.map(async (item) => {
+      const unitPriceInt = Math.round(Number(item.unitPrice) || 0);
+      const qtyInt = Math.round(Number(item.quantity) || 1);
+      const lineTotalInt = unitPriceInt * qtyInt;
+      let costPriceInt = Math.round(Number(item.costPrice) || 0);
+
+      if (costPriceInt <= 0 && item.inventoryId && isTauri && sqlDb) {
+        try {
+          const invCost = await sqlDb.select<{ cost_price: number }[]>(
+            "SELECT cost_price FROM inventory WHERE id = $1 LIMIT 1",
+            [item.inventoryId]
+          );
+          if (invCost && invCost.length > 0) {
+            costPriceInt = Math.round(Number(invCost[0].cost_price) || 0);
+          }
+        } catch {}
+      }
+
+      return {
+        ...item,
+        unitPriceInt,
+        qtyInt,
+        lineTotalInt,
+        costPriceInt,
+      };
+    })
+  );
 
   if (isTauri && sqlDb) {
     try {
@@ -138,32 +141,17 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
         }
       }
 
-      for (const item of input.items) {
-        const unitPriceInt = Math.round(Number(item.unitPrice) || 0);
-        const qtyInt = Math.round(Number(item.quantity) || 1);
-        const lineTotalInt = unitPriceInt * qtyInt;
-        let costPriceInt = Math.round(Number(item.costPrice) || 0);
-
-        if (costPriceInt <= 0 && item.inventoryId) {
-          const invCost = await sqlDb.select<{ cost_price: number }[]>(
-            "SELECT cost_price FROM inventory WHERE id = $1 LIMIT 1",
-            [item.inventoryId]
-          );
-          if (invCost && invCost.length > 0) {
-            costPriceInt = Math.round(Number(invCost[0].cost_price) || 0);
-          }
-        }
-
+      for (const item of resolvedItems) {
         await sqlDb.execute(
           `INSERT INTO sale_items (sale_id, inventory_id, item_name, serial_number, quantity, unit_price, cost_price, total_price)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [saleId, item.inventoryId, item.itemName, item.serialNumber || null, qtyInt, unitPriceInt, costPriceInt, lineTotalInt]
+          [saleId, item.inventoryId, item.itemName, item.serialNumber || null, item.qtyInt, item.unitPriceInt, item.costPriceInt, item.lineTotalInt]
         );
 
         if (item.inventoryId) {
           await sqlDb.execute(
             `UPDATE inventory SET quantity = MAX(0, quantity - $1) WHERE id = $2`,
-            [qtyInt, item.inventoryId]
+            [item.qtyInt, item.inventoryId]
           );
         }
 
@@ -377,11 +365,11 @@ export async function deleteSale(id: number): Promise<void> {
 
   if (isTauri && sqlDb) {
     try {
-      await sqlDb.execute("BEGIN TRANSACTION;");
       const items = await sqlDb.select<any[]>(
         "SELECT inventory_id, quantity, serial_number FROM sale_items WHERE sale_id = $1",
         [id]
       );
+      await sqlDb.execute("BEGIN TRANSACTION;");
 
       for (const item of items) {
         const invId = Number(item.inventory_id ?? item.inventoryId);
