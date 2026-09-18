@@ -551,6 +551,29 @@ export interface DailyReportPayableItem {
   balanceDue: number;
 }
 
+export interface DailyReportSaleItem {
+  id: number;
+  invoiceNo: string;
+  customerName: string;
+  totalAmount: number;
+  paidAmount: number;
+  balanceDue: number;
+  paymentMethod: string;
+  itemsSummary: string;
+}
+
+export interface DailyReportAdjustmentItem {
+  id: number;
+  adjustmentNo: string;
+  customerName: string;
+  itemTakenName: string;
+  itemTakenValue: number;
+  itemGivenName: string;
+  itemGivenPrice: number;
+  netDifference: number;
+  paymentStatus: string;
+}
+
 export interface DailyReportRow {
   day: number;
   date: string;
@@ -563,6 +586,8 @@ export interface DailyReportRow {
   remarks: string;
   expenseItems?: DailyReportExpenseItem[];
   payableItems?: DailyReportPayableItem[];
+  saleItems?: DailyReportSaleItem[];
+  adjustmentItems?: DailyReportAdjustmentItem[];
 }
 
 export interface ExpenseRecord {

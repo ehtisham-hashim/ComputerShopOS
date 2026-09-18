@@ -1,6 +1,15 @@
 import React, { useState } from "react";
 import { DailyReportRow } from "../../db/schema";
-import { Calendar, ChevronDown, ChevronRight, ChevronUp, Receipt, Building2 } from "lucide-react";
+import {
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Receipt,
+  Building2,
+  ShoppingCart,
+  ArrowLeftRight,
+} from "lucide-react";
 
 interface ReportDailyTableProps {
   dailyData: DailyReportRow[];
@@ -101,8 +110,12 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                 const expenses = row.expenses || 0;
                 const payables = row.payables || 0;
                 const net = row.netProfit ?? (row.grossProfit - expenses);
-                const hasActivity = row.sales > 0 || row.grossProfit > 0 || expenses > 0 || payables > 0;
-                const hasDetails = (row.expenseItems && row.expenseItems.length > 0) || (row.payableItems && row.payableItems.length > 0);
+                const hasSales = Boolean(row.saleItems && row.saleItems.length > 0);
+                const hasSwaps = Boolean(row.adjustmentItems && row.adjustmentItems.length > 0);
+                const hasExpenses = Boolean(row.expenseItems && row.expenseItems.length > 0);
+                const hasPurchases = Boolean(row.payableItems && row.payableItems.length > 0);
+                const hasDetails = hasSales || hasSwaps || hasExpenses || hasPurchases;
+                const hasActivity = row.sales > 0 || row.grossProfit > 0 || expenses > 0 || payables > 0 || hasSwaps;
                 const isExpanded = expandedDays.has(row.day);
 
                 return (
@@ -170,16 +183,96 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                       <tr className="bg-gray-50/80 dark:bg-gray-800/60 border-y border-gray-200/60 dark:border-gray-700/60">
                         <td colSpan={10} className="px-6 py-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Daily Sales Breakdown */}
+                            {hasSales && (
+                              <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/40 bg-white dark:bg-gray-900 p-3 shadow-xs">
+                                <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-100 dark:border-gray-800 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                                  <ShoppingCart className="size-3.5" />
+                                  <span>Sales Invoices ({row.saleItems!.length})</span>
+                                  <span className="ml-auto">Total: Rs. {row.sales.toLocaleString()}</span>
+                                </div>
+                                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                                  {row.saleItems!.map((sale) => (
+                                    <div key={sale.id} className="flex items-center justify-between text-xs py-1 border-b border-gray-50 dark:border-gray-800/40 last:border-0">
+                                      <div className="flex flex-col min-w-0 pr-2">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{sale.customerName}</span>
+                                          <span className="font-mono text-[10px] text-gray-400 font-bold">{sale.invoiceNo}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 truncate">
+                                          <span className="px-1.5 py-0.2 bg-gray-100 dark:bg-gray-800 rounded font-medium text-gray-600 dark:text-gray-400">
+                                            {sale.paymentMethod}
+                                          </span>
+                                          <span className="truncate">{sale.itemsSummary}</span>
+                                          {sale.balanceDue > 0 && (
+                                            <span className="text-rose-500 font-semibold">• Due: Rs. {sale.balanceDue.toLocaleString()}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <span className="font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap ml-auto">
+                                        Rs. {sale.totalAmount.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Daily Trade-Ins & Swaps Breakdown */}
+                            {hasSwaps && (
+                              <div className="rounded-xl border border-purple-200 dark:border-purple-900/40 bg-white dark:bg-gray-900 p-3 shadow-xs">
+                                <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-100 dark:border-gray-800 text-purple-600 dark:text-purple-400 font-bold text-xs">
+                                  <ArrowLeftRight className="size-3.5" />
+                                  <span>Trade-Ins & Swaps ({row.adjustmentItems!.length})</span>
+                                  <span className="ml-auto">
+                                    Net:{" "}
+                                    {row.adjustmentItems!.reduce((sum, a) => sum + a.netDifference, 0) >= 0
+                                      ? `+Rs. ${row.adjustmentItems!.reduce((sum, a) => sum + a.netDifference, 0).toLocaleString()}`
+                                      : `-Rs. ${Math.abs(row.adjustmentItems!.reduce((sum, a) => sum + a.netDifference, 0)).toLocaleString()}`}
+                                  </span>
+                                </div>
+                                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                                  {row.adjustmentItems!.map((adj) => (
+                                    <div key={adj.id} className="flex items-center justify-between text-xs py-1 border-b border-gray-50 dark:border-gray-800/40 last:border-0">
+                                      <div className="flex flex-col min-w-0 pr-2">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{adj.customerName}</span>
+                                          <span className="font-mono text-[10px] text-gray-400 font-bold">{adj.adjustmentNo}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-[10px] text-gray-400 truncate">
+                                          <span className="text-amber-600 dark:text-amber-400 font-medium">In: {adj.itemTakenName} (Rs. {adj.itemTakenValue.toLocaleString()})</span>
+                                          <span>→</span>
+                                          <span className="text-brand-600 dark:text-brand-400 font-medium">Out: {adj.itemGivenName} (Rs. {adj.itemGivenPrice.toLocaleString()})</span>
+                                        </div>
+                                      </div>
+                                      <div className="text-right whitespace-nowrap ml-auto">
+                                        <span
+                                          className={`font-bold ${
+                                            adj.netDifference >= 0
+                                              ? "text-emerald-600 dark:text-emerald-400"
+                                              : "text-rose-600 dark:text-rose-400"
+                                          }`}
+                                        >
+                                          {adj.netDifference >= 0 ? `+Rs. ${adj.netDifference.toLocaleString()}` : `-Rs. ${Math.abs(adj.netDifference).toLocaleString()}`}
+                                        </span>
+                                        <div className="text-[9px] text-gray-400">{adj.paymentStatus}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Daily Expenses Breakdown */}
-                            {row.expenseItems && row.expenseItems.length > 0 && (
+                            {hasExpenses && (
                               <div className="rounded-xl border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-gray-900 p-3 shadow-xs">
                                 <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-100 dark:border-gray-800 text-rose-600 dark:text-rose-400 font-bold text-xs">
                                   <Receipt className="size-3.5" />
-                                  <span>Daily Expenses ({row.expenseItems.length})</span>
+                                  <span>Daily Expenses ({row.expenseItems!.length})</span>
                                   <span className="ml-auto">Total: Rs. {expenses.toLocaleString()}</span>
                                 </div>
                                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-                                  {row.expenseItems.map((exp) => (
+                                  {row.expenseItems!.map((exp) => (
                                     <div key={exp.id} className="flex items-center justify-between text-xs py-1 border-b border-gray-50 dark:border-gray-800/40 last:border-0">
                                       <div className="flex flex-col">
                                         <span className="font-semibold text-gray-800 dark:text-gray-200">{exp.title}</span>
@@ -200,16 +293,16 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                               </div>
                             )}
 
-                            {/* Daily Purchases Breakdown */}
-                            {row.payableItems && row.payableItems.length > 0 && (
+                            {/* Daily Purchases / Payables Breakdown */}
+                            {hasPurchases && (
                               <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-white dark:bg-gray-900 p-3 shadow-xs">
                                 <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-100 dark:border-gray-800 text-amber-600 dark:text-amber-400 font-bold text-xs">
                                   <Building2 className="size-3.5" />
-                                  <span>Supplier Purchases / Payables ({row.payableItems.length})</span>
+                                  <span>Purchases / Payables ({row.payableItems!.length})</span>
                                   <span className="ml-auto">Total: Rs. {payables.toLocaleString()}</span>
                                 </div>
                                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
-                                  {row.payableItems.map((pur) => (
+                                  {row.payableItems!.map((pur) => (
                                     <div key={pur.id} className="flex items-center justify-between text-xs py-1 border-b border-gray-50 dark:border-gray-800/40 last:border-0">
                                       <div className="flex flex-col">
                                         <span className="font-semibold text-gray-800 dark:text-gray-200">

@@ -5,9 +5,21 @@ import { getRepairTickets } from "./repairsService";
 import { getAdjustments } from "./adjustmentsService";
 import { getPayablesSummary } from "./payablesService";
 import { getPurchases } from "./purchaseService";
-import { DailyReportRow, ExpenseRecord, MonthlyReportDetail } from "./schema";
+import {
+  DailyReportRow,
+  ExpenseRecord,
+  MonthlyReportDetail,
+  DailyReportSaleItem,
+  DailyReportAdjustmentItem,
+} from "./schema";
 
-export type { DailyReportRow, ExpenseRecord, MonthlyReportDetail };
+export type {
+  DailyReportRow,
+  ExpenseRecord,
+  MonthlyReportDetail,
+  DailyReportSaleItem,
+  DailyReportAdjustmentItem,
+};
 
 export interface MonthlyReportViewData extends MonthlyReportDetail {
   marginPercent: number;
@@ -148,6 +160,8 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
             netProfit: Number(d.netProfit ?? ((d.grossProfit || 0) - (d.expenses || 0))),
             expenseItems: d.expenseItems || [],
             payableItems: d.payableItems || [],
+            saleItems: d.saleItems || [],
+            adjustmentItems: d.adjustmentItems || [],
           }));
         }
 
@@ -224,6 +238,8 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
           netProfit: Number(d.netProfit ?? ((d.grossProfit || 0) - (d.expenses || 0))),
           expenseItems: d.expenseItems || [],
           payableItems: d.payableItems || [],
+          saleItems: d.saleItems || [],
+          adjustmentItems: d.adjustmentItems || [],
         }));
       }
 
@@ -310,10 +326,10 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
   if (isTauri && sqlDb) {
     try {
       periodSales = await sqlDb.select<any[]>(
-        `SELECT id, invoice_no as invoiceNo, total_amount as totalAmount, 
-                paid_amount as paidAmount, balance_due as balanceDue, 
-                payment_method as paymentMethod, payment_status as paymentStatus,
-                created_at as createdAt
+        `SELECT id, invoice_no as invoiceNo, customer_name as customerName,
+                total_amount as totalAmount, paid_amount as paidAmount,
+                balance_due as balanceDue, payment_method as paymentMethod,
+                payment_status as paymentStatus, created_at as createdAt
          FROM sales 
          WHERE created_at >= $1 AND created_at < $2`,
         [startOfMonth, endOfMonth]
@@ -384,6 +400,14 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
   const netProfit = (grossProfit + repairRevenue + swapMargin) - totalExpenses;
   const marginPercent = grossSales > 0 ? Math.round((grossProfit / grossSales) * 100) : 0;
 
+  // Group sale items by saleId for fast lookup in daily breakdown
+  const saleItemsMap = new Map<number, any[]>();
+  periodItems.forEach((it) => {
+    const list = saleItemsMap.get(it.saleId) || [];
+    list.push(it);
+    saleItemsMap.set(it.saleId, list);
+  });
+
   // 31-Day Calendar Breakdown
   const dailyData: DailyReportRow[] = [];
   const dayNames = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
@@ -409,6 +433,38 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
       dayCogs += itemCost * Number(it.quantity || 1);
     });
     const dayGp = Math.max(0, daySalesTotal - dayCogs);
+
+    // Sales breakdown for this day
+    const daySaleItems: DailyReportSaleItem[] = dayActualSales.map((s) => {
+      const items = saleItemsMap.get(s.id) || [];
+      const itemsSummary = items
+        .map((it) => `${it.itemName} (x${it.quantity})`)
+        .join(", ");
+      return {
+        id: s.id,
+        invoiceNo: s.invoiceNo,
+        customerName: s.customerName || "Walk-in Customer",
+        totalAmount: Number(s.totalAmount || 0),
+        paidAmount: Number(s.paidAmount || 0),
+        balanceDue: Number(s.balanceDue || 0),
+        paymentMethod: s.paymentMethod || "CASH",
+        itemsSummary: itemsSummary || "—",
+      };
+    });
+
+    // Trade-ins / Adjustments breakdown for this day
+    const dayAdjustments = periodAdjustments.filter((a) => a.createdAt >= dayStart && a.createdAt < dayEnd);
+    const dayAdjustmentItems: DailyReportAdjustmentItem[] = dayAdjustments.map((a) => ({
+      id: a.id,
+      adjustmentNo: a.adjustmentNo,
+      customerName: a.customerName || "Walk-in Customer",
+      itemTakenName: a.itemTakenName,
+      itemTakenValue: Number(a.itemTakenValue || 0),
+      itemGivenName: a.itemGivenName,
+      itemGivenPrice: Number(a.itemGivenPrice || 0),
+      netDifference: Number(a.netDifference || 0),
+      paymentStatus: a.paymentStatus || "PAID",
+    }));
 
     // Expenses for this day
     const dayExpenses = expensesList.filter((e) => e.expenseDate >= dayStart && e.expenseDate < dayEnd);
@@ -437,7 +493,8 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     const dayNet = dayGp - dayExpensesTotal;
 
     const remarksParts: string[] = [];
-    if (daySales.length > 0) remarksParts.push(`${daySales.length} sale(s)`);
+    if (dayActualSales.length > 0) remarksParts.push(`${dayActualSales.length} sale(s)`);
+    if (dayAdjustments.length > 0) remarksParts.push(`${dayAdjustments.length} swap(s)`);
     if (dayExpenses.length > 0) remarksParts.push(`${dayExpenses.length} exp (Rs. ${dayExpensesTotal.toLocaleString()})`);
     if (dayPurchases.length > 0) remarksParts.push(`${dayPurchases.length} pur (Rs. ${dayPurchasesTotal.toLocaleString()})`);
 
@@ -453,6 +510,8 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
       remarks: remarksParts.join(" • "),
       expenseItems: dayExpenseItems,
       payableItems: dayPayableItems,
+      saleItems: daySaleItems,
+      adjustmentItems: dayAdjustmentItems,
     });
   }
 
