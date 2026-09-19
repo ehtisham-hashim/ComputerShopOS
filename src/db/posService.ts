@@ -331,9 +331,9 @@ export async function processSalePayment(
       const newBalance = Math.max(0, totalAmount - newPaid);
       const newStatus: PaymentStatus = newBalance === 0 ? "PAID" : newPaid === 0 ? "UNPAID" : "PARTIAL";
 
-      // ponytail: preserve original invoice payment_method so historical cash/card breakdown remains accurate
+      // When payment is collected, the debt is no longer considered an unrecoverable bad debt
       await sqlDb.execute(
-        `UPDATE sales SET paid_amount = $1, balance_due = $2, payment_status = $3 WHERE id = $4`,
+        `UPDATE sales SET paid_amount = $1, balance_due = $2, payment_status = $3, is_bad_debt = 0 WHERE id = $4`,
         [newPaid, newBalance, newStatus, saleId]
       );
     }
@@ -348,6 +348,7 @@ export async function processSalePayment(
     s.paidAmount = newPaid;
     s.balanceDue = Math.max(0, totalAmount - newPaid);
     s.paymentStatus = s.balanceDue === 0 ? "PAID" : newPaid === 0 ? "UNPAID" : "PARTIAL";
+    s.isBadDebt = 0;
   }
 }
 
@@ -471,13 +472,16 @@ export async function toggleSaleBadDebt(saleId: number, isBadDebt: boolean): Pro
   const val = isBadDebt ? 1 : 0;
 
   if (isTauri && sqlDb) {
-    await sqlDb.execute("UPDATE sales SET is_bad_debt = $1 WHERE id = $2", [val, saleId]);
+    await sqlDb.execute(
+      "UPDATE sales SET is_bad_debt = CASE WHEN balance_due > 0 THEN $1 ELSE 0 END WHERE id = $2",
+      [val, saleId]
+    );
     return;
   }
 
   const s = memoryStore.sales.find((sale) => sale.id === saleId);
   if (s) {
-    s.isBadDebt = val;
+    s.isBadDebt = s.balanceDue > 0 ? val : 0;
   }
 }
 

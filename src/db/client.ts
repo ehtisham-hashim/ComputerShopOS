@@ -603,6 +603,10 @@ export async function initDb(): Promise<void> {
       }
 
       try {
+        await sqlDb.execute("UPDATE sales SET is_bad_debt = 0 WHERE balance_due <= 0 AND is_bad_debt = 1;");
+      } catch {}
+
+      try {
         const existingReports = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM monthly_reports");
         const reportCount = existingReports?.[0]?.cnt ?? existingReports?.[0]?.["COUNT(*)"] ?? 0;
         if (Number(reportCount) === 0) {

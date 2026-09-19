@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { Eye, Printer, Trash2, Banknote, Package, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Eye, Printer, Trash2, Banknote, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { SaleRecord, SaleLineItem } from "../../db/schema";
 import { SearchInput } from "../ui/SearchInput";
 import { StatusBadge } from "../ui/StatusBadge";
@@ -31,7 +31,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
   onPrintReceipt,
   onDeleteSale,
   onCollectPayment,
-  onToggleBadDebt,
+  onToggleBadDebt: _onToggleBadDebt,
 }) => {
   const [page, setPage] = useState(1);
   const pageSize = 20;
@@ -62,11 +62,15 @@ export const SalesTable: React.FC<SalesTableProps> = ({
 
     if (!matchesSearch) return false;
 
-    if (statusFilter === "BAD_DEBT") return s.isBadDebt === 1;
+    const isPaidInFull = Number(s.balanceDue || 0) <= 0 || s.paymentStatus === "PAID";
+    const isPartialPaid = !isPaidInFull && (s.paymentStatus === "PARTIAL" || Number(s.paidAmount || 0) > 0);
+    const isBad = s.isBadDebt === 1 && !isPaidInFull && !isPartialPaid;
+
+    if (statusFilter === "BAD_DEBT") return isBad;
     if (statusFilter === "ALL") return true;
-    if (statusFilter === "UNPAID") return s.paymentStatus === "UNPAID" && s.isBadDebt !== 1;
-    if (statusFilter === "PARTIAL") return s.paymentStatus === "PARTIAL" && s.isBadDebt !== 1;
-    if (statusFilter === "PAID") return s.paymentStatus === "PAID";
+    if (statusFilter === "UNPAID") return !isPaidInFull && !isPartialPaid && !isBad;
+    if (statusFilter === "PARTIAL") return isPartialPaid;
+    if (statusFilter === "PAID") return isPaidInFull;
     return s.paymentStatus === statusFilter;
   });
 
@@ -135,7 +139,9 @@ export const SalesTable: React.FC<SalesTableProps> = ({
             ) : (
               paginated.map((s) => {
                 const summary = itemsBySaleId.get(s.id);
-                const isBad = s.isBadDebt === 1;
+                const isPaidInFull = Number(s.balanceDue || 0) <= 0 || s.paymentStatus === "PAID";
+                const isPartialPaid = !isPaidInFull && (s.paymentStatus === "PARTIAL" || Number(s.paidAmount || 0) > 0);
+                const isBad = s.isBadDebt === 1 && !isPaidInFull && !isPartialPaid;
 
                 return (
                   <tr
@@ -184,8 +190,12 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                           BAD DEBT
                         </span>
+                      ) : isPaidInFull ? (
+                        <StatusBadge status="PAID" />
+                      ) : isPartialPaid ? (
+                        <StatusBadge status="PARTIAL" />
                       ) : (
-                        <StatusBadge status={s.paymentStatus || "PAID"} />
+                        <StatusBadge status={s.paymentStatus || "UNPAID"} />
                       )}
                     </td>
                     <td className="py-3.5 px-4 text-xs text-gray-400">
@@ -203,19 +213,7 @@ export const SalesTable: React.FC<SalesTableProps> = ({
                             <span>Collect</span>
                           </button>
                         )}
-                        {onToggleBadDebt && (
-                          <button
-                            onClick={() => onToggleBadDebt(s)}
-                            className={`inline-flex size-8 items-center justify-center rounded-lg transition-colors ${
-                              isBad
-                                ? "text-amber-500 bg-amber-50 dark:bg-amber-950/30 hover:text-gray-400"
-                                : "text-gray-300 hover:text-amber-500 hover:bg-gray-100 dark:hover:bg-gray-800"
-                            }`}
-                            title={isBad ? "Remove bad debt flag" : "Flag as bad debt"}
-                          >
-                            <AlertTriangle className="size-4" />
-                          </button>
-                        )}
+                        {/* Status change / bad debt toggle button hidden per user request */}
                         <button
                           onClick={() => onViewInvoice(s)}
                           className="inline-flex size-8 items-center justify-center rounded-lg text-gray-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-500/15 dark:hover:text-brand-400"
