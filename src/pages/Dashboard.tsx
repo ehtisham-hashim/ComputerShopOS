@@ -30,8 +30,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   const totalUnits = items.reduce((acc, i) => acc + i.quantity, 0);
   const totalValue = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
+  const totalCostValue = items.reduce((acc, i) => acc + (Number(i.costPrice) || 0) * i.quantity, 0);
   const totalRevenue = sales.reduce((acc, s) => acc + Number(s.totalAmount || 0), 0);
   const totalReceivables = sales.reduce((acc, s) => acc + Number(s.balanceDue || 0), 0);
+  const totalDiscounts = sales.reduce((acc, s) => acc + Number(s.discount || 0), 0);
+  const totalCashCollected = sales.reduce((acc, s) => acc + Number(s.paidAmount || 0), 0);
   const lowStockItems = items.filter((i) => i.quantity <= 5);
 
   return (
@@ -50,7 +53,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
       <DashboardStats
         totalUnits={totalUnits}
         totalValue={totalValue}
+        totalCostValue={totalCostValue}
         totalRevenue={totalRevenue}
+        totalDiscounts={totalDiscounts}
+        totalCashCollected={totalCashCollected}
         lowStockCount={lowStockItems.length}
         totalReceivables={totalReceivables}
         totalPayables={totalPayables}

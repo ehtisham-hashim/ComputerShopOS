@@ -48,7 +48,14 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
   const sumNet = totalNetProfit ?? (totalGrossProfit - sumExpenses);
 
   const activeDays = dailyData.filter(
-    (d) => d.sales > 0 || d.grossProfit > 0 || (d.expenses || 0) > 0 || (d.payables || 0) > 0
+    (d) =>
+      d.sales > 0 ||
+      d.grossProfit !== 0 ||
+      (d.expenses || 0) > 0 ||
+      (d.payables || 0) > 0 ||
+      (d.adjustmentItems && d.adjustmentItems.length > 0) ||
+      (d.payableItems && d.payableItems.length > 0) ||
+      (d.saleItems && d.saleItems.length > 0)
   );
 
   return (
@@ -71,12 +78,14 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
               <span>•</span>
               <span>Sales: Rs. {totalSales.toLocaleString()}</span>
               <span>•</span>
-              <span>GP: Rs. {totalGrossProfit.toLocaleString()}</span>
+              <span className={totalGrossProfit >= 0 ? "text-emerald-500 font-semibold" : "text-rose-500 font-semibold"}>
+                GP: {totalGrossProfit >= 0 ? `Rs. ${totalGrossProfit.toLocaleString()}` : `-Rs. ${Math.abs(totalGrossProfit).toLocaleString()}`}
+              </span>
               <span>•</span>
               <span className="text-rose-500 dark:text-rose-400">Exp: Rs. {sumExpenses.toLocaleString()}</span>
               <span>•</span>
               <span className={sumNet >= 0 ? "text-emerald-500 font-semibold" : "text-rose-500 font-semibold"}>
-                Net: Rs. {sumNet.toLocaleString()}
+                Net: {sumNet >= 0 ? `Rs. ${sumNet.toLocaleString()}` : `-Rs. ${Math.abs(sumNet).toLocaleString()}`}
               </span>
             </p>
           </div>
@@ -98,7 +107,7 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                 <th className="px-4 py-3 text-right">Daily Sale</th>
                 <th className="px-4 py-3 text-right">Gross Profit</th>
                 <th className="px-4 py-3 text-right">Expenses</th>
-                <th className="px-4 py-3 text-right">Purchases</th>
+                <th className="px-4 py-3 text-right">Purchases / Paid</th>
                 <th className="px-4 py-3 text-right">Net Profit</th>
                 <th className="px-4 py-3 text-right">Margin %</th>
                 <th className="px-4 py-3">Remarks / Details</th>
@@ -115,7 +124,14 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                 const hasExpenses = Boolean(row.expenseItems && row.expenseItems.length > 0);
                 const hasPurchases = Boolean(row.payableItems && row.payableItems.length > 0);
                 const hasDetails = hasSales || hasSwaps || hasExpenses || hasPurchases;
-                const hasActivity = row.sales > 0 || row.grossProfit > 0 || expenses > 0 || payables > 0 || hasSwaps;
+                const hasActivity =
+                  row.sales > 0 ||
+                  row.grossProfit !== 0 ||
+                  expenses > 0 ||
+                  payables > 0 ||
+                  hasSwaps ||
+                  hasPurchases ||
+                  hasSales;
                 const isExpanded = expandedDays.has(row.day);
 
                 return (
@@ -151,8 +167,18 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                       <td className="px-4 py-2.5 text-right font-bold text-gray-900 dark:text-white">
                         {row.sales > 0 ? `Rs. ${row.sales.toLocaleString()}` : "0"}
                       </td>
-                      <td className="px-4 py-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                        {row.grossProfit > 0 ? `Rs. ${row.grossProfit.toLocaleString()}` : "0"}
+                      <td className={`px-4 py-2.5 text-right font-bold ${
+                        row.grossProfit > 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : row.grossProfit < 0
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-gray-400"
+                      }`}>
+                        {row.grossProfit > 0
+                          ? `Rs. ${row.grossProfit.toLocaleString()}`
+                          : row.grossProfit < 0
+                          ? `-Rs. ${Math.abs(row.grossProfit).toLocaleString()}`
+                          : "0"}
                       </td>
                       <td className={`px-4 py-2.5 text-right font-bold ${expenses > 0 ? "text-rose-600 dark:text-rose-400" : "text-gray-400"}`}>
                         {expenses > 0 ? `Rs. ${expenses.toLocaleString()}` : "0"}
@@ -160,8 +186,18 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                       <td className={`px-4 py-2.5 text-right font-bold ${payables > 0 ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>
                         {payables > 0 ? `Rs. ${payables.toLocaleString()}` : "0"}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-bold ${net > 0 ? "text-emerald-600 dark:text-emerald-400" : net < 0 ? "text-rose-600 dark:text-rose-400" : "text-gray-400"}`}>
-                        {net !== 0 ? `Rs. ${net.toLocaleString()}` : "0"}
+                      <td className={`px-4 py-2.5 text-right font-bold ${
+                        net > 0
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : net < 0
+                          ? "text-rose-600 dark:text-rose-400"
+                          : "text-gray-400"
+                      }`}>
+                        {net > 0
+                          ? `Rs. ${net.toLocaleString()}`
+                          : net < 0
+                          ? `-Rs. ${Math.abs(net).toLocaleString()}`
+                          : "0"}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-400 text-[11px]">
                         {row.sales > 0 ? `${margin}%` : "—"}
@@ -298,26 +334,43 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                               <div className="rounded-xl border border-amber-200 dark:border-amber-900/40 bg-white dark:bg-gray-900 p-3 shadow-xs">
                                 <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-100 dark:border-gray-800 text-amber-600 dark:text-amber-400 font-bold text-xs">
                                   <Building2 className="size-3.5" />
-                                  <span>Purchases / Payables ({row.payableItems!.length})</span>
+                                  <span>Purchases & Vendor Payments ({row.payableItems!.length})</span>
                                   <span className="ml-auto">Total: Rs. {payables.toLocaleString()}</span>
                                 </div>
                                 <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
                                   {row.payableItems!.map((pur) => (
                                     <div key={pur.id} className="flex items-center justify-between text-xs py-1 border-b border-gray-50 dark:border-gray-800/40 last:border-0">
                                       <div className="flex flex-col">
-                                        <span className="font-semibold text-gray-800 dark:text-gray-200">
-                                          {pur.partyName || "Supplier Purchase"}
-                                        </span>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                            {pur.partyName || "Supplier"}
+                                          </span>
+                                          <span className={`px-1.5 py-0.2 text-[9px] rounded font-semibold ${
+                                            pur.type === "PAYMENT"
+                                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+                                              : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+                                          }`}>
+                                            {pur.type === "PAYMENT" ? "SUPPLIER PAYMENT" : "PURCHASE ORDER"}
+                                          </span>
+                                        </div>
                                         <div className="flex items-center gap-1.5 text-[10px] text-gray-400">
                                           {pur.purchaseNo && <span>{pur.purchaseNo}</span>}
-                                          <span>• Paid: Rs. {pur.paidAmount.toLocaleString()}</span>
-                                          {pur.balanceDue > 0 && (
-                                            <span className="text-amber-500 font-semibold">• Due: Rs. {pur.balanceDue.toLocaleString()}</span>
+                                          {pur.type === "PAYMENT" ? (
+                                            <span>• {pur.description || "Khata Payment"}</span>
+                                          ) : (
+                                            <>
+                                              <span>• Paid: Rs. {pur.paidAmount.toLocaleString()}</span>
+                                              {pur.balanceDue > 0 && (
+                                                <span className="text-amber-500 font-semibold">• Due: Rs. {pur.balanceDue.toLocaleString()}</span>
+                                              )}
+                                            </>
                                           )}
                                         </div>
                                       </div>
-                                      <span className="font-bold text-amber-600 dark:text-amber-400 whitespace-nowrap ml-2">
-                                        Rs. {pur.totalAmount.toLocaleString()}
+                                      <span className={`font-bold whitespace-nowrap ml-2 ${
+                                        pur.type === "PAYMENT" ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+                                      }`}>
+                                        {pur.type === "PAYMENT" ? `Paid Rs. ${pur.paidAmount.toLocaleString()}` : `Rs. ${pur.totalAmount.toLocaleString()}`}
                                       </span>
                                     </div>
                                   ))}
@@ -340,8 +393,8 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                 <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
                   Rs. {totalSales.toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400">
-                  Rs. {totalGrossProfit.toLocaleString()}
+                <td className={`px-4 py-3 text-right font-bold ${totalGrossProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {totalGrossProfit >= 0 ? `Rs. ${totalGrossProfit.toLocaleString()}` : `-Rs. ${Math.abs(totalGrossProfit).toLocaleString()}`}
                 </td>
                 <td className="px-4 py-3 text-right text-rose-600 dark:text-rose-400">
                   Rs. {sumExpenses.toLocaleString()}
@@ -349,8 +402,8 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                 <td className="px-4 py-3 text-right text-amber-600 dark:text-amber-400">
                   Rs. {sumPayables.toLocaleString()}
                 </td>
-                <td className={`px-4 py-3 text-right ${sumNet >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
-                  Rs. {sumNet.toLocaleString()}
+                <td className={`px-4 py-3 text-right font-bold ${sumNet >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                  {sumNet >= 0 ? `Rs. ${sumNet.toLocaleString()}` : `-Rs. ${Math.abs(sumNet).toLocaleString()}`}
                 </td>
                 <td className="px-4 py-3 text-right text-gray-500">
                   {totalSales > 0 ? `${Math.round((totalGrossProfit / totalSales) * 100)}%` : "0%"}

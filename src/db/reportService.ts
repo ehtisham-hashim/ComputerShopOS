@@ -10,6 +10,7 @@ import {
   ExpenseRecord,
   MonthlyReportDetail,
   DailyReportSaleItem,
+  DailyReportPayableItem,
   DailyReportAdjustmentItem,
 } from "./schema";
 
@@ -18,6 +19,7 @@ export type {
   ExpenseRecord,
   MonthlyReportDetail,
   DailyReportSaleItem,
+  DailyReportPayableItem,
   DailyReportAdjustmentItem,
 };
 
@@ -327,6 +329,7 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     try {
       periodSales = await sqlDb.select<any[]>(
         `SELECT id, invoice_no as invoiceNo, customer_name as customerName,
+                subtotal, discount,
                 total_amount as totalAmount, paid_amount as paidAmount,
                 balance_due as balanceDue, payment_method as paymentMethod,
                 payment_status as paymentStatus, created_at as createdAt
@@ -354,14 +357,41 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     periodItems = memoryStore.saleItems.filter((it) => saleIds.has(it.saleId));
   }
 
+  // Fetch supplier ledger transactions (purchases and payments) for the month
+  let periodLedgerEntries: any[] = [];
+  if (isTauri && sqlDb) {
+    try {
+      periodLedgerEntries = await sqlDb.select<any[]>(
+        `SELECT l.id, l.party_id as partyId, l.tx_date as txDate, l.tx_type as txType,
+                l.ref_no as refNo, l.description, l.debit, l.credit, l.balance,
+                p.name as partyName
+         FROM payable_ledger l
+         LEFT JOIN payable_parties p ON l.party_id = p.id
+         WHERE l.tx_date >= $1 AND l.tx_date < $2`,
+        [startOfMonth, endOfMonth]
+      );
+    } catch (e) {
+      console.error("Failed to query live payable_ledger in SQLite:", e);
+    }
+  } else {
+    const partyMap = new Map(memoryStore.payableParties.map((p) => [p.id, p.name]));
+    periodLedgerEntries = memoryStore.payableLedger
+      .filter((l) => l.txDate >= startOfMonth && l.txDate < endOfMonth)
+      .map((l) => ({
+        ...l,
+        partyName: partyMap.get(l.partyId) || "Supplier",
+      }));
+  }
+
   const periodRepairs = repairs.filter((r) => r.createdAt >= startOfMonth && r.createdAt < endOfMonth);
   const periodAdjustments = adjustments.filter((a) => a.createdAt >= startOfMonth && a.createdAt < endOfMonth);
 
   // Exclude manual opening receivables (RCV-) from gross sales so old debts don't fake-inflate current sales
   const actualSales = periodSales.filter((s) => !String(s.invoiceNo || "").startsWith("RCV-"));
   const grossSales = actualSales.reduce((acc, s) => acc + Number(s.totalAmount || 0), 0);
-  const collectedCash = periodSales.reduce((acc, s) => acc + Number(s.paidAmount || 0), 0);
-  const receivables = periodSales.reduce((acc, s) => acc + Number(s.balanceDue || 0), 0);
+  const totalDiscounts = actualSales.reduce((acc, s) => acc + Number(s.discount || 0), 0);
+  const collectedCash = actualSales.reduce((acc, s) => acc + Number(s.paidAmount || 0), 0);
+  const receivables = actualSales.reduce((acc, s) => acc + Number(s.balanceDue || 0), 0);
 
   let cogs = 0;
   const productMap = new Map<string, { quantity: number; revenue: number }>();
@@ -389,14 +419,17 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     });
   });
 
-  const grossProfit = Math.max(0, grossSales - cogs);
+  // Realized Gross Profit = Cash Collected - COGS
+  // Discounts directly reduce totalAmount, and unpaid credit (receivables) reduces realized profit.
+  // This can legitimately result in negative profit when heavily discounted or unpaid!
+  const grossProfit = collectedCash - cogs;
   const totalExpenses = expensesList.reduce((acc, e) => acc + Number(e.amount || 0), 0);
   const repairRevenue = periodRepairs.reduce((acc, r) => acc + Number(r.finalCost || r.estimatedCost || 0), 0);
   const swapInflow = periodAdjustments.filter((a) => a.netDifference > 0).reduce((acc, a) => acc + a.netDifference, 0);
   const swapOutflow = Math.abs(periodAdjustments.filter((a) => a.netDifference < 0).reduce((acc, a) => acc + a.netDifference, 0));
   const swapMargin = swapInflow - swapOutflow;
 
-  // Formula: True Net Profit = Gross Profit + Repair Revenue + Swap Margin - Operating Expenses
+  // Formula: True Net Profit = Realized Gross Profit + Repair Revenue + Swap Margin - Operating Expenses
   const netProfit = (grossProfit + repairRevenue + swapMargin) - totalExpenses;
   const marginPercent = grossSales > 0 ? Math.round((grossProfit / grossSales) * 100) : 0;
 
@@ -422,6 +455,7 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     const daySales = periodSales.filter((s) => s.createdAt >= dayStart && s.createdAt < dayEnd);
     const dayActualSales = daySales.filter((s) => !String(s.invoiceNo || "").startsWith("RCV-"));
     const daySalesTotal = dayActualSales.reduce((acc, s) => acc + Number(s.totalAmount || 0), 0);
+    const dayCollected = dayActualSales.reduce((acc, s) => acc + Number(s.paidAmount || 0), 0);
     const daySaleIds = new Set(dayActualSales.map((s) => s.id));
     const dayItems = periodItems.filter((it) => daySaleIds.has(it.saleId));
     let dayCogs = 0;
@@ -432,7 +466,8 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
           : invCostMap.get(it.inventoryId) || 0;
       dayCogs += itemCost * Number(it.quantity || 1);
     });
-    const dayGp = Math.max(0, daySalesTotal - dayCogs);
+    // Realized Gross Profit for the day (can be negative if discounted or unpaid)
+    const dayGp = dayCollected - dayCogs;
 
     // Sales breakdown for this day
     const daySaleItems: DailyReportSaleItem[] = dayActualSales.map((s) => {
@@ -465,6 +500,13 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
       netDifference: Number(a.netDifference || 0),
       paymentStatus: a.paymentStatus || "PAID",
     }));
+    const daySwapInflow = dayAdjustments.filter((a) => a.netDifference > 0).reduce((acc, a) => acc + a.netDifference, 0);
+    const daySwapOutflow = Math.abs(dayAdjustments.filter((a) => a.netDifference < 0).reduce((acc, a) => acc + a.netDifference, 0));
+    const daySwapMargin = daySwapInflow - daySwapOutflow;
+
+    // Repairs for this day
+    const dayRepairs = periodRepairs.filter((r) => r.createdAt >= dayStart && r.createdAt < dayEnd);
+    const dayRepairRev = dayRepairs.reduce((acc, r) => acc + Number(r.finalCost || r.estimatedCost || 0), 0);
 
     // Expenses for this day
     const dayExpenses = expensesList.filter((e) => e.expenseDate >= dayStart && e.expenseDate < dayEnd);
@@ -478,25 +520,53 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
       notes: e.notes,
     }));
 
-    // Purchases/Payables for this day
+    // Purchases and Supplier Payments for this day
     const dayPurchases = periodPurchases.filter((p) => p.purchaseDate >= dayStart && p.purchaseDate < dayEnd);
     const dayPurchasesTotal = dayPurchases.reduce((acc, p) => acc + Number(p.totalAmount || 0), 0);
-    const dayPayableItems = dayPurchases.map((p) => ({
-      id: p.id,
-      purchaseNo: p.purchaseNo,
-      partyName: p.partyName,
-      totalAmount: p.totalAmount,
-      paidAmount: p.paidAmount,
-      balanceDue: p.balanceDue,
-    }));
 
-    const dayNet = dayGp - dayExpensesTotal;
+    const dayLedgerPayments = periodLedgerEntries.filter(
+      (l) => l.txType === "PAYMENT" && l.txDate >= dayStart && l.txDate < dayEnd
+    );
+    const dayPurchaseNos = new Set(dayPurchases.map((p) => p.purchaseNo));
+    const standalonePayments = dayLedgerPayments.filter(
+      (l) => !l.refNo || !dayPurchaseNos.has(l.refNo.replace(/^PAY-/, ""))
+    );
+    const dayStandalonePaymentsTotal = standalonePayments.reduce((acc, l) => acc + Number(l.debit || 0), 0);
+    const dayPayablesTotal = dayPurchasesTotal + dayStandalonePaymentsTotal;
+
+    const dayPayableItems: DailyReportPayableItem[] = [
+      ...dayPurchases.map((p) => ({
+        id: p.id,
+        purchaseNo: p.purchaseNo,
+        partyName: p.partyName,
+        totalAmount: p.totalAmount,
+        paidAmount: p.paidAmount,
+        balanceDue: p.balanceDue,
+        type: "PURCHASE" as const,
+        description: "Purchase Order",
+      })),
+      ...standalonePayments.map((l) => ({
+        id: l.id,
+        purchaseNo: l.refNo || `PAY-${l.id}`,
+        partyName: l.partyName || "Supplier",
+        totalAmount: Number(l.debit || 0),
+        paidAmount: Number(l.debit || 0),
+        balanceDue: 0,
+        type: "PAYMENT" as const,
+        description: l.description || "Supplier Payment",
+      })),
+    ];
+
+    // True daily net profit includes gross profit, repairs, swap margins, minus expenses
+    const dayNet = (dayGp + dayRepairRev + daySwapMargin) - dayExpensesTotal;
 
     const remarksParts: string[] = [];
     if (dayActualSales.length > 0) remarksParts.push(`${dayActualSales.length} sale(s)`);
-    if (dayAdjustments.length > 0) remarksParts.push(`${dayAdjustments.length} swap(s)`);
+    if (dayAdjustments.length > 0) remarksParts.push(`${dayAdjustments.length} swap(s) (${daySwapMargin >= 0 ? "+" : "-"}Rs. ${Math.abs(daySwapMargin).toLocaleString()})`);
+    if (dayRepairs.length > 0) remarksParts.push(`${dayRepairs.length} repair(s)`);
     if (dayExpenses.length > 0) remarksParts.push(`${dayExpenses.length} exp (Rs. ${dayExpensesTotal.toLocaleString()})`);
     if (dayPurchases.length > 0) remarksParts.push(`${dayPurchases.length} pur (Rs. ${dayPurchasesTotal.toLocaleString()})`);
+    if (standalonePayments.length > 0) remarksParts.push(`${standalonePayments.length} paid to vendor (Rs. ${dayStandalonePaymentsTotal.toLocaleString()})`);
 
     dailyData.push({
       day: d,
@@ -505,7 +575,7 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
       sales: daySalesTotal,
       grossProfit: dayGp,
       expenses: dayExpensesTotal,
-      payables: dayPurchasesTotal,
+      payables: dayPayablesTotal,
       netProfit: dayNet,
       remarks: remarksParts.join(" • "),
       expenseItems: dayExpenseItems,
@@ -531,7 +601,7 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
   };
 
   const trendData = dailyData
-    .filter((d) => d.sales > 0 || d.grossProfit > 0)
+    .filter((d) => d.sales > 0 || d.grossProfit !== 0 || d.netProfit !== 0)
     .slice(0, 15)
     .map((d) => ({
       label: `Day ${d.day}`,
@@ -560,7 +630,7 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     swapCount: periodAdjustments.length,
     totalTransactions: periodSales.length,
     cogs,
-    discounts: 0,
+    discounts: totalDiscounts,
     swapInflow,
     swapOutflow,
     totalNetIncome: netProfit,

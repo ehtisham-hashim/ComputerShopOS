@@ -549,6 +549,8 @@ export interface DailyReportPayableItem {
   totalAmount: number;
   paidAmount: number;
   balanceDue: number;
+  type?: "PURCHASE" | "PAYMENT";
+  description?: string;
 }
 
 export interface DailyReportSaleItem {
