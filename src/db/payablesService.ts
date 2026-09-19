@@ -156,21 +156,14 @@ export async function deletePayableParty(id: number): Promise<void> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    await sqlDb.execute("BEGIN TRANSACTION;");
-    try {
-      await sqlDb.execute(
-        "DELETE FROM purchase_items WHERE purchase_id IN (SELECT id FROM purchases WHERE party_id = $1)",
-        [id]
-      );
-      await sqlDb.execute("DELETE FROM purchases WHERE party_id = $1", [id]);
-      await sqlDb.execute("DELETE FROM payable_ledger WHERE party_id = $1", [id]);
-      await sqlDb.execute("DELETE FROM payable_parties WHERE id = $1", [id]);
-      await sqlDb.execute("COMMIT;");
-      return;
-    } catch (err) {
-      await sqlDb.execute("ROLLBACK;");
-      throw err;
-    }
+    await sqlDb.execute(
+      "DELETE FROM purchase_items WHERE purchase_id IN (SELECT id FROM purchases WHERE party_id = $1)",
+      [id]
+    );
+    await sqlDb.execute("DELETE FROM purchases WHERE party_id = $1", [id]);
+    await sqlDb.execute("DELETE FROM payable_ledger WHERE party_id = $1", [id]);
+    await sqlDb.execute("DELETE FROM payable_parties WHERE id = $1", [id]);
+    return;
   }
 
   const purchaseIds = memoryStore.purchases.filter((p) => p.partyId === id).map((p) => p.id);
@@ -229,51 +222,44 @@ export async function addLedgerEntry(
   const newBalance = currentBal + credit - debit;
 
   if (isTauri && sqlDb) {
-    try {
-      await sqlDb.execute("BEGIN TRANSACTION;");
-      const res = await sqlDb.execute(
-        `INSERT INTO payable_ledger (party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          input.partyId,
-          input.txDate || now,
-          input.txType,
-          input.refNo?.trim() || "",
-          input.description.trim(),
-          debit,
-          credit,
-          newBalance,
-          now,
-        ]
-      );
-
-      // Update running totals in party
-      await sqlDb.execute(
-        `UPDATE payable_parties
-         SET total_debit = total_debit + $1,
-             total_credit = total_credit + $2,
-             current_balance = $3
-         WHERE id = $4`,
-        [debit, credit, newBalance, input.partyId]
-      );
-      await sqlDb.execute("COMMIT;");
-
-      return {
-        id: Number(res.lastInsertId) || 1,
-        partyId: input.partyId,
-        txDate: input.txDate || now,
-        txType: input.txType,
-        refNo: input.refNo?.trim() || "",
-        description: input.description.trim(),
+    const res = await sqlDb.execute(
+      `INSERT INTO payable_ledger (party_id, tx_date, tx_type, ref_no, description, debit, credit, balance, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        input.partyId,
+        input.txDate || now,
+        input.txType,
+        input.refNo?.trim() || "",
+        input.description.trim(),
         debit,
         credit,
-        balance: newBalance,
-        createdAt: now,
-      };
-    } catch (txErr) {
-      await sqlDb.execute("ROLLBACK;").catch(() => {});
-      throw txErr;
-    }
+        newBalance,
+        now,
+      ]
+    );
+
+    // Update running totals in party
+    await sqlDb.execute(
+      `UPDATE payable_parties
+       SET total_debit = total_debit + $1,
+           total_credit = total_credit + $2,
+           current_balance = $3
+       WHERE id = $4`,
+      [debit, credit, newBalance, input.partyId]
+    );
+
+    return {
+      id: Number(res.lastInsertId) || 1,
+      partyId: input.partyId,
+      txDate: input.txDate || now,
+      txType: input.txType,
+      refNo: input.refNo?.trim() || "",
+      description: input.description.trim(),
+      debit,
+      credit,
+      balance: newBalance,
+      createdAt: now,
+    };
   }
 
   const newId = memoryStore.payableLedger.length > 0
@@ -342,30 +328,23 @@ export async function recalculatePartyLedger(partyId: number): Promise<void> {
     let totDebit = 0;
     let totCredit = 0;
 
-    try {
-      await sqlDb.execute("BEGIN TRANSACTION;");
-      for (const e of entries) {
-        const debit = Number(e.debit) || 0;
-        const credit = Number(e.credit) || 0;
-        runningBal = runningBal + credit - debit;
-        totDebit += debit;
-        totCredit += credit;
+    for (const e of entries) {
+      const debit = Number(e.debit) || 0;
+      const credit = Number(e.credit) || 0;
+      runningBal = runningBal + credit - debit;
+      totDebit += debit;
+      totCredit += credit;
 
-        await sqlDb.execute("UPDATE payable_ledger SET balance = $1 WHERE id = $2", [
-          runningBal,
-          e.id,
-        ]);
-      }
-
-      await sqlDb.execute(
-        "UPDATE payable_parties SET total_debit = $1, total_credit = $2, current_balance = $3 WHERE id = $4",
-        [totDebit, totCredit, runningBal, partyId]
-      );
-      await sqlDb.execute("COMMIT;");
-    } catch (txErr) {
-      await sqlDb.execute("ROLLBACK;").catch(() => {});
-      throw txErr;
+      await sqlDb.execute("UPDATE payable_ledger SET balance = $1 WHERE id = $2", [
+        runningBal,
+        e.id,
+      ]);
     }
+
+    await sqlDb.execute(
+      "UPDATE payable_parties SET total_debit = $1, total_credit = $2, current_balance = $3 WHERE id = $4",
+      [totDebit, totCredit, runningBal, partyId]
+    );
     return;
   }
 

@@ -138,8 +138,7 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
   }
 
   if (isTauri && sqlDb) {
-    try {
-      let availableSerialId: number | null = null;
+    let availableSerialId: number | null = null;
       if (!input.serialNumber && input.itemGivenInventoryId) {
         const availableSerials = await sqlDb.select<{ id: number }[]>(
           "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'AVAILABLE' LIMIT 1",
@@ -149,8 +148,6 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
           availableSerialId = availableSerials[0].id;
         }
       }
-
-      await sqlDb.execute("BEGIN TRANSACTION;");
 
       await sqlDb.execute(
         `INSERT INTO adjustments (
@@ -198,12 +195,7 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
         );
       }
 
-      await sqlDb.execute("COMMIT;");
       return adjustmentNo;
-    } catch (err) {
-      try { await sqlDb.execute("ROLLBACK;"); } catch {}
-      throw err;
-    }
   }
 
   // Fallback memory store
@@ -256,64 +248,56 @@ export async function deleteAdjustment(id: number): Promise<void> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    try {
-      const rows = await sqlDb.select<any[]>(
-        "SELECT item_given_inventory_id, item_taken_inventory_id FROM adjustments WHERE id = $1",
-        [id]
-      );
+    const rows = await sqlDb.select<any[]>(
+      "SELECT item_given_inventory_id, item_taken_inventory_id FROM adjustments WHERE id = $1",
+      [id]
+    );
 
-      let soldSerialId: number | null = null;
-      if (rows.length > 0) {
-        const givenInvId = rows[0].item_given_inventory_id ?? rows[0].itemGivenInventoryId;
-        if (givenInvId) {
-          const soldSerials = await sqlDb.select<{ id: number }[]>(
-            "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'SOLD' ORDER BY id DESC LIMIT 1",
-            [givenInvId]
-          );
-          if (soldSerials.length > 0) {
-            soldSerialId = soldSerials[0].id;
-          }
+    let soldSerialId: number | null = null;
+    if (rows.length > 0) {
+      const givenInvId = rows[0].item_given_inventory_id ?? rows[0].itemGivenInventoryId;
+      if (givenInvId) {
+        const soldSerials = await sqlDb.select<{ id: number }[]>(
+          "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'SOLD' ORDER BY id DESC LIMIT 1",
+          [givenInvId]
+        );
+        if (soldSerials.length > 0) {
+          soldSerialId = soldSerials[0].id;
         }
       }
-
-      await sqlDb.execute("BEGIN TRANSACTION;");
-
-      if (rows.length > 0) {
-        const givenInvId = rows[0].item_given_inventory_id ?? rows[0].itemGivenInventoryId;
-        const takenInvId = rows[0].item_taken_inventory_id ?? rows[0].itemTakenInventoryId;
-
-        if (givenInvId) {
-          await sqlDb.execute(
-            "UPDATE inventory SET quantity = quantity + 1 WHERE id = $1",
-            [givenInvId]
-          );
-          if (soldSerialId != null) {
-            await sqlDb.execute(
-              "UPDATE inventory_serials SET status = 'AVAILABLE' WHERE id = $1",
-              [soldSerialId]
-            );
-          }
-        }
-
-        if (takenInvId) {
-          await sqlDb.execute(
-            "UPDATE inventory SET quantity = MAX(0, quantity - 1) WHERE id = $1",
-            [takenInvId]
-          );
-          await sqlDb.execute(
-            "DELETE FROM inventory_serials WHERE inventory_id = $1",
-            [takenInvId]
-          );
-        }
-      }
-
-      await sqlDb.execute("DELETE FROM adjustments WHERE id = $1", [id]);
-      await sqlDb.execute("COMMIT;");
-      return;
-    } catch (err) {
-      try { await sqlDb.execute("ROLLBACK;"); } catch {}
-      throw err;
     }
+
+    if (rows.length > 0) {
+      const givenInvId = rows[0].item_given_inventory_id ?? rows[0].itemGivenInventoryId;
+      const takenInvId = rows[0].item_taken_inventory_id ?? rows[0].itemTakenInventoryId;
+
+      if (givenInvId) {
+        await sqlDb.execute(
+          "UPDATE inventory SET quantity = quantity + 1 WHERE id = $1",
+          [givenInvId]
+        );
+        if (soldSerialId != null) {
+          await sqlDb.execute(
+            "UPDATE inventory_serials SET status = 'AVAILABLE' WHERE id = $1",
+            [soldSerialId]
+          );
+        }
+      }
+
+      if (takenInvId) {
+        await sqlDb.execute(
+          "UPDATE inventory SET quantity = MAX(0, quantity - 1) WHERE id = $1",
+          [takenInvId]
+        );
+        await sqlDb.execute(
+          "DELETE FROM inventory_serials WHERE inventory_id = $1",
+          [takenInvId]
+        );
+      }
+    }
+
+    await sqlDb.execute("DELETE FROM adjustments WHERE id = $1", [id]);
+    return;
   }
 
   const idx = memoryStore.adjustments.findIndex((a) => a.id === id);

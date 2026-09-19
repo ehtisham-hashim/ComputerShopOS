@@ -103,72 +103,64 @@ export async function createSaleTransaction(input: CreateSaleInput): Promise<str
   );
 
   if (isTauri && sqlDb) {
-    try {
-      await sqlDb.execute("BEGIN TRANSACTION;");
+    const saleRes = await sqlDb.execute(
+      `INSERT INTO sales (
+        invoice_no, customer_id, customer_name, customer_phone,
+        subtotal, discount, tax, total_amount, paid_amount,
+        payment_status, balance_due, payment_method, notes, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      [
+        invoiceNo,
+        custId || null,
+        input.customerName || "Walk-in Customer",
+        input.customerPhone || "",
+        subtotalInt,
+        discountInt,
+        taxInt,
+        totalAmountInt,
+        paidInt,
+        paymentStatus,
+        balanceDueInt,
+        input.paymentMethod,
+        input.notes || "",
+        now,
+      ]
+    );
 
-      const saleRes = await sqlDb.execute(
-        `INSERT INTO sales (
-          invoice_no, customer_id, customer_name, customer_phone,
-          subtotal, discount, tax, total_amount, paid_amount,
-          payment_status, balance_due, payment_method, notes, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-        [
-          invoiceNo,
-          custId || null,
-          input.customerName || "Walk-in Customer",
-          input.customerPhone || "",
-          subtotalInt,
-          discountInt,
-          taxInt,
-          totalAmountInt,
-          paidInt,
-          paymentStatus,
-          balanceDueInt,
-          input.paymentMethod,
-          input.notes || "",
-          now,
-        ]
+    let saleId = Number((saleRes as any)?.lastInsertId ?? (saleRes as any)?.last_insert_rowid ?? 0);
+    if (!saleId || isNaN(saleId) || saleId <= 0) {
+      const found = await sqlDb.select<{ id: number }[]>(
+        "SELECT id FROM sales WHERE invoice_no = $1 LIMIT 1",
+        [invoiceNo]
+      );
+      if (found && found.length > 0) {
+        saleId = Number(found[0].id);
+      }
+    }
+
+    for (const item of resolvedItems) {
+      await sqlDb.execute(
+        `INSERT INTO sale_items (sale_id, inventory_id, item_name, serial_number, quantity, unit_price, cost_price, total_price)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [saleId, item.inventoryId, item.itemName, item.serialNumber || null, item.qtyInt, item.unitPriceInt, item.costPriceInt, item.lineTotalInt]
       );
 
-      let saleId = Number((saleRes as any)?.lastInsertId ?? (saleRes as any)?.last_insert_rowid ?? 0);
-      if (!saleId || isNaN(saleId) || saleId <= 0) {
-        const found = await sqlDb.select<{ id: number }[]>(
-          "SELECT id FROM sales WHERE invoice_no = $1 LIMIT 1",
-          [invoiceNo]
-        );
-        if (found && found.length > 0) {
-          saleId = Number(found[0].id);
-        }
-      }
-
-      for (const item of resolvedItems) {
+      if (item.inventoryId) {
         await sqlDb.execute(
-          `INSERT INTO sale_items (sale_id, inventory_id, item_name, serial_number, quantity, unit_price, cost_price, total_price)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [saleId, item.inventoryId, item.itemName, item.serialNumber || null, item.qtyInt, item.unitPriceInt, item.costPriceInt, item.lineTotalInt]
+          `UPDATE inventory SET quantity = MAX(0, quantity - $1) WHERE id = $2`,
+          [item.qtyInt, item.inventoryId]
         );
-
-        if (item.inventoryId) {
-          await sqlDb.execute(
-            `UPDATE inventory SET quantity = MAX(0, quantity - $1) WHERE id = $2`,
-            [item.qtyInt, item.inventoryId]
-          );
-        }
-
-        if (item.serialNumber) {
-          await sqlDb.execute(
-            `UPDATE inventory_serials SET status = 'SOLD' WHERE serial_number = $1`,
-            [item.serialNumber]
-          );
-        }
       }
 
-      await sqlDb.execute("COMMIT;");
-      return invoiceNo;
-    } catch (err) {
-      try { await sqlDb.execute("ROLLBACK;"); } catch {}
-      throw err;
+      if (item.serialNumber) {
+        await sqlDb.execute(
+          `UPDATE inventory_serials SET status = 'SOLD' WHERE serial_number = $1`,
+          [item.serialNumber]
+        );
+      }
     }
+
+    return invoiceNo;
   }
 
   // Browser Fallback
@@ -364,42 +356,35 @@ export async function deleteSale(id: number): Promise<void> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    try {
-      const items = await sqlDb.select<any[]>(
-        "SELECT inventory_id, quantity, serial_number FROM sale_items WHERE sale_id = $1",
-        [id]
-      );
-      await sqlDb.execute("BEGIN TRANSACTION;");
+    const items = await sqlDb.select<any[]>(
+      "SELECT inventory_id, quantity, serial_number FROM sale_items WHERE sale_id = $1",
+      [id]
+    );
 
-      for (const item of items) {
-        const invId = Number(item.inventory_id ?? item.inventoryId);
-        const qty = Math.round(Number(item.quantity) || 1);
-        const serial = item.serial_number ?? item.serialNumber;
+    for (const item of items) {
+      const invId = Number(item.inventory_id ?? item.inventoryId);
+      const qty = Math.round(Number(item.quantity) || 1);
+      const serial = item.serial_number ?? item.serialNumber;
 
-        if (invId) {
-          await sqlDb.execute(
-            "UPDATE inventory SET quantity = quantity + $1 WHERE id = $2",
-            [qty, invId]
-          );
-        }
-
-        // ponytail: strictly restore only serials that were explicitly registered on this line item
-        if (serial) {
-          await sqlDb.execute(
-            "UPDATE inventory_serials SET status = 'AVAILABLE' WHERE serial_number = $1",
-            [serial]
-          );
-        }
+      if (invId) {
+        await sqlDb.execute(
+          "UPDATE inventory SET quantity = quantity + $1 WHERE id = $2",
+          [qty, invId]
+        );
       }
 
-      await sqlDb.execute("DELETE FROM sale_items WHERE sale_id = $1", [id]);
-      await sqlDb.execute("DELETE FROM sales WHERE id = $1", [id]);
-      await sqlDb.execute("COMMIT;");
-      return;
-    } catch (err) {
-      try { await sqlDb.execute("ROLLBACK;"); } catch {}
-      throw err;
+      // ponytail: strictly restore only serials that were explicitly registered on this line item
+      if (serial) {
+        await sqlDb.execute(
+          "UPDATE inventory_serials SET status = 'AVAILABLE' WHERE serial_number = $1",
+          [serial]
+        );
+      }
     }
+
+    await sqlDb.execute("DELETE FROM sale_items WHERE sale_id = $1", [id]);
+    await sqlDb.execute("DELETE FROM sales WHERE id = $1", [id]);
+    return;
   }
 
   const items = memoryStore.saleItems.filter((si) => si.saleId === id);

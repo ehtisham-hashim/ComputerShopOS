@@ -55,46 +55,38 @@ export async function addRepairTicket(ticket: AddRepairInput): Promise<string> {
   const partsJson = JSON.stringify(parts);
 
   if (isTauri && sqlDb) {
-    try {
-      await sqlDb.execute("BEGIN TRANSACTION;");
+    await sqlDb.execute(
+      `INSERT INTO repairs (
+        ticket_no, customer_id, customer_name, customer_phone, device,
+        reported_issue, parts_used, labor_cost, estimated_cost, final_cost, status, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        ticketNo,
+        custId || null,
+        ticket.customerName,
+        ticket.customerPhone,
+        ticket.device,
+        ticket.reportedIssue,
+        partsJson,
+        labor,
+        estCost,
+        totalCost,
+        ticket.status || "RECEIVED",
+        now,
+      ]
+    );
 
-      await sqlDb.execute(
-        `INSERT INTO repairs (
-          ticket_no, customer_id, customer_name, customer_phone, device,
-          reported_issue, parts_used, labor_cost, estimated_cost, final_cost, status, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [
-          ticketNo,
-          custId || null,
-          ticket.customerName,
-          ticket.customerPhone,
-          ticket.device,
-          ticket.reportedIssue,
-          partsJson,
-          labor,
-          estCost,
-          totalCost,
-          ticket.status || "RECEIVED",
-          now,
-        ]
-      );
-
-      for (const p of parts) {
-        if (p.isHardware && p.inventoryId) {
-          const qty = p.quantity ?? 1;
-          await sqlDb.execute(
-            "UPDATE inventory SET quantity = MAX(0, quantity - $1) WHERE id = $2",
-            [qty, p.inventoryId]
-          );
-        }
+    for (const p of parts) {
+      if (p.isHardware && p.inventoryId) {
+        const qty = p.quantity ?? 1;
+        await sqlDb.execute(
+          "UPDATE inventory SET quantity = MAX(0, quantity - $1) WHERE id = $2",
+          [qty, p.inventoryId]
+        );
       }
-
-      await sqlDb.execute("COMMIT;");
-      return ticketNo;
-    } catch (err) {
-      try { await sqlDb.execute("ROLLBACK;"); } catch {}
-      throw err;
     }
+
+    return ticketNo;
   }
 
   // Fallback
@@ -162,39 +154,31 @@ export async function deleteRepairTicket(id: number): Promise<void> {
   const sqlDb = await getSqlDb();
 
   if (isTauri && sqlDb) {
-    try {
-      const rows = await sqlDb.select<any[]>(
-        "SELECT parts_used FROM repairs WHERE id = $1",
-        [id]
-      );
+    const rows = await sqlDb.select<any[]>(
+      "SELECT parts_used FROM repairs WHERE id = $1",
+      [id]
+    );
 
-      await sqlDb.execute("BEGIN TRANSACTION;");
-
-      await sqlDb.execute("DELETE FROM repairs WHERE id = $1", [id]);
-      const rawParts = rows.length > 0 ? (rows[0].parts_used ?? rows[0].partsUsed) : null;
-      if (rawParts) {
-        try {
-          const parts: RepairPartUsed[] = JSON.parse(rawParts || "[]");
-          for (const p of parts) {
-            if (p.isHardware && p.inventoryId) {
-              const qty = p.quantity ?? 1;
-              await sqlDb.execute(
-                "UPDATE inventory SET quantity = quantity + $1 WHERE id = $2",
-                [qty, p.inventoryId]
-              );
-            }
+    await sqlDb.execute("DELETE FROM repairs WHERE id = $1", [id]);
+    const rawParts = rows.length > 0 ? (rows[0].parts_used ?? rows[0].partsUsed) : null;
+    if (rawParts) {
+      try {
+        const parts: RepairPartUsed[] = JSON.parse(rawParts || "[]");
+        for (const p of parts) {
+          if (p.isHardware && p.inventoryId) {
+            const qty = p.quantity ?? 1;
+            await sqlDb.execute(
+              "UPDATE inventory SET quantity = quantity + $1 WHERE id = $2",
+              [qty, p.inventoryId]
+            );
           }
-        } catch (err) {
-          console.error("Failed to parse parts_used on delete:", err);
         }
+      } catch (err) {
+        console.error("Failed to parse parts_used on delete:", err);
       }
-
-      await sqlDb.execute("COMMIT;");
-      return;
-    } catch (err) {
-      try { await sqlDb.execute("ROLLBACK;"); } catch {}
-      throw err;
     }
+
+    return;
   }
 
   const idx = memoryStore.repairs.findIndex((r) => r.id === id);
