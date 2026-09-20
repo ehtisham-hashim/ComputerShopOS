@@ -137,18 +137,30 @@ export const SalariesPage: React.FC = () => {
   };
 
   const handlePayQuickStaff = (title: string, defaultAmount: number) => {
-    const dateUnix = Math.floor(new Date(selectedYear, selectedMonth - 1, new Date().getDate(), 12, 0, 0).getTime() / 1000);
-    setEditingSalary({
-      id: 0,
-      year: selectedYear,
-      month: selectedMonth,
-      category: "SALARY",
-      title,
-      amount: defaultAmount,
-      expenseDate: dateUnix,
-      paymentMethod: "CASH",
-      notes: "Monthly staff salary",
-    });
+    const existing = salaries.find(
+      (s) => s.title.trim().toLowerCase() === title.trim().toLowerCase()
+    );
+
+    if (existing) {
+      // If already recorded for this month, open the existing salary record to view/edit
+      setEditingSalary(existing);
+    } else {
+      // Pre-fill a new salary record with all details
+      const dateUnix = Math.floor(
+        new Date(selectedYear, selectedMonth - 1, new Date().getDate(), 12, 0, 0).getTime() / 1000
+      );
+      setEditingSalary({
+        id: 0,
+        year: selectedYear,
+        month: selectedMonth,
+        category: "SALARY",
+        title,
+        amount: defaultAmount,
+        expenseDate: dateUnix,
+        paymentMethod: "CASH",
+        notes: `Monthly staff salary for ${MONTH_NAMES[selectedMonth - 1]} ${selectedYear}`,
+      });
+    }
     setShowAddModal(true);
   };
 
@@ -507,11 +519,28 @@ export const SalariesPage: React.FC = () => {
           selectedMonth={selectedMonth}
           monthName={monthName}
           onExpenseAdded={() => {
-            showToast(editingSalary && editingSalary.id > 0 ? "Salary updated" : "Salary payout recorded");
+            showToast(
+              editingSalary && editingSalary.id > 0
+                ? "Salary updated"
+                : "Salary payout recorded"
+            );
             loadSalaries();
           }}
           expenseToEdit={editingSalary && editingSalary.id > 0 ? editingSalary : null}
+          prefillData={editingSalary && editingSalary.id === 0 ? editingSalary : null}
           initialCategory="SALARY"
+          titleOverride={
+            editingSalary && editingSalary.id > 0
+              ? `Edit Salary: ${editingSalary.title}`
+              : editingSalary && editingSalary.id === 0
+              ? `Quick Payout: ${editingSalary.title}`
+              : "Pay Staff Salary"
+          }
+          descriptionOverride={
+            editingSalary && editingSalary.id === 0
+              ? `Verify details and confirm payout of Rs. ${editingSalary.amount?.toLocaleString()} for ${monthName} ${selectedYear}`
+              : undefined
+          }
         />
       )}
     </div>

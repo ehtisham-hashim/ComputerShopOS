@@ -2,8 +2,11 @@ import React, { useState, useEffect } from "react";
 import {
   FileText,
   Plus,
+  Minus,
   Trash2,
   Save,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import {
   BrandType,
@@ -360,12 +363,18 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
           </div>
         </div>
 
-        {/* SECTION 4: 5-COLUMN ITEMS TABLE */}
+        {/* SECTION 4: INVOICE LINE ITEMS TABLE */}
         <div className="space-y-3">
+          {/* Header with item count and Add Row button */}
           <div className="flex items-center justify-between">
-            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
-              3. Invoice Line Items (5-Column Layout)
-            </label>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                3. Invoice Line Items ({items.length})
+              </label>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-brand-50 text-brand-600 dark:bg-brand-950/40 dark:text-brand-400 border border-brand-200 dark:border-brand-800">
+                Official 5-Column Bill
+              </span>
+            </div>
             <button
               type="button"
               onClick={addItemRow}
@@ -376,34 +385,37 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
             </button>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
-            <table className="w-full text-left text-xs">
-              <thead className="border-b border-gray-100 bg-gray-50 text-[11px] font-bold uppercase text-gray-500 dark:border-gray-800 dark:bg-gray-800/50 dark:text-gray-400">
+          {/* Line items table with clean horizontal scroll for all screens */}
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-theme-xs">
+            <table className="w-full text-left text-xs min-w-[620px]">
+              <thead className="border-b border-gray-100 bg-gray-50 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:border-gray-800 dark:bg-gray-800/50 dark:text-gray-400">
                 <tr>
-                  <th className="px-3 py-2.5 w-12 text-center">S N</th>
-                  <th className="px-3 py-2.5 min-w-[280px]">Description & Warranty Notes</th>
-                  <th className="px-3 py-2.5 w-20 text-center">Qty</th>
-                  <th className="px-3 py-2.5 w-32 text-right">Unit Price</th>
-                  <th className="px-3 py-2.5 w-36 text-right">Total Amount</th>
-                  <th className="px-3 py-2.5 w-12 text-center"></th>
+                  <th className="px-3 py-3 w-12 text-center">#</th>
+                  <th className="px-3 py-3 min-w-[260px]">Description & Warranty Notes</th>
+                  <th className="px-3 py-3 w-36 text-center">Quantity</th>
+                  <th className="px-3 py-3 w-40 text-right">Unit Price</th>
+                  <th className="px-3 py-3 w-36 text-right">Total Amount</th>
+                  <th className="px-3 py-3 w-12 text-center"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                 {items.map((item, index) => (
-                  <tr key={index} className="align-top">
-                    {/* SN */}
-                    <td className="px-3 py-2.5 text-center font-bold text-gray-500 pt-3.5">
-                      {index + 1}
+                  <tr key={index} className="group hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+                    {/* Item Number (#) */}
+                    <td className="px-3 py-3 text-center align-top">
+                      <span className="inline-flex size-6 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-xs font-bold text-gray-600 dark:text-gray-300 font-mono mt-1">
+                        {index + 1}
+                      </span>
                     </td>
 
-                    {/* Description */}
-                    <td className="px-3 py-2 space-y-1.5">
+                    {/* Description & Inventory Quick Pick */}
+                    <td className="px-3 py-3 space-y-2 align-top">
                       {inventoryItems.length > 0 && (
                         <CustomDropdown
                           value=""
                           onChange={(val) => handlePickInventory(index, val)}
                           options={[
-                            { value: "", label: "-- Quick pick from Inventory --" },
+                            { value: "", label: "-- Quick pick product from Inventory --" },
                             ...inventoryItems.map((inv) => ({
                               value: String(inv.id),
                               label: `${inv.name} (PKR ${inv.price.toLocaleString()})`,
@@ -411,55 +423,151 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
                           ]}
                           size="sm"
                           className="w-full"
-                          buttonClassName="w-full text-[11px] py-1 text-gray-500"
+                          buttonClassName="w-full text-xs py-1 text-gray-500 bg-gray-50/70 dark:bg-gray-800/50 border-dashed hover:border-brand-400"
                         />
                       )}
+                      {/* Uses .tail-textarea from index.css so text never touches the ceiling */}
                       <textarea
                         rows={2}
                         value={item.description}
                         onChange={(e) => updateItem(index, "description", e.target.value)}
-                        placeholder="Item name / specs / warranty&#10;e.g. LOGITECH H390 OGR&#10;5 MONTH WARANTY"
-                        className="tail-input text-xs resize-y"
+                        placeholder="Item name / specs / warranty&#10;e.g. LOGITECH H390 USB HEADSET - 5 MONTH WARRANTY"
+                        className="tail-textarea"
                       />
                     </td>
 
-                    {/* Qty */}
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.qty}
-                        onChange={(e) => updateItem(index, "qty", parseInt(e.target.value) || 0)}
-                        className="tail-input text-xs text-center font-mono"
-                      />
+                    {/* Quantity with tactile - / + stepper */}
+                    <td className="px-3 py-3 align-top">
+                      <div className="flex flex-col items-center gap-1 mt-1">
+                        <div className="tail-stepper">
+                          <button
+                            type="button"
+                            onClick={() => updateItem(index, "qty", Math.max(1, (Number(item.qty) || 1) - 1))}
+                            disabled={Number(item.qty) <= 1}
+                            aria-label="Decrease quantity"
+                            className="tail-stepper-btn"
+                          >
+                            <Minus className="size-3" />
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.qty === 0 ? "" : item.qty}
+                            onChange={(e) =>
+                              updateItem(
+                                index,
+                                "qty",
+                                e.target.value === "" ? 0 : Math.max(1, parseInt(e.target.value) || 1)
+                              )
+                            }
+                            onBlur={() => {
+                              if (!item.qty || item.qty < 1) updateItem(index, "qty", 1);
+                            }}
+                            className="w-11 bg-transparent text-center tail-num-input text-xs font-bold text-gray-900 focus:outline-none dark:text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateItem(index, "qty", (Number(item.qty) || 0) + 1)}
+                            aria-label="Increase quantity"
+                            className="tail-stepper-btn"
+                          >
+                            <Plus className="size-3" />
+                          </button>
+                        </div>
+                        <span className="text-[10px] text-gray-400 font-medium">units</span>
+                      </div>
                     </td>
 
-                    {/* Unit Price */}
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        min="0"
-                        value={item.unitPrice}
-                        onChange={(e) => updateItem(index, "unitPrice", parseInt(e.target.value) || 0)}
-                        className="tail-input text-xs text-right font-mono"
-                      />
+                    {/* Unit Price with PKR prefix and +/- 100 micro-adjusters */}
+                    <td className="px-3 py-3 align-top">
+                      <div className="flex flex-col items-end gap-1 mt-1">
+                        <div className="tail-currency-box w-full">
+                          <span className="pl-2.5 text-[10px] font-bold text-gray-400 select-none">PKR</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={item.unitPrice === 0 ? "" : item.unitPrice}
+                            placeholder="0"
+                            onChange={(e) =>
+                              updateItem(
+                                index,
+                                "unitPrice",
+                                e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value) || 0)
+                              )
+                            }
+                            className="w-full bg-transparent py-2 pl-1 pr-6 text-right tail-num-input text-xs font-bold text-gray-900 focus:outline-none dark:text-white"
+                          />
+                          {/* Micro-adjusters for quick +/- 100 PKR adjustments */}
+                          <div className="absolute right-1 flex flex-col items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateItem(index, "unitPrice", (Number(item.unitPrice) || 0) + 100)
+                              }
+                              title="Add PKR 100"
+                              className="p-0.5 rounded text-gray-400 hover:text-brand-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-brand-400 transition-colors"
+                            >
+                              <ChevronUp className="size-2.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateItem(
+                                  index,
+                                  "unitPrice",
+                                  Math.max(0, (Number(item.unitPrice) || 0) - 100)
+                                )
+                              }
+                              title="Subtract PKR 100"
+                              className="p-0.5 rounded text-gray-400 hover:text-brand-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-brand-400 transition-colors"
+                            >
+                              <ChevronDown className="size-2.5" />
+                            </button>
+                          </div>
+                        </div>
+                        {/* Quick increment chips */}
+                        <div className="flex items-center justify-end gap-1">
+                          {[500, 1000].map((step) => (
+                            <button
+                              key={step}
+                              type="button"
+                              onClick={() =>
+                                updateItem(index, "unitPrice", (Number(item.unitPrice) || 0) + step)
+                              }
+                              className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 hover:bg-brand-50 hover:text-brand-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-brand-950/40 dark:hover:text-brand-400 transition-colors"
+                            >
+                              +{step}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </td>
 
-                    {/* Total Amount */}
-                    <td className="px-3 py-2 text-right font-bold text-gray-900 dark:text-white pt-3.5 font-mono">
-                      PKR {item.totalAmount.toLocaleString()}
+                    {/* Calculated Line Total */}
+                    <td className="px-3 py-3 text-right align-top">
+                      <div className="pt-2">
+                        <span className="font-mono text-xs font-bold tabular-nums text-gray-900 dark:text-white block">
+                          PKR {item.totalAmount.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-medium tabular-nums block mt-0.5">
+                          {item.qty || 0} × PKR {Number(item.unitPrice || 0).toLocaleString()}
+                        </span>
+                      </div>
                     </td>
 
-                    {/* Delete */}
-                    <td className="px-3 py-2 text-center pt-2.5">
-                      <button
-                        type="button"
-                        onClick={() => removeItemRow(index)}
-                        disabled={items.length <= 1}
-                        className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 disabled:opacity-30 transition-colors"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
+                    {/* Delete Action Button */}
+                    <td className="px-3 py-3 text-center align-top">
+                      <div className="pt-1.5">
+                        <button
+                          type="button"
+                          onClick={() => removeItemRow(index)}
+                          disabled={items.length <= 1}
+                          title="Delete line item"
+                          className="p-1.5 rounded-lg text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 disabled:opacity-25 disabled:pointer-events-none transition-colors"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -467,28 +575,37 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
             </table>
           </div>
 
-          {/* FINANCIAL SUMMARY */}
+          {/* SECTION 5: FINANCIAL SUMMARY (Subtotal, Discount, Final Total) */}
           <div className="flex flex-col sm:flex-row justify-end items-end gap-4 pt-2">
-            <div className="w-full sm:w-72 space-y-2 text-xs">
-              <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                <span>Subtotal:</span>
-                <span className="font-mono font-semibold text-gray-900 dark:text-white">
+            <div className="w-full sm:w-80 space-y-2.5 text-xs bg-gray-50/80 dark:bg-gray-800/40 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 shadow-theme-xs">
+              {/* Subtotal */}
+              <div className="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                <span className="font-medium">Subtotal ({items.length} {items.length === 1 ? 'item' : 'items'}):</span>
+                <span className="font-mono font-bold text-gray-900 dark:text-white tabular-nums">
                   PKR {subtotal.toLocaleString()}
                 </span>
               </div>
+              {/* Discount Input with PKR prefix */}
               <div className="flex items-center justify-between gap-2">
-                <span className="text-gray-600 dark:text-gray-400">Discount (PKR):</span>
-                <input
-                  type="number"
-                  min="0"
-                  value={discount}
-                  onChange={(e) => setDiscount(parseInt(e.target.value) || 0)}
-                  className="tail-input text-xs text-right w-28 py-1 font-mono"
-                />
+                <span className="font-medium text-gray-600 dark:text-gray-400">Special Discount:</span>
+                <div className="tail-currency-box w-36">
+                  <span className="pl-2 text-[10px] font-bold text-gray-400 select-none">PKR</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={discount === 0 ? "" : discount}
+                    placeholder="0"
+                    onChange={(e) =>
+                      setDiscount(e.target.value === "" ? 0 : Math.max(0, parseInt(e.target.value) || 0))
+                    }
+                    className="w-full bg-transparent py-1.5 pl-1 pr-2.5 text-right tail-num-input text-xs font-bold text-gray-900 focus:outline-none dark:text-white"
+                  />
+                </div>
               </div>
-              <div className="flex justify-between border-t border-gray-200 pt-2 text-sm font-bold text-gray-900 dark:text-white dark:border-gray-700">
-                <span>TOTAL AMOUNT:</span>
-                <span className="font-mono text-brand-600 dark:text-brand-400">
+              {/* Final Payable Total */}
+              <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-2.5 text-sm font-bold text-gray-900 dark:text-white">
+                <span className="tracking-wide">FINAL PAYABLE:</span>
+                <span className="font-mono text-base font-extrabold text-brand-600 dark:text-brand-400 tabular-nums">
                   PKR {totalAmount.toLocaleString()}
                 </span>
               </div>

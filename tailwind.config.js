@@ -6,6 +6,7 @@ export default {
     fontFamily: {
       outfit: ["Outfit", "Inter", "sans-serif"],
       sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+      mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
     },
     extend: {
       colors: {

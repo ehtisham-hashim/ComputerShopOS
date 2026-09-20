@@ -13,7 +13,10 @@ interface AddExpenseModalProps {
   monthName: string;
   onExpenseAdded: () => void;
   expenseToEdit?: ExpenseRecord | null;
+  prefillData?: Partial<ExpenseRecord> | null;
   initialCategory?: ExpenseCategory;
+  titleOverride?: string;
+  descriptionOverride?: string;
 }
 
 const formatDateToYMD = (date: Date) => {
@@ -31,7 +34,10 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   monthName,
   onExpenseAdded,
   expenseToEdit,
+  prefillData,
   initialCategory,
+  titleOverride,
+  descriptionOverride,
 }) => {
   const getDefaultDateStr = () => {
     const now = new Date();
@@ -40,6 +46,8 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     }
     return formatDateToYMD(new Date(selectedYear, selectedMonth - 1, 1));
   };
+
+  const isEditing = Boolean(expenseToEdit && expenseToEdit.id > 0);
 
   const [title, setTitle] = useState<string>("");
   const [category, setCategory] = useState<ExpenseCategory>(initialCategory || "MISC");
@@ -50,14 +58,19 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   useEffect(() => {
-    if (expenseToEdit) {
-      setTitle(expenseToEdit.title);
-      setCategory((expenseToEdit.category as ExpenseCategory) || initialCategory || "MISC");
-      setAmount(String(expenseToEdit.amount));
-      setPaymentMethod(expenseToEdit.paymentMethod || "CASH");
-      setNotes(expenseToEdit.notes || "");
-      if (expenseToEdit.expenseDate) {
-        setDateStr(formatDateToYMD(new Date(expenseToEdit.expenseDate * 1000)));
+    const data =
+      expenseToEdit && expenseToEdit.id > 0
+        ? expenseToEdit
+        : prefillData || (expenseToEdit && expenseToEdit.id === 0 ? expenseToEdit : null);
+
+    if (data) {
+      setTitle(data.title || "");
+      setCategory((data.category as ExpenseCategory) || initialCategory || "MISC");
+      setAmount(data.amount !== undefined && data.amount !== null ? String(data.amount) : "");
+      setPaymentMethod(data.paymentMethod || "CASH");
+      setNotes(data.notes || "");
+      if (data.expenseDate) {
+        setDateStr(formatDateToYMD(new Date(data.expenseDate * 1000)));
       } else {
         setDateStr(getDefaultDateStr());
       }
@@ -69,7 +82,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       setNotes("");
       setDateStr(getDefaultDateStr());
     }
-  }, [expenseToEdit, isOpen, initialCategory, selectedYear, selectedMonth]);
+  }, [expenseToEdit, prefillData, isOpen, initialCategory, selectedYear, selectedMonth]);
 
   if (!isOpen) return null;
 
@@ -86,7 +99,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
       const targetDay = parts[2] || 1;
       const dateUnix = Math.floor(new Date(targetYear, targetMonth - 1, targetDay, 12, 0, 0).getTime() / 1000);
 
-      if (expenseToEdit) {
+      if (isEditing && expenseToEdit) {
         await updateExpense(expenseToEdit.id, {
           year: targetYear,
           month: targetMonth,
@@ -118,14 +131,30 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
     }
   };
 
+  const modalTitle =
+    titleOverride ||
+    (isEditing
+      ? category === "SALARY"
+        ? "Edit Staff Salary"
+        : "Edit Shop Expense"
+      : category === "SALARY"
+      ? "Record Staff Salary"
+      : "Record Shop Expense");
+
+  const modalDesc =
+    descriptionOverride ||
+    (category === "SALARY"
+      ? `Salary disbursement for ${monthName} ${selectedYear}`
+      : `Operating overhead for ${monthName} ${selectedYear}`);
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={expenseToEdit ? "Edit Shop Expense" : "Record Shop Expense"}
-      description={`Operating overhead for ${monthName} ${selectedYear}`}
+      title={modalTitle}
+      description={modalDesc}
       icon={
-        expenseToEdit ? (
+        isEditing ? (
           <Pencil className="size-5 text-brand-500" />
         ) : (
           <DollarSign className="size-5 text-brand-500" />
@@ -219,7 +248,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
             placeholder="Optional details or receipt number"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="tail-input resize-none"
+            className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-xs text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 transition-colors min-h-[56px] resize-none"
           />
         </div>
 
@@ -238,8 +267,12 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
           >
             {submitting
               ? "Saving..."
-              : expenseToEdit
-              ? "Update Expense"
+              : isEditing
+              ? category === "SALARY"
+                ? "Update Salary"
+                : "Update Expense"
+              : category === "SALARY"
+              ? "Confirm & Record Salary"
               : "Save Expense"}
           </button>
         </div>

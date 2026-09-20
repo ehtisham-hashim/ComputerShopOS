@@ -69,6 +69,29 @@
     @apply h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs text-gray-900 shadow-theme-xs transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
   }
 
+  /* Multi-line Textarea with comfortable padding (never touches ceiling) */
+  .tail-textarea {
+    @apply min-h-[58px] w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs leading-relaxed text-gray-900 shadow-theme-xs transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 resize-y;
+  }
+
+  /* Number/currency input without ugly browser spinner arrows */
+  .tail-num-input {
+    @apply [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none tabular-nums font-mono;
+  }
+
+  /* Tactile Quantity Stepper Container & Buttons */
+  .tail-stepper {
+    @apply inline-flex items-center rounded-xl border border-gray-200 bg-gray-50/70 p-1 shadow-theme-xs dark:border-gray-800 dark:bg-gray-900/60;
+  }
+  .tail-stepper-btn {
+    @apply flex size-7 items-center justify-center rounded-lg text-gray-500 hover:bg-white hover:text-gray-900 hover:shadow-theme-xs active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition-all dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white;
+  }
+
+  /* Currency Input Box with Integrated Prefix & Controls */
+  .tail-currency-box {
+    @apply relative flex items-center rounded-xl border border-gray-200 bg-white shadow-theme-xs transition-colors focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900;
+  }
+
   .tail-select {
     @apply h-10 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-900 shadow-theme-xs transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
   }
