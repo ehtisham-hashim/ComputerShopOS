@@ -69,9 +69,17 @@ export const AddCustomerModal: React.FC<AddCustomerModalProps> = ({ isOpen, onCl
           <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">Internal Notes</label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Preferences, specs, notes..." rows={2} className="tail-input" />
         </div>
-        <div className="flex justify-end gap-2.5 pt-2">
-          <button type="button" onClick={onClose} className="tail-btn-secondary">Cancel</button>
-          <button type="submit" disabled={isSubmitting} className="tail-btn-primary">{isSubmitting ? "Saving..." : "Save Customer"}</button>
+        <div className="flex justify-end items-center gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <button type="button" onClick={onClose} className="tail-btn-secondary-sm">
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="tail-btn-primary-sm"
+          >
+            {isSubmitting ? "Saving..." : "Save Customer"}
+          </button>
         </div>
       </form>
     </Modal>

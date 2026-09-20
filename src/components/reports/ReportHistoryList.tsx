@@ -32,7 +32,7 @@ export const ReportHistoryList: React.FC<ReportHistoryListProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={onBackToCurrent}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors shadow-theme-xs"
+            className="tail-btn-secondary-sm flex items-center gap-1.5"
           >
             <ArrowLeft className="size-4" />
             <span>Back to Current Month</span>
@@ -93,28 +93,28 @@ export const ReportHistoryList: React.FC<ReportHistoryListProps> = ({
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 flex-1 text-xs">
                   <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-bold">Total Sales</span>
-                    <span className="font-bold text-gray-900 dark:text-white">
+                    <span className="font-bold tabular-nums text-gray-900 dark:text-white">
                       Rs. {item.grossSales.toLocaleString()}
                     </span>
                   </div>
 
                   <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-bold">Gross Profit</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
                       Rs. {item.grossProfit.toLocaleString()}
                     </span>
                   </div>
 
                   <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-bold">Total Expenses</span>
-                    <span className="font-bold text-rose-600 dark:text-rose-400">
+                    <span className="font-bold tabular-nums text-rose-600 dark:text-rose-400">
                       Rs. {item.totalExpenses.toLocaleString()}
                     </span>
                   </div>
 
                   <div>
                     <span className="text-gray-400 block text-[10px] uppercase font-bold">Net Profit</span>
-                    <span className={`font-bold flex items-center gap-1 ${
+                    <span className={`font-bold tabular-nums flex items-center gap-1 ${
                       isProfitable ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                     }`}>
                       {isProfitable ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}

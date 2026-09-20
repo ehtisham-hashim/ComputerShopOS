@@ -29,6 +29,41 @@ export function useSalesCart(items: InventoryItem[], initialCartItems?: Inventor
     });
   };
 
+  const setCartItemQty = (id: number, qty: number) => {
+    if (qty <= 0) {
+      removeFromCart(id);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((c) => {
+        if (c.item.id === id) {
+          const clamped = Math.min(c.item.quantity, Math.max(1, Math.round(qty)));
+          return { ...c, quantity: clamped };
+        }
+        return c;
+      })
+    );
+  };
+
+  const addToCartBySku = (query: string): boolean => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return false;
+    const match = items.find(
+      (it) =>
+        it.quantity > 0 &&
+        (it.sku.toLowerCase() === trimmed || it.name.toLowerCase() === trimmed)
+    ) || items.find(
+      (it) =>
+        it.quantity > 0 &&
+        (it.sku.toLowerCase().includes(trimmed) || it.name.toLowerCase().includes(trimmed))
+    );
+    if (match) {
+      addToCart(match);
+      return true;
+    }
+    return false;
+  };
+
   const updateCartQty = (id: number, delta: number) => {
     setCart((prev) =>
       prev
@@ -40,5 +75,15 @@ export function useSalesCart(items: InventoryItem[], initialCartItems?: Inventor
   const removeFromCart = (id: number) => setCart((prev) => prev.filter((c) => c.item.id !== id));
   const clearCart = () => setCart([]);
 
-  return { cart, isSaleModalOpen, setIsSaleModalOpen, addToCart, updateCartQty, removeFromCart, clearCart };
+  return {
+    cart,
+    isSaleModalOpen,
+    setIsSaleModalOpen,
+    addToCart,
+    setCartItemQty,
+    addToCartBySku,
+    updateCartQty,
+    removeFromCart,
+    clearCart,
+  };
 }

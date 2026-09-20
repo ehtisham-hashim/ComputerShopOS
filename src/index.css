@@ -52,29 +52,52 @@
 
   /* Card Styles */
   .tail-card {
-    @apply rounded-2xl border border-gray-200 bg-white p-5 md:p-6 shadow-theme-xs transition-all dark:border-gray-800 dark:bg-gray-900/90;
+    @apply rounded-2xl border border-gray-200/90 bg-white p-5 md:p-6 shadow-theme-xs transition-all dark:border-gray-800/90 dark:bg-gray-900/90 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.04)];
   }
 
   /* Metric Box */
   .tail-metric-icon {
-    @apply flex size-12 items-center justify-center rounded-xl bg-gray-100 text-brand-600 transition-colors dark:bg-gray-800 dark:text-brand-400;
+    @apply flex size-10 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 transition-colors dark:bg-brand-500/15 dark:text-brand-400;
   }
 
   /* Form Control Base */
   .tail-input {
-    @apply w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-theme-xs transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
+    @apply h-10 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-900 shadow-theme-xs transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
+  }
+
+  .tail-input-sm {
+    @apply h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs text-gray-900 shadow-theme-xs transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
   }
 
   .tail-select {
-    @apply w-full rounded-xl border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-theme-xs transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
+    @apply h-10 w-full rounded-xl border border-gray-200 bg-white px-3.5 text-sm text-gray-900 shadow-theme-xs transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
   }
 
+  .tail-select-sm {
+    @apply h-9 w-full rounded-xl border border-gray-200 bg-white px-3 text-xs text-gray-900 shadow-theme-xs transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100 dark:focus:border-brand-500 dark:focus:ring-brand-500/20;
+  }
+
+  /* Button System */
   .tail-btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-theme-xs transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white shadow-theme-xs transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .tail-btn-primary-sm {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-brand-600 px-3 text-xs font-semibold text-white shadow-theme-xs transition-all hover:bg-brand-700 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
   }
 
   .tail-btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-theme-xs transition-all hover:bg-gray-50 hover:text-gray-900 active:scale-[0.98] dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white;
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-theme-xs transition-all hover:bg-gray-50 hover:text-gray-900 active:scale-[0.98] dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .tail-btn-secondary-sm {
+    @apply inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-xs font-semibold text-gray-700 shadow-theme-xs transition-all hover:bg-gray-50 hover:text-gray-900 active:scale-[0.98] dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  /* Tabular Numerals for Hardware Specs & Money */
+  .tabular-num, .price, .stat-value, td.numeric {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
   }
 }
 

@@ -9,7 +9,7 @@ interface SidebarBrandProps {
 export const SidebarBrand: React.FC<SidebarBrandProps> = ({ isExpanded, toggleSidebar }) => {
   return (
     <div
-      className={`flex h-20 items-center border-b border-gray-200 dark:border-gray-800 ${
+      className={`flex h-16 items-center border-b border-gray-200 dark:border-gray-800 ${
         isExpanded ? "justify-between px-5" : "justify-center px-0"
       }`}
     >

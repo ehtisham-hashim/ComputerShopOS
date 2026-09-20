@@ -86,9 +86,9 @@ export const DocGeneratorPage: React.FC<DocGeneratorPageProps> = ({ items }) => 
             setDuplicateDoc(null);
             setIsCreateModalOpen(true);
           }}
-          className="tail-btn-primary text-xs"
+          className="tail-btn-primary-sm"
         >
-          <Plus className="size-4" />
+          <Plus className="size-3.5" />
           <span>New Document</span>
         </button>
       </PageHeader>

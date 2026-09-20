@@ -29,7 +29,7 @@ export const SerialViewerModal: React.FC<SerialViewerModalProps> = ({ item, seri
         </div>
       )}
       <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-end">
-        <button onClick={onClose} className="tail-btn-secondary text-xs">Close</button>
+        <button onClick={onClose} className="tail-btn-secondary-sm">Close</button>
       </div>
     </Modal>
   );

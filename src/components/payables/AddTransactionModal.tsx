@@ -278,21 +278,21 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
         </div>
 
         <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-800">
-          <div className="text-gray-500 font-mono text-[11px]">
+          <div className="text-gray-500 tabular-nums text-[11px] font-semibold">
             Current Balance: PKR {party.currentBalance.toLocaleString()}
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={onClose}
-              className="tail-btn-secondary"
+              className="tail-btn-secondary-sm"
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="tail-btn-primary"
+              className="tail-btn-primary-sm"
               disabled={isSubmitting}
             >
               {isSubmitting ? "Recording..." : `Record ${typeConfig.label}`}

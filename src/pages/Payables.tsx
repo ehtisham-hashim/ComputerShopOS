@@ -119,16 +119,16 @@ export const PayablesPage: React.FC<PayablesPageProps> = ({ onRefreshInventory }
                   setPurchasePreSelectedPartyId(null);
                   setIsNewPurchaseOpen(true);
                 }}
-                className="tail-btn-primary text-xs flex items-center gap-1.5"
+                className="tail-btn-primary-sm"
               >
-                <ShoppingBag className="size-4" />
+                <ShoppingBag className="size-3.5" />
                 <span>+ New Purchase</span>
               </button>
               <button
                 onClick={() => setIsAddSupplierOpen(true)}
-                className="tail-btn-secondary text-xs flex items-center gap-1.5"
+                className="tail-btn-secondary-sm"
               >
-                <Plus className="size-4" />
+                <Plus className="size-3.5" />
                 <span>New Supplier</span>
               </button>
             </div>

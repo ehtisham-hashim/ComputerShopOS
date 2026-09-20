@@ -66,7 +66,7 @@ export const CustomersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader title="Customer CRM & Profiles" subtitle="Manage contact directory and transaction history" icon={Users}>
-        <button onClick={() => setIsAddModalOpen(true)} className="tail-btn-primary text-xs"><Plus className="size-4" /><span>New Customer</span></button>
+        <button onClick={() => setIsAddModalOpen(true)} className="tail-btn-primary-sm"><Plus className="size-3.5" /><span>New Customer</span></button>
       </PageHeader>
       <CustomerStats customers={customers} />
       <CustomerTable

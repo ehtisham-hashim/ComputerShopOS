@@ -132,9 +132,9 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({
       >
         <button
           onClick={handleOpenAddModal}
-          className="tail-btn-primary text-xs flex items-center gap-1.5"
+          className="tail-btn-primary-sm"
         >
-          <Plus className="size-4" />
+          <Plus className="size-3.5" />
           <span>Add Category</span>
         </button>
       </PageHeader>
@@ -185,6 +185,7 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({
             value={searchQuery}
             onChange={setSearchQuery}
             placeholder="Search categories by name or description..."
+            size="sm"
             className="flex-1 max-w-md"
           />
           <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
@@ -194,13 +195,13 @@ export const CategoriesPage: React.FC<CategoriesPageProps> = ({
 
         <div className="overflow-x-auto">
           <table className="w-full min-w-[700px] text-left text-sm whitespace-nowrap">
-            <thead className="border-b border-gray-100 bg-gray-50/50 text-xs font-semibold uppercase text-gray-400 dark:border-gray-800 dark:bg-gray-800/30 dark:text-gray-500">
+            <thead className="border-b border-gray-100 bg-gray-50/60 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:border-gray-800 dark:bg-gray-800/40 dark:text-gray-500">
               <tr>
-                <th className="py-3.5 px-4">Category Name</th>
-                <th className="py-3.5 px-4">Description & Scope</th>
-                <th className="py-3.5 px-4 text-center">Active Products</th>
-                <th className="py-3.5 px-4">Created Date</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3 px-4">Category Name</th>
+                <th className="py-3 px-4">Description & Scope</th>
+                <th className="py-3 px-4 text-center">Active Products</th>
+                <th className="py-3 px-4">Created Date</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

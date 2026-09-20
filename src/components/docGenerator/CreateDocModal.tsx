@@ -551,11 +551,11 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
         </div>
 
         {/* MODAL FOOTER BUTTONS */}
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 pt-4 border-t border-gray-100 dark:border-gray-800">
           <button
             type="button"
             onClick={onClose}
-            className="tail-btn-secondary w-full sm:w-auto text-xs"
+            className="tail-btn-secondary-sm w-full sm:w-auto"
           >
             Cancel
           </button>
@@ -563,7 +563,7 @@ export const CreateDocModal: React.FC<CreateDocModalProps> = ({
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="tail-btn-primary w-full sm:w-auto text-xs"
+            className="tail-btn-primary-sm w-full sm:w-auto flex items-center justify-center gap-1.5"
           >
             <Save className="size-3.5" />
             <span>{isSubmitting ? "Saving..." : "Save Record"}</span>

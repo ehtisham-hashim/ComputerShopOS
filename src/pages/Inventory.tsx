@@ -63,7 +63,7 @@ export const InventoryPage: React.FC<InventoryPageProps> = ({ items, categories 
   return (
     <div className="space-y-6">
       <PageHeader title="Inventory & Stock Management" subtitle="Manage catalogs, stock units, margins, and serials" icon={Boxes}>
-        <button onClick={() => setIsModalOpen(true)} className="tail-btn-primary text-xs"><Plus className="size-4" /><span>Add Product</span></button>
+        <button onClick={() => setIsModalOpen(true)} className="tail-btn-primary-sm"><Plus className="size-3.5" /><span>Add Product</span></button>
       </PageHeader>
       <InventoryStats items={items} />
       <InventoryTable

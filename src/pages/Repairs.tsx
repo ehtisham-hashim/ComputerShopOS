@@ -64,7 +64,7 @@ export const RepairsPage: React.FC<RepairsPageProps> = ({ items = [], onRefreshI
   return (
     <div className="space-y-6">
       <PageHeader title="Repairs & RMA Service" subtitle="Manage hardware service jobs and RMA invoices" icon={Wrench}>
-        <button onClick={() => setIsModalOpen(true)} className="tail-btn-primary text-xs"><Plus className="size-4" /><span>New Repair Ticket</span></button>
+        <button onClick={() => setIsModalOpen(true)} className="tail-btn-primary-sm"><Plus className="size-3.5" /><span>New Repair Ticket</span></button>
       </PageHeader>
       <RepairStats tickets={tickets} />
       <RepairTable

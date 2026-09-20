@@ -52,7 +52,7 @@ export const Modal: React.FC<ModalProps> = ({
     if (!icon) return null;
     if (React.isValidElement(icon)) return icon;
     const IconComp = icon as React.ElementType;
-    return <IconComp className="size-5 text-brand-500" />;
+    return <IconComp className="size-4.5 text-brand-500" />;
   };
 
   const subText = description || subtitle;
@@ -60,17 +60,21 @@ export const Modal: React.FC<ModalProps> = ({
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-md dark:bg-black/60 p-3 sm:p-5 md:p-6 animate-in fade-in duration-150">
       <div className="absolute inset-0 w-full h-full" onClick={onClose} />
-      <div className={`relative z-10 w-full ${maxWidthClass} ${containerClassName || "max-h-[90vh]"} flex flex-col rounded-2xl border border-gray-200 bg-white shadow-theme-xl dark:border-gray-800 dark:bg-gray-900 transition-all`}>
-        <div className="flex items-center justify-between border-b border-gray-100 p-4 sm:px-6 sm:py-4 dark:border-gray-800 shrink-0">
+      <div className={`relative z-10 w-full ${maxWidthClass} ${containerClassName || "max-h-[90vh]"} flex flex-col rounded-2xl border border-gray-200/90 bg-white shadow-theme-xl dark:border-gray-800/90 dark:bg-gray-900 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05),0_20px_40px_rgba(0,0,0,0.6)] transition-all`}>
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-3">
-            {icon && <div className="shrink-0">{renderIcon()}</div>}
+            {icon && (
+              <div className="flex size-9 items-center justify-center rounded-xl bg-brand-500/10 border border-brand-500/20 dark:bg-brand-500/15 shrink-0">
+                {renderIcon()}
+              </div>
+            )}
             <div className="flex flex-col">
-              <h3 className="font-bold text-gray-900 dark:text-white text-base">{title}</h3>
-              {subText && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{subText}</p>}
+              <h3 className="font-bold text-gray-900 dark:text-white text-base leading-tight">{title}</h3>
+              {subText && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">{subText}</p>}
             </div>
           </div>
-          <button type="button" onClick={onClose} className="size-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white transition-colors">
-            <X className="size-4.5" />
+          <button type="button" onClick={onClose} className="size-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-white transition-colors active:scale-95">
+            <X className="size-4" />
           </button>
         </div>
         <div className={`flex-1 min-h-0 ${bodyClassName !== undefined ? bodyClassName : "overflow-y-auto p-4 sm:p-6"}`}>

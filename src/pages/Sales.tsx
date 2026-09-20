@@ -37,8 +37,16 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, categories = [], on
   const [isDeleting, setIsDeleting] = useState(false);
   const [isManualReceivableOpen, setIsManualReceivableOpen] = useState(false);
 
-  const { cart, isSaleModalOpen, setIsSaleModalOpen, addToCart, updateCartQty, removeFromCart, clearCart } =
-    useSalesCart(items, initialCartItems);
+  const {
+    cart,
+    isSaleModalOpen,
+    setIsSaleModalOpen,
+    addToCart,
+    setCartItemQty,
+    updateCartQty,
+    removeFromCart,
+    clearCart,
+  } = useSalesCart(items, initialCartItems);
 
   const fetchSalesData = async (showLoader = false) => {
     if (showLoader) setIsLoading(true);
@@ -120,7 +128,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, categories = [], on
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsManualReceivableOpen(true)}
-            className="tail-btn-secondary text-xs flex items-center gap-1.5 text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700/50 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+            className="tail-btn-secondary-sm text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700/50 hover:bg-amber-50 dark:hover:bg-amber-950/20"
           >
             <Plus className="size-3.5" />
             <span>Record Receivable</span>
@@ -130,9 +138,9 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, categories = [], on
               clearCart();
               setIsSaleModalOpen(true);
             }}
-            className="tail-btn-primary text-xs flex items-center gap-1.5"
+            className="tail-btn-primary-sm"
           >
-            <Plus className="size-4" />
+            <Plus className="size-3.5" />
             <span>New Sale (F2)</span>
           </button>
         </div>
@@ -162,6 +170,7 @@ export const SalesPage: React.FC<SalesPageProps> = ({ items, categories = [], on
         customers={customers}
         cart={cart}
         onAddToCart={addToCart}
+        onSetCartQty={setCartItemQty}
         onUpdateCartQty={updateCartQty}
         onRemoveFromCart={removeFromCart}
         onSaleCompleted={handleSaleCompleted}

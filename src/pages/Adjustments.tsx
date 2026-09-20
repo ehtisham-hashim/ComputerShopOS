@@ -59,7 +59,7 @@ export const AdjustmentsPage: React.FC<AdjustmentsPageProps> = ({ items, onRefre
   return (
     <div className="space-y-6">
       <PageHeader title="PC Swap & Trade-In Adjustments" subtitle="Manage customer PC trade-ins, upgrade swaps, and financial difference calculations" icon={ArrowLeftRight}>
-        <button onClick={() => setIsModalOpen(true)} className="tail-btn-primary text-xs"><Plus className="size-4" /><span>New Swap / Trade-In</span></button>
+        <button onClick={() => setIsModalOpen(true)} className="tail-btn-primary-sm"><Plus className="size-3.5" /><span>New Swap / Trade-In</span></button>
       </PageHeader>
       <AdjustmentStats adjustments={adjustments} />
       <AdjustmentTable

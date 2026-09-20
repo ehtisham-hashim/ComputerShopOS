@@ -155,18 +155,18 @@ export const AddManualReceivableModal: React.FC<AddManualReceivableModalProps> =
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex justify-end items-center gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
           <button
             type="button"
             onClick={onClose}
-            className="tail-btn-secondary"
+            className="tail-btn-secondary-sm"
             disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="tail-btn-primary"
+            className="tail-btn-primary-sm"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Recording..." : "Record Receivable"}

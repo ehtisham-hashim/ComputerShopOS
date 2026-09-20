@@ -534,11 +534,11 @@ export const CreateAdjustmentModal: React.FC<CreateAdjustmentModalProps> = ({
         </div>
 
         {/* Modal Actions */}
-        <div className="flex justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex justify-end items-center gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
           <button
             type="button"
             onClick={onClose}
-            className="tail-btn-secondary"
+            className="tail-btn-secondary-sm"
             disabled={isSubmitting}
           >
             Cancel
@@ -546,7 +546,7 @@ export const CreateAdjustmentModal: React.FC<CreateAdjustmentModalProps> = ({
           <button
             type="submit"
             disabled={isSubmitting}
-            className="tail-btn-primary"
+            className="tail-btn-primary-sm"
           >
             {isSubmitting ? "Recording & Inwarding..." : "Record Trade-In & Inward Stock"}
           </button>

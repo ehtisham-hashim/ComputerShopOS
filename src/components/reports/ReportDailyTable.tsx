@@ -160,14 +160,14 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                           <span>{row.day}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap text-gray-600 dark:text-gray-300 font-mono text-[11px]">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-gray-600 dark:text-gray-300 font-mono text-[11px] tabular-nums">
                         {row.date}
                       </td>
                       <td className="px-4 py-2.5 font-medium text-gray-500">{row.dayOfWeek}</td>
-                      <td className="px-4 py-2.5 text-right font-bold text-gray-900 dark:text-white">
+                      <td className="px-4 py-2.5 text-right font-bold text-gray-900 dark:text-white tabular-nums">
                         {row.sales > 0 ? `Rs. ${row.sales.toLocaleString()}` : "0"}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-bold ${
+                      <td className={`px-4 py-2.5 text-right font-bold tabular-nums ${
                         row.grossProfit > 0
                           ? "text-emerald-600 dark:text-emerald-400"
                           : row.grossProfit < 0
@@ -180,13 +180,13 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                           ? `-Rs. ${Math.abs(row.grossProfit).toLocaleString()}`
                           : "0"}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-bold ${expenses > 0 ? "text-rose-600 dark:text-rose-400" : "text-gray-400"}`}>
+                      <td className={`px-4 py-2.5 text-right font-bold tabular-nums ${expenses > 0 ? "text-rose-600 dark:text-rose-400" : "text-gray-400"}`}>
                         {expenses > 0 ? `Rs. ${expenses.toLocaleString()}` : "0"}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-bold ${payables > 0 ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>
+                      <td className={`px-4 py-2.5 text-right font-bold tabular-nums ${payables > 0 ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>
                         {payables > 0 ? `Rs. ${payables.toLocaleString()}` : "0"}
                       </td>
-                      <td className={`px-4 py-2.5 text-right font-bold ${
+                      <td className={`px-4 py-2.5 text-right font-bold tabular-nums ${
                         net > 0
                           ? "text-emerald-600 dark:text-emerald-400"
                           : net < 0
@@ -199,7 +199,7 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                           ? `-Rs. ${Math.abs(net).toLocaleString()}`
                           : "0"}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-gray-400 text-[11px]">
+                      <td className="px-4 py-2.5 text-right text-gray-400 text-[11px] tabular-nums">
                         {row.sales > 0 ? `${margin}%` : "—"}
                       </td>
                       <td className="px-4 py-2.5 text-gray-500 text-[11px]">
@@ -390,22 +390,22 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                 <td colSpan={3} className="px-4 py-3 text-gray-900 dark:text-white uppercase tracking-wider text-[11px]">
                   Total for Month
                 </td>
-                <td className="px-4 py-3 text-right text-gray-900 dark:text-white">
+                <td className="px-4 py-3 text-right text-gray-900 dark:text-white tabular-nums font-bold">
                   Rs. {totalSales.toLocaleString()}
                 </td>
-                <td className={`px-4 py-3 text-right font-bold ${totalGrossProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                <td className={`px-4 py-3 text-right font-bold tabular-nums ${totalGrossProfit >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                   {totalGrossProfit >= 0 ? `Rs. ${totalGrossProfit.toLocaleString()}` : `-Rs. ${Math.abs(totalGrossProfit).toLocaleString()}`}
                 </td>
-                <td className="px-4 py-3 text-right text-rose-600 dark:text-rose-400">
+                <td className="px-4 py-3 text-right text-rose-600 dark:text-rose-400 tabular-nums font-bold">
                   Rs. {sumExpenses.toLocaleString()}
                 </td>
-                <td className="px-4 py-3 text-right text-amber-600 dark:text-amber-400">
+                <td className="px-4 py-3 text-right text-amber-600 dark:text-amber-400 tabular-nums font-bold">
                   Rs. {sumPayables.toLocaleString()}
                 </td>
-                <td className={`px-4 py-3 text-right font-bold ${sumNet >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                <td className={`px-4 py-3 text-right font-bold tabular-nums ${sumNet >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
                   {sumNet >= 0 ? `Rs. ${sumNet.toLocaleString()}` : `-Rs. ${Math.abs(sumNet).toLocaleString()}`}
                 </td>
-                <td className="px-4 py-3 text-right text-gray-500">
+                <td className="px-4 py-3 text-right text-gray-500 tabular-nums font-bold">
                   {totalSales > 0 ? `${Math.round((totalGrossProfit / totalSales) * 100)}%` : "0%"}
                 </td>
                 <td className="px-4 py-3"></td>

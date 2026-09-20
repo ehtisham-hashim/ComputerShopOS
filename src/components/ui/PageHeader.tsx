@@ -17,15 +17,25 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   children,
 }) => {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white flex items-center gap-2">
-          {Icon && <Icon className={`size-6 ${iconColor}`} />}
-          {title}
-        </h1>
-        {subtitle && <p className="text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>}
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-3">
+        {Icon && (
+          <div className="flex size-10 items-center justify-center rounded-xl bg-brand-500/10 border border-brand-500/20 dark:bg-brand-500/15 shrink-0">
+            <Icon className={`size-5 ${iconColor}`} />
+          </div>
+        )}
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
-      {children && <div className="flex items-center gap-2">{children}</div>}
+      {children && <div className="flex items-center gap-2.5 shrink-0">{children}</div>}
     </div>
   );
 };

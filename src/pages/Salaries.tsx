@@ -3,7 +3,6 @@ import {
   Banknote,
   Users,
   Plus,
-  Search,
   Pencil,
   Trash2,
   Calendar,
@@ -26,6 +25,7 @@ import {
 import { MONTH_NAMES } from "../components/expenses/ExpenseHeader";
 import { AddExpenseModal } from "../components/expenses/AddExpenseModal";
 import { CustomDropdown } from "../components/ui/CustomDropdown";
+import { SearchInput } from "../components/ui/SearchInput";
 
 export const SalariesPage: React.FC = () => {
   const now = new Date();
@@ -213,7 +213,7 @@ export const SalariesPage: React.FC = () => {
 
           <button
             onClick={handleApplyStaffRoster}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-all"
+            className="inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 active:scale-95 transition-all"
             title="Auto-record salaries for standard shop staff"
           >
             <Zap className="size-3.5" />
@@ -225,9 +225,9 @@ export const SalariesPage: React.FC = () => {
               setEditingSalary(null);
               setShowAddModal(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-all shadow-sm shadow-brand-500/20"
+            className="tail-btn-primary-sm"
           >
-            <Plus className="size-4" />
+            <Plus className="size-3.5" />
             <span>Pay Staff Salary</span>
           </button>
         </div>
@@ -336,16 +336,13 @@ export const SalariesPage: React.FC = () => {
       <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 overflow-hidden shadow-theme-xs">
         {/* Table Filter / Controls */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search staff name or notes..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-brand-500"
-            />
-          </div>
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Search staff name or notes..."
+            size="sm"
+            className="w-full sm:w-72"
+          />
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <CreditCard className="size-4 text-gray-400 shrink-0" />

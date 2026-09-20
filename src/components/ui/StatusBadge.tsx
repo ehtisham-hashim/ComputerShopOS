@@ -25,19 +25,37 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   const currentVariant = getVariant();
 
-  const variantStyles: Record<BadgeVariant, string> = {
-    success: "bg-success-50 text-success-600 dark:bg-success-500/15 dark:text-success-400",
-    warning: "bg-warning-50 text-warning-600 dark:bg-warning-500/15 dark:text-warning-400",
-    error: "bg-error-50 text-error-600 dark:bg-error-500/15 dark:text-error-400",
-    brand: "bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400",
-    neutral: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  const variantStyles: Record<BadgeVariant, { bg: string; dot: string }> = {
+    success: {
+      bg: "border border-success-500/25 bg-success-50/80 text-success-700 dark:bg-success-500/10 dark:text-success-400 dark:border-success-500/20",
+      dot: "bg-success-500",
+    },
+    warning: {
+      bg: "border border-warning-500/25 bg-warning-50/80 text-warning-700 dark:bg-warning-500/10 dark:text-warning-400 dark:border-warning-500/20",
+      dot: "bg-warning-500",
+    },
+    error: {
+      bg: "border border-error-500/25 bg-error-50/80 text-error-700 dark:bg-error-500/10 dark:text-error-400 dark:border-error-500/20",
+      dot: "bg-error-500",
+    },
+    brand: {
+      bg: "border border-brand-500/25 bg-brand-50/80 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400 dark:border-brand-500/20",
+      dot: "bg-brand-500",
+    },
+    neutral: {
+      bg: "border border-gray-200 bg-gray-100 text-gray-700 dark:bg-gray-800/80 dark:text-gray-300 dark:border-gray-700",
+      dot: "bg-gray-400",
+    },
   };
+
+  const currentStyle = variantStyles[currentVariant];
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold ${variantStyles[currentVariant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold tracking-wide uppercase ${currentStyle.bg} ${className}`}
     >
-      {status.replace(/_/g, " ")}
+      <span className={`size-1.5 rounded-full ${currentStyle.dot} shrink-0`} />
+      <span>{status.replace(/_/g, " ")}</span>
     </span>
   );
 };

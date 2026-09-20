@@ -84,9 +84,10 @@ export const SalesTable: React.FC<SalesTableProps> = ({
           value={searchQuery}
           onChange={onSearchChange}
           placeholder="Search invoice #, customer name, phone, notes..."
+          size="sm"
           className="flex-1 max-w-md"
         />
-        <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-1 sm:pb-0 scrollbar-thin">
           {[
             { id: "ALL", label: `All (${sales.length})` },
             { id: "PAID", label: "Paid" },
@@ -97,10 +98,10 @@ export const SalesTable: React.FC<SalesTableProps> = ({
             <button
               key={st.id}
               onClick={() => onStatusFilterChange(st.id)}
-              className={`rounded-lg px-3 py-1.5 font-semibold transition-colors shrink-0 ${
+              className={`h-9 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 flex items-center ${
                 statusFilter === st.id
                   ? "bg-brand-600 text-white shadow-theme-xs"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               }`}
             >
               {st.label}
@@ -110,17 +111,17 @@ export const SalesTable: React.FC<SalesTableProps> = ({
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1050px] text-left text-sm whitespace-nowrap">
-          <thead className="border-b border-gray-100 bg-gray-50/50 text-xs font-semibold uppercase text-gray-400 dark:border-gray-800 dark:bg-gray-800/30 dark:text-gray-500">
+          <thead className="border-b border-gray-100 bg-gray-50/60 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:border-gray-800 dark:bg-gray-800/40 dark:text-gray-500">
             <tr>
-              <th className="py-3.5 px-4">Invoice #</th>
-              <th className="py-3.5 px-4">Customer & Items</th>
-              <th className="py-3.5 px-4">Method</th>
-              <th className="py-3.5 px-4">Total Amount</th>
-              <th className="py-3.5 px-4">Paid</th>
-              <th className="py-3.5 px-4">Balance</th>
-              <th className="py-3.5 px-4">Status</th>
-              <th className="py-3.5 px-4">Date</th>
-              <th className="py-3.5 px-4 text-right">Actions</th>
+              <th className="py-3 px-4">Invoice #</th>
+              <th className="py-3 px-4">Customer & Items</th>
+              <th className="py-3 px-4">Method</th>
+              <th className="py-3 px-4">Total Amount</th>
+              <th className="py-3 px-4">Paid</th>
+              <th className="py-3 px-4">Balance</th>
+              <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Date</th>
+              <th className="py-3 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">

@@ -27,8 +27,8 @@ export const ReportCategoryBreakdown: React.FC<ReportCategoryBreakdownProps> = (
                   <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{p.name}</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-gray-400 font-medium">{p.quantity} units</span>
-                  <span className="font-mono font-bold text-gray-900 dark:text-white">PKR {p.revenue.toLocaleString()}</span>
+                  <span className="text-gray-400 font-medium tabular-nums">{p.quantity} units</span>
+                  <span className="tabular-nums font-bold text-gray-900 dark:text-white">PKR {p.revenue.toLocaleString()}</span>
                 </div>
               </div>
             ))
@@ -46,15 +46,15 @@ export const ReportCategoryBreakdown: React.FC<ReportCategoryBreakdownProps> = (
         <div className="space-y-2.5">
           <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50/50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 text-xs">
             <span className="flex items-center gap-2 font-bold text-emerald-700 dark:text-emerald-300"><Banknote className="size-4" /> Physical Cash</span>
-            <span className="font-mono font-bold text-sm text-emerald-700 dark:text-emerald-300">PKR {report.paymentBreakdown.cash.toLocaleString()}</span>
+            <span className="tabular-nums font-bold text-sm text-emerald-700 dark:text-emerald-300">PKR {report.paymentBreakdown.cash.toLocaleString()}</span>
           </div>
-          <div className="flex items-center justify-between p-3 rounded-xl bg-blue-50/50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-xs">
-            <span className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-300"><CreditCard className="size-4" /> Debit / Credit Card</span>
-            <span className="font-mono font-bold text-sm text-blue-700 dark:text-blue-300">PKR {report.paymentBreakdown.card.toLocaleString()}</span>
+          <div className="flex items-center justify-between p-3 rounded-xl bg-brand-50/50 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 text-xs">
+            <span className="flex items-center gap-2 font-bold text-brand-700 dark:text-brand-300"><CreditCard className="size-4" /> Debit / Credit Card</span>
+            <span className="tabular-nums font-bold text-sm text-brand-700 dark:text-brand-300">PKR {report.paymentBreakdown.card.toLocaleString()}</span>
           </div>
           <div className="flex items-center justify-between p-3 rounded-xl bg-purple-50/50 dark:bg-purple-500/10 border border-purple-100 dark:border-purple-500/20 text-xs">
             <span className="flex items-center gap-2 font-bold text-purple-700 dark:text-purple-300"><Split className="size-4" /> Split Payment</span>
-            <span className="font-mono font-bold text-sm text-purple-700 dark:text-purple-300">PKR {report.paymentBreakdown.split.toLocaleString()}</span>
+            <span className="tabular-nums font-bold text-sm text-purple-700 dark:text-purple-300">PKR {report.paymentBreakdown.split.toLocaleString()}</span>
           </div>
         </div>
       </div>
