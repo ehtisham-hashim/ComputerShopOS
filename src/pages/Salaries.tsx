@@ -13,17 +13,20 @@ import {
   CreditCard,
   Building2,
   DollarSign,
+  Settings2,
 } from "lucide-react";
 import { ExpenseRecord } from "../db/schema";
 import {
   getExpensesByMonth,
-  createExpense,
   updateExpense,
   deleteExpense,
-  RECURRING_EXPENSE_TEMPLATES,
+  getRecurringTemplates,
+  applyRecurringExpenses,
+  RecurringTemplate,
 } from "../db/expenseService";
 import { MONTH_NAMES } from "../components/expenses/ExpenseHeader";
 import { AddExpenseModal } from "../components/expenses/AddExpenseModal";
+import { ApplyRecurringModal } from "../components/expenses/ApplyRecurringModal";
 import { CustomDropdown } from "../components/ui/CustomDropdown";
 import { SearchInput } from "../components/ui/SearchInput";
 
@@ -101,39 +104,51 @@ export const SalariesPage: React.FC = () => {
     }
   };
 
-  // Quick apply recurring staff salaries
-  const staffTemplates = RECURRING_EXPENSE_TEMPLATES.filter((t) => t.category === "SALARY");
+  // Dynamic staff recurring salaries (customizable)
+  const [staffTemplates, setStaffTemplates] = useState<RecurringTemplate[]>([]);
+  const [showEditSalariesModal, setShowEditSalariesModal] = useState<boolean>(false);
+  const [isPayingOutAll, setIsPayingOutAll] = useState<boolean>(false);
 
-  const handleApplyStaffRoster = async () => {
-    let appliedCount = 0;
-    let skippedCount = 0;
-    const nowSec = Math.floor(Date.now() / 1000);
+  const loadStaffTemplates = async () => {
+    try {
+      const all = await getRecurringTemplates();
+      setStaffTemplates(all.filter((t) => t.category === "SALARY"));
+    } catch (err) {
+      console.error("Failed to load staff templates:", err);
+    }
+  };
 
-    for (const t of staffTemplates) {
-      const exists = salaries.some((s) => s.title.trim().toLowerCase() === t.title.trim().toLowerCase());
-      if (!exists) {
-        await createExpense({
-          year: selectedYear,
-          month: selectedMonth,
-          category: "SALARY",
-          title: t.title,
-          amount: t.amount,
-          expenseDate: nowSec,
-          paymentMethod: t.paymentMethod,
-          notes: t.notes,
-        });
-        appliedCount++;
-      } else {
-        skippedCount++;
-      }
+  useEffect(() => {
+    loadStaffTemplates();
+  }, []);
+
+  const handlePayoutAll = async () => {
+    const unpaid = staffTemplates.filter(
+      (t) => !salaries.some((s) => s.title.trim().toLowerCase() === t.title.trim().toLowerCase())
+    );
+
+    if (unpaid.length === 0) {
+      showToast("All staff have already been paid for this month");
+      return;
     }
 
-    if (appliedCount > 0) {
-      showToast(`Applied ${appliedCount} staff salary payouts (${skippedCount} already recorded)`);
-    } else {
-      showToast(`All ${skippedCount} staff salaries are already recorded for this month`);
+    const total = unpaid.reduce((sum, t) => sum + t.amount, 0);
+    const confirmed = window.confirm(
+      `Pay out all ${unpaid.length} remaining staff member${unpaid.length > 1 ? "s" : ""} for ${monthName} ${selectedYear}?\nTotal: Rs. ${total.toLocaleString()}`
+    );
+    if (!confirmed) return;
+
+    setIsPayingOutAll(true);
+    try {
+      const res = await applyRecurringExpenses(selectedYear, selectedMonth, unpaid);
+      showToast(`Recorded payout for ${res.applied} staff members (Rs. ${total.toLocaleString()})`);
+      await loadSalaries();
+    } catch (err) {
+      console.error("Failed to payout all staff:", err);
+      showToast("Failed to record staff payouts");
+    } finally {
+      setIsPayingOutAll(false);
     }
-    await loadSalaries();
   };
 
   const handlePayQuickStaff = (title: string, defaultAmount: number) => {
@@ -224,12 +239,22 @@ export const SalariesPage: React.FC = () => {
           </div>
 
           <button
-            onClick={handleApplyStaffRoster}
-            className="inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 active:scale-95 transition-all"
-            title="Auto-record salaries for standard shop staff"
+            onClick={() => setShowEditSalariesModal(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 active:scale-95 transition-all shadow-theme-xs"
+            title="Edit staff list and monthly salary amounts"
+          >
+            <Settings2 className="size-3.5 text-gray-500" />
+            <span>Edit Salaries</span>
+          </button>
+
+          <button
+            onClick={handlePayoutAll}
+            disabled={isPayingOutAll}
+            className="inline-flex items-center gap-1.5 h-9 px-3 text-xs font-semibold rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 active:scale-95 transition-all disabled:opacity-50"
+            title="1-click payout for all remaining staff this month"
           >
             <Zap className="size-3.5" />
-            <span>Apply Staff Roster</span>
+            <span>{isPayingOutAll ? "Paying out..." : "PayOut All"}</span>
           </button>
 
           <button
@@ -245,31 +270,43 @@ export const SalariesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Staff Roster Payout Chips */}
+      {/* Quick Staff Payout Chips */}
       {staffTemplates.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap text-xs bg-gray-50/60 dark:bg-gray-900/40 p-3 rounded-2xl border border-gray-200/80 dark:border-gray-800">
-          <span className="font-bold text-gray-500 text-[11px] uppercase tracking-wider flex items-center gap-1 mr-1">
-            <Users className="size-3.5 text-brand-500" />
-            Quick Payout:
-          </span>
-          {staffTemplates.map((t) => {
-            const isPaid = salaries.some((s) => s.title.trim().toLowerCase() === t.title.trim().toLowerCase());
-            return (
-              <button
-                key={t.title}
-                onClick={() => handlePayQuickStaff(t.title, t.amount)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium border transition-all ${
-                  isPaid
-                    ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50"
-                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-brand-500"
-                }`}
-              >
-                <span>{t.title}</span>
-                <span className="font-mono text-[11px] opacity-75">Rs. {t.amount.toLocaleString()}</span>
-                {isPaid && <Check className="size-3 text-emerald-500 ml-0.5" />}
-              </button>
-            );
-          })}
+        <div className="flex items-center justify-between gap-2 flex-wrap text-xs bg-gray-50/60 dark:bg-gray-900/40 p-3 rounded-2xl border border-gray-200/80 dark:border-gray-800">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-gray-500 text-[11px] uppercase tracking-wider flex items-center gap-1 mr-1">
+              <Users className="size-3.5 text-brand-500" />
+              Quick Payout:
+            </span>
+            {staffTemplates.map((t) => {
+              const isPaid = salaries.some((s) => s.title.trim().toLowerCase() === t.title.trim().toLowerCase());
+              return (
+                <button
+                  key={t.title}
+                  onClick={() => handlePayQuickStaff(t.title, t.amount)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-medium border transition-all ${
+                    isPaid
+                      ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-brand-500 shadow-theme-xs"
+                  }`}
+                >
+                  <span>{t.title}</span>
+                  <span className="font-mono text-[11px] opacity-75">Rs. {t.amount.toLocaleString()}</span>
+                  {isPaid && <Check className="size-3 text-emerald-500 ml-0.5" />}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowEditSalariesModal(true)}
+            className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400 hover:underline hover:text-brand-700 ml-auto"
+            title="Add, remove or adjust staff monthly salaries"
+          >
+            <Settings2 className="size-3.5" />
+            <span>Edit Salaries</span>
+          </button>
         </div>
       )}
 
@@ -541,6 +578,28 @@ export const SalariesPage: React.FC = () => {
               ? `Verify details and confirm payout of Rs. ${editingSalary.amount?.toLocaleString()} for ${monthName} ${selectedYear}`
               : undefined
           }
+        />
+      )}
+
+      {/* Edit Staff Salaries Modal */}
+      {showEditSalariesModal && (
+        <ApplyRecurringModal
+          isOpen={showEditSalariesModal}
+          onClose={() => setShowEditSalariesModal(false)}
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          monthName={monthName}
+          categoryFilter="SALARY"
+          existingExpenses={salaries}
+          onApplied={(applied, _skipped) => {
+            showToast(
+              applied > 0
+                ? `Recorded payout for ${applied} staff`
+                : "Staff salaries updated"
+            );
+            loadSalaries();
+            loadStaffTemplates();
+          }}
         />
       )}
     </div>

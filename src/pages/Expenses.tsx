@@ -4,13 +4,13 @@ import { ExpenseRecord } from "../db/schema";
 import {
   getExpensesByMonth,
   deleteExpense,
-  applyRecurringExpenses,
   updateExpense,
 } from "../db/expenseService";
 import { ExpenseHeader, MONTH_NAMES } from "../components/expenses/ExpenseHeader";
 import { ExpenseSummaryCards } from "../components/expenses/ExpenseSummaryCards";
 import { ExpenseTable } from "../components/expenses/ExpenseTable";
 import { AddExpenseModal } from "../components/expenses/AddExpenseModal";
+import { ApplyRecurringModal } from "../components/expenses/ApplyRecurringModal";
 
 export const ExpensesPage: React.FC = () => {
   const now = new Date();
@@ -21,6 +21,7 @@ export const ExpensesPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [showRecurringModal, setShowRecurringModal] = useState<boolean>(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -70,14 +71,8 @@ export const ExpensesPage: React.FC = () => {
     }
   };
 
-  const handleApplyRecurring = async () => {
-    try {
-      const res = await applyRecurringExpenses(selectedYear, selectedMonth);
-      showToast(`Applied ${res.applied} recurring overheads (${res.skipped} already existed)`);
-      await loadExpenses();
-    } catch (err) {
-      console.error("Failed to apply recurring expenses:", err);
-    }
+  const handleApplyRecurring = () => {
+    setShowRecurringModal(true);
   };
 
   const total = expenses.reduce((acc, e) => acc + e.amount, 0);
@@ -149,6 +144,27 @@ export const ExpensesPage: React.FC = () => {
           loadExpenses();
         }}
       />
+
+      {/* Customize & Apply Recurring Expenses Modal */}
+      {showRecurringModal && (
+        <ApplyRecurringModal
+          isOpen={showRecurringModal}
+          onClose={() => setShowRecurringModal(false)}
+          selectedYear={selectedYear}
+          selectedMonth={selectedMonth}
+          monthName={monthName}
+          categoryFilter="ALL"
+          existingExpenses={expenses}
+          onApplied={(applied, _skipped) => {
+            showToast(
+              applied > 0
+                ? `Applied ${applied} recurring overheads`
+                : "Recurring expenses updated"
+            );
+            loadExpenses();
+          }}
+        />
+      )}
     </div>
   );
 };
