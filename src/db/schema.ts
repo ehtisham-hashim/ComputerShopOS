@@ -576,6 +576,16 @@ export interface DailyReportAdjustmentItem {
   paymentStatus: string;
 }
 
+export interface DailyReportRepairItem {
+  id: number;
+  ticketNo: string;
+  customerName: string;
+  device: string;
+  reportedIssue: string;
+  finalCost: number;
+  status: string;
+}
+
 export interface DailyReportRow {
   day: number;
   date: string;
@@ -590,6 +600,7 @@ export interface DailyReportRow {
   payableItems?: DailyReportPayableItem[];
   saleItems?: DailyReportSaleItem[];
   adjustmentItems?: DailyReportAdjustmentItem[];
+  repairItems?: DailyReportRepairItem[];
 }
 
 export interface ExpenseRecord {

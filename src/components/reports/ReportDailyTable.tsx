@@ -9,6 +9,7 @@ import {
   Building2,
   ShoppingCart,
   ArrowLeftRight,
+  Wrench,
 } from "lucide-react";
 
 interface ReportDailyTableProps {
@@ -97,7 +98,7 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
       </div>
 
       {!isCollapsed && (
-        <div className="overflow-x-auto max-h-[500px] scrollbar-thin">
+        <div className="overflow-x-auto max-h-[75vh] scrollbar-thin">
           <table className="w-full text-left text-xs">
             <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800/90 backdrop-blur-sm text-gray-500 font-bold uppercase tracking-wider text-[10px] z-10 border-b border-gray-200 dark:border-gray-700">
               <tr>
@@ -123,7 +124,8 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                 const hasSwaps = Boolean(row.adjustmentItems && row.adjustmentItems.length > 0);
                 const hasExpenses = Boolean(row.expenseItems && row.expenseItems.length > 0);
                 const hasPurchases = Boolean(row.payableItems && row.payableItems.length > 0);
-                const hasDetails = hasSales || hasSwaps || hasExpenses || hasPurchases;
+                const hasRepairs = Boolean(row.repairItems && row.repairItems.length > 0);
+                const hasDetails = hasSales || hasSwaps || hasExpenses || hasPurchases || hasRepairs;
                 const hasActivity =
                   row.sales > 0 ||
                   row.grossProfit !== 0 ||
@@ -131,7 +133,8 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                   payables > 0 ||
                   hasSwaps ||
                   hasPurchases ||
-                  hasSales;
+                  hasSales ||
+                  hasRepairs;
                 const isExpanded = expandedDays.has(row.day);
 
                 return (
@@ -206,8 +209,12 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span>{row.remarks || "—"}</span>
                           {hasDetails && (
-                            <span className="text-[10px] text-brand-600 dark:text-brand-400 underline font-medium">
-                              {isExpanded ? "hide details" : "view breakdown"}
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border transition-colors ${
+                              isExpanded
+                                ? "bg-brand-100 dark:bg-brand-950/50 text-brand-700 dark:text-brand-300 border-brand-300 dark:border-brand-700"
+                                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-brand-50 hover:text-brand-600 hover:border-brand-300 dark:hover:bg-brand-950/30"
+                            }`}>
+                              {isExpanded ? "Hide Details" : "Show Details"}
                             </span>
                           )}
                         </div>
@@ -322,6 +329,40 @@ export const ReportDailyTable: React.FC<ReportDailyTableProps> = ({
                                       </div>
                                       <span className="font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap ml-2">
                                         Rs. {exp.amount.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Daily Repairs Breakdown */}
+                            {hasRepairs && (
+                              <div className="rounded-xl border border-sky-200 dark:border-sky-900/40 bg-white dark:bg-gray-900 p-3 shadow-xs">
+                                <div className="flex items-center gap-2 pb-2 mb-2 border-b border-gray-100 dark:border-gray-800 text-sky-600 dark:text-sky-400 font-bold text-xs">
+                                  <Wrench className="size-3.5" />
+                                  <span>Repairs & Service ({row.repairItems!.length})</span>
+                                  <span className="ml-auto">Total: Rs. {row.repairItems!.reduce((s, r) => s + r.finalCost, 0).toLocaleString()}</span>
+                                </div>
+                                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1 scrollbar-thin">
+                                  {row.repairItems!.map((rep) => (
+                                    <div key={rep.id} className="flex items-center justify-between text-xs py-1 border-b border-gray-50 dark:border-gray-800/40 last:border-0">
+                                      <div className="flex flex-col min-w-0 pr-2">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">{rep.customerName}</span>
+                                          <span className="font-mono text-[10px] text-gray-400 font-bold">{rep.ticketNo}</span>
+                                          <span className={`px-1.5 py-0.5 text-[9px] rounded font-semibold ${
+                                            rep.status === "COMPLETED"
+                                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
+                                              : "bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-400"
+                                          }`}>{rep.status}</span>
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 truncate">
+                                          {rep.device} • {rep.reportedIssue}
+                                        </div>
+                                      </div>
+                                      <span className="font-bold text-sky-600 dark:text-sky-400 whitespace-nowrap ml-auto">
+                                        Rs. {rep.finalCost.toLocaleString()}
                                       </span>
                                     </div>
                                   ))}

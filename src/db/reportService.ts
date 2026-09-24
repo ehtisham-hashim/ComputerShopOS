@@ -504,9 +504,18 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
     const daySwapOutflow = Math.abs(dayAdjustments.filter((a) => a.netDifference < 0).reduce((acc, a) => acc + a.netDifference, 0));
     const daySwapMargin = daySwapInflow - daySwapOutflow;
 
-    // Repairs for this day
+    // Repairs for this day — map to drill-down items
     const dayRepairs = periodRepairs.filter((r) => r.createdAt >= dayStart && r.createdAt < dayEnd);
     const dayRepairRev = dayRepairs.reduce((acc, r) => acc + Number(r.finalCost || r.estimatedCost || 0), 0);
+    const dayRepairItems = dayRepairs.map((r) => ({
+      id: r.id,
+      ticketNo: r.ticketNo,
+      customerName: r.customerName || "Walk-in Customer",
+      device: r.device,
+      reportedIssue: r.reportedIssue,
+      finalCost: Number(r.finalCost || r.estimatedCost || 0),
+      status: r.status,
+    }));
 
     // Expenses for this day
     const dayExpenses = expensesList.filter((e) => e.expenseDate >= dayStart && e.expenseDate < dayEnd);
@@ -582,6 +591,7 @@ export async function getMonthlyReport(year: number, month: number): Promise<Mon
       payableItems: dayPayableItems,
       saleItems: daySaleItems,
       adjustmentItems: dayAdjustmentItems,
+      repairItems: dayRepairItems,
     });
   }
 
