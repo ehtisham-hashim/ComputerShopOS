@@ -1,5 +1,5 @@
-import React from "react";
-import { Phone, Mail, MapPin, Calendar, Eye, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Phone, Mail, MapPin, Calendar, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Customer } from "../../db/schema";
 import { SearchInput } from "../ui/SearchInput";
 
@@ -20,12 +20,22 @@ export const CustomerTable: React.FC<CustomerTableProps> = ({
   onViewHistory,
   onDeleteCustomer,
 }) => {
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
   const filtered = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (c.email && c.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="tail-card">
@@ -58,7 +68,7 @@ export const CustomerTable: React.FC<CustomerTableProps> = ({
             ) : filtered.length === 0 ? (
               <tr><td colSpan={7} className="py-12 text-center text-gray-400 text-xs">No customers found.</td></tr>
             ) : (
-              filtered.map((cust) => (
+              paginated.map((cust) => (
                 <tr key={cust.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
                   <td className="py-3.5 px-4 font-mono text-xs font-bold text-gray-400">CUST-{String(cust.id).padStart(4, "0")}</td>
                   <td className="py-3.5 px-4 font-bold text-gray-900 dark:text-white truncate max-w-[140px]">{cust.name}</td>
@@ -90,6 +100,33 @@ export const CustomerTable: React.FC<CustomerTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-4 py-3 text-xs text-gray-500">
+          <span>
+            Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} customers
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <ChevronLeft className="size-3.5 inline mr-1" /> Prev
+            </button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Next <ChevronRight className="size-3.5 inline ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

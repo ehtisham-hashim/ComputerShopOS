@@ -14,47 +14,47 @@ export const ReportSummaryCards: React.FC<ReportSummaryCardsProps> = ({ report }
     <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Gross Sales Invoiced"
+          title="Total Sales"
           value={`Rs. ${report.grossSales.toLocaleString()}`}
           icon={DollarSign}
-          description={`${report.totalTransactions} transactions in month`}
+          description={`${report.totalTransactions} transactions this month`}
         />
         <StatCard
-          title="Estimated Gross Profit"
+          title="Gross Sales Profit"
           value={`Rs. ${report.grossProfit.toLocaleString()}`}
           icon={TrendingUp}
-          description={`${report.marginPercent}% gross margin`}
+          description={`${report.marginPercent}% profit margin on sales`}
         />
         <StatCard
-          title="Total Operating Expenses"
+          title="Shop Expenses"
           value={`Rs. ${report.totalExpenses.toLocaleString()}`}
           icon={Receipt}
           variant={report.totalExpenses > 0 ? "warning" : "default"}
-          description="Rent, salaries, bills & overheads"
+          description="Rent, electricity, staff salaries & tea"
         />
         <StatCard
-          title="True Net Profit"
+          title="Final Net Profit"
           value={`Rs. ${report.netProfit.toLocaleString()}`}
           icon={isProfitable ? TrendingUp : TrendingDown}
           variant={isProfitable ? "default" : "warning"}
-          description={isProfitable ? "Gross Profit − Operating Expenses" : "Operating at a deficit this month"}
+          description={isProfitable ? "Take-home profit after all expenses" : "Operating at a deficit this month"}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <StatCard
-          title="Customer Receivables (Uncollected)"
+          title="Customer Udhaar (To Collect)"
           value={`Rs. ${report.receivables.toLocaleString()}`}
           icon={Clock}
           variant={report.receivables > 0 ? "warning" : "default"}
-          description={report.receivables > 0 ? "Outstanding customer invoice dues" : "All customer accounts cleared"}
+          description={report.receivables > 0 ? "Pending customer credit dues to recover" : "All customer accounts cleared"}
         />
         <StatCard
-          title="Supplier Payables (Vendor Debts)"
+          title="Supplier Khata (To Pay)"
           value={`Rs. ${report.payables.toLocaleString()}`}
           icon={Building2}
           variant={report.payables > 0 ? "warning" : "default"}
-          description={report.payables > 0 ? "Net balance owed to suppliers" : "All vendor accounts settled"}
+          description={report.payables > 0 ? "Net balance owed to market vendors" : "All supplier accounts cleared"}
         />
       </div>
     </div>

@@ -1,21 +1,49 @@
 import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
 
-export const ItemTitles = [
-  "LAPTOP",
-  "DESKTOP",
-  "GPU",
-  "CPU",
-  "RAM",
-  "STORAGE",
-  "MOTHERBOARD",
-  "PSU",
-  "MONITOR",
-  "KEYBOARD",
-  "MOUSE",
-  "ACCESSORY",
+export const DefaultCategories = [
+  { name: "Routers", description: "Wi-Fi routers, broadband & gigabit wireless routers, mesh systems" },
+  { name: "Network Switches", description: "5/8/16/24-port Ethernet gigabit & PoE network switches" },
+  { name: "Gaming Accessories", description: "RGB keyboards, gaming headsets, mice, oversized desk pads" },
+  { name: "Speakers & Audio", description: "2.1 desktop speakers, subwoofers, soundbars, multimedia audio" },
+  { name: "Display Cables", description: "HDMI 2.0/2.1, DisplayPort 1.4/2.0, DVI, Type-C to DP/HDMI cables" },
+  { name: "Branded Mice", description: "New & boxed branded mice (Logitech, Razer, Dell, HP, Lenovo)" },
+  { name: "Standard Mice", description: "Standard optical office & desktop mice" },
+  { name: "USB & Printer Cables", description: "USB Type-A to Type-B printer cables, USB-A to USB-A data cables" },
+  { name: "USB Extensions", description: "USB 2.0 / 3.0 extension cables, powered USB hubs" },
+  { name: "Audio Cables (Stereo)", description: "3.5mm Aux male-to-male stereo audio patch cables" },
+  { name: "Audio/Video Cables (AV/RCA)", description: "3.5mm Aux to 2/3-RCA composite video & audio cables" },
+  { name: "Internal Power Cables", description: "SATA to 6-pin / 8-pin PCI-e GPU power adapter cables" },
+  { name: "SATA Splitter Cables", description: "SATA power 1-to-2 Y-splitter power cables" },
+  { name: "Mobile Data Cables", description: "USB Type-C, Lightning, and Micro-USB fast charging data cables" },
+  // Core hardware components
+  { name: "LAPTOP", description: "Laptops, notebooks, ultrabooks" },
+  { name: "DESKTOP", description: "Desktop PCs, all-in-one workstations" },
+  { name: "CPU", description: "Processors (Intel & AMD)" },
+  { name: "GPU", description: "Graphics cards (NVIDIA, AMD Radeon)" },
+  { name: "RAM", description: "DDR4 / DDR5 Desktop & Laptop memory modules" },
+  { name: "STORAGE", description: "NVMe SSDs, SATA SSDs, Internal Hard Drives" },
+  { name: "MOTHERBOARD", description: "Desktop & Server motherboards" },
+  { name: "PSU", description: "Power supply units (ATX / SFX modular & non-modular)" },
+  { name: "MONITOR", description: "Monitors, gaming displays, business screens" },
+  { name: "KEYBOARD", description: "Mechanical & membrane keyboards" },
+  { name: "MOUSE", description: "Computer mice and pointing devices" },
+  { name: "ACCESSORY", description: "General PC accessories, adapters, thermal paste" },
 ] as const;
 
-export type ItemTitle = (typeof ItemTitles)[number];
+export const ItemTitles: readonly string[] = DefaultCategories.map((c) => c.name);
+
+export type ItemTitle = string;
+
+// Categories Table
+export const categories = sqliteTable("categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  description: text("description").default(""),
+  createdAt: integer("created_at").notNull().$defaultFn(() => Math.floor(Date.now() / 1000)),
+});
+
+export type CategoryRecord = typeof categories.$inferSelect;
+export type NewCategoryRecord = typeof categories.$inferInsert;
 
 export const SerialStatuses = ["AVAILABLE", "SOLD", "DEFECTIVE"] as const;
 export type SerialStatus = (typeof SerialStatuses)[number];
@@ -52,7 +80,7 @@ export type NewCustomer = typeof customers.$inferInsert;
 // 2. Inventory Table (Integer Currency)
 export const inventory = sqliteTable("inventory", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  title: text("title", { enum: ItemTitles }).notNull(),
+  title: text("title").notNull(),
   name: text("name").notNull(),
   sku: text("sku").notNull().unique(),
   quantity: integer("quantity").notNull().default(0),
@@ -116,6 +144,7 @@ export const saleItems = sqliteTable("sale_items", {
   serialNumber: text("serial_number"),
   quantity: integer("quantity").notNull().default(1),
   unitPrice: integer("unit_price").notNull().default(0),
+  costPrice: integer("cost_price").notNull().default(0),
   totalPrice: integer("total_price").notNull().default(0),
 });
 
@@ -262,6 +291,7 @@ export interface CreateSaleInput {
     serialNumber?: string;
     quantity: number;
     unitPrice: number;
+    costPrice?: number;
   }[];
   subtotal: number;
   discount?: number;
@@ -404,7 +434,7 @@ export const purchaseItems = sqliteTable("purchase_items", {
     .notNull()
     .references(() => purchases.id, { onDelete: "cascade" }),
   inventoryId: integer("inventory_id").references(() => inventory.id),
-  title: text("title", { enum: ItemTitles }).notNull(),
+  title: text("title").notNull(),
   itemName: text("item_name").notNull(),
   sku: text("sku").notNull(),
   quantity: integer("quantity").notNull().default(1),
@@ -503,13 +533,74 @@ export type NewMonthlyReportRecord = typeof monthlyReports.$inferInsert;
 
 // --- Monthly Reports & Expense Domain Interfaces ---
 
+export interface DailyReportExpenseItem {
+  id: number;
+  title: string;
+  category: string;
+  amount: number;
+  paymentMethod?: string;
+  notes?: string | null;
+}
+
+export interface DailyReportPayableItem {
+  id: number;
+  purchaseNo?: string;
+  partyName?: string;
+  totalAmount: number;
+  paidAmount: number;
+  balanceDue: number;
+  type?: "PURCHASE" | "PAYMENT";
+  description?: string;
+}
+
+export interface DailyReportSaleItem {
+  id: number;
+  invoiceNo: string;
+  customerName: string;
+  totalAmount: number;
+  paidAmount: number;
+  balanceDue: number;
+  paymentMethod: string;
+  itemsSummary: string;
+}
+
+export interface DailyReportAdjustmentItem {
+  id: number;
+  adjustmentNo: string;
+  customerName: string;
+  itemTakenName: string;
+  itemTakenValue: number;
+  itemGivenName: string;
+  itemGivenPrice: number;
+  netDifference: number;
+  paymentStatus: string;
+}
+
+export interface DailyReportRepairItem {
+  id: number;
+  ticketNo: string;
+  customerName: string;
+  device: string;
+  reportedIssue: string;
+  finalCost: number;
+  status: string;
+}
+
 export interface DailyReportRow {
   day: number;
   date: string;
   dayOfWeek: string;
   sales: number;
   grossProfit: number;
+  expenses: number;
+  payables: number;
+  netProfit: number;
   remarks: string;
+  expenseItems?: DailyReportExpenseItem[];
+  payableItems?: DailyReportPayableItem[];
+  saleItems?: DailyReportSaleItem[];
+  adjustmentItems?: DailyReportAdjustmentItem[];
+  repairItems?: DailyReportRepairItem[];
 }
 
 export interface ExpenseRecord {

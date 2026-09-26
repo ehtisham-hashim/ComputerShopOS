@@ -1,5 +1,5 @@
 import React from "react";
-import { LayoutDashboard, Boxes, ShoppingCart, FileText, Wrench, Users, Settings, ArrowLeftRight, BarChart3, Building2, Receipt } from "lucide-react";
+import { LayoutDashboard, Boxes, ShoppingCart, FileText, Wrench, Users, Settings, ArrowLeftRight, BarChart3, Building2, Receipt, Tags, Banknote } from "lucide-react";
 import { useSidebar } from "../../context/SidebarContext";
 import { NavTab } from "./navTypes";
 import { SidebarBrand } from "./SidebarBrand";
@@ -12,6 +12,7 @@ interface AppSidebarProps {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   inventoryCount: number;
+  categoriesCount?: number;
   lowStockCount?: number;
   activeRepairsCount?: number;
   customersCount?: number;
@@ -22,6 +23,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
   activeTab,
   onSelectTab,
   inventoryCount,
+  categoriesCount = 0,
   lowStockCount = 0,
   activeRepairsCount = 0,
   customersCount = 0,
@@ -31,16 +33,18 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({
 
   const navItems: NavItemConfig[] = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "sales", label: "Sales & Invoices", icon: ShoppingCart, hotkey: "F2" },
-    { id: "payables", label: "Payables & Vendors", icon: Building2, badge: payablesCount > 0 ? `${payablesCount}` : undefined, badgeType: "warning" },
-    { id: "doc-generator", label: "Doc Generator", icon: FileText, hotkey: "F4" },
-    { id: "inventory", label: "Inventory & Serials", icon: Boxes, badge: lowStockCount > 0 ? `${lowStockCount} Low` : `${inventoryCount}`, badgeType: lowStockCount > 0 ? "warning" : "neutral" },
-    { id: "repairs", label: "Repairs & RMA", icon: Wrench, badge: activeRepairsCount > 0 ? `${activeRepairsCount}` : undefined, badgeType: "brand" },
-    { id: "adjustments", label: "Swaps & Trade-Ins", icon: ArrowLeftRight },
-    { id: "expenses", label: "Expenses & Bills", icon: Receipt },
-    { id: "customers", label: "Customers (CRM)", icon: Users, badge: customersCount > 0 ? `${customersCount}` : undefined, badgeType: "neutral" },
-    { id: "settings", label: "Settings & System", icon: Settings },
-    { id: "reports", label: "Monthly Reports", icon: BarChart3 },
+    { id: "sales", label: "Sales", icon: ShoppingCart, hotkey: "F2" },
+    { id: "payables", label: "Purchases", icon: Building2, badge: payablesCount > 0 ? `${payablesCount}` : undefined, badgeType: "warning" },
+    { id: "doc-generator", label: "Documents", icon: FileText, hotkey: "F4" },
+    { id: "inventory", label: "Inventory", icon: Boxes, badge: lowStockCount > 0 ? `${lowStockCount} Low` : `${inventoryCount}`, badgeType: lowStockCount > 0 ? "warning" : "neutral" },
+    { id: "categories", label: "Categories", icon: Tags, badge: categoriesCount > 0 ? `${categoriesCount}` : undefined, badgeType: "neutral" },
+    { id: "repairs", label: "Repairs", icon: Wrench, badge: activeRepairsCount > 0 ? `${activeRepairsCount}` : undefined, badgeType: "brand" },
+    { id: "adjustments", label: "Trade-Ins", icon: ArrowLeftRight },
+    { id: "expenses", label: "Expenses", icon: Receipt },
+    { id: "salaries", label: "Salaries", icon: Banknote },
+    { id: "customers", label: "Customers", icon: Users, badge: customersCount > 0 ? `${customersCount}` : undefined, badgeType: "neutral" },
+    { id: "reports", label: "Reports", icon: BarChart3 },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (

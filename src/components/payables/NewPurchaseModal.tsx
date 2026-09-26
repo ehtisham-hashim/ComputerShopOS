@@ -22,6 +22,7 @@ import {
 import { getPayableParties } from "../../db/payablesService";
 import { getInventoryItems } from "../../db/inventoryService";
 import { createPurchase, getNextPurchaseNo } from "../../db/purchaseService";
+import { getCategories } from "../../db/categoryService";
 
 interface PurchaseItemRow {
   id: string;
@@ -72,6 +73,7 @@ export const NewPurchaseModal: React.FC<NewPurchaseModalProps> = ({
     },
   ]);
 
+  const [categoryList, setCategoryList] = useState<string[]>(() => [...ItemTitles]);
   const [paidAmount, setPaidAmount] = useState<number | "">("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,6 +81,12 @@ export const NewPurchaseModal: React.FC<NewPurchaseModalProps> = ({
   // Load parties, inventory, and auto-generate purchaseNo when opened
   useEffect(() => {
     if (isOpen) {
+      getCategories().then((cats) => {
+        if (cats && cats.length > 0) {
+          setCategoryList(cats.map((c) => c.name));
+        }
+      }).catch((e) => console.error("Error loading categories:", e));
+
       const today = new Date().toISOString().split("T")[0];
       setPurchaseDateStr(today);
       setStatus("RECEIVED");
@@ -497,7 +505,7 @@ export const NewPurchaseModal: React.FC<NewPurchaseModalProps> = ({
                       <CustomDropdown
                         value={row.title}
                         onChange={(val) => handleItemChange(row.id, "title", val as ItemTitle)}
-                        options={ItemTitles.map((t) => ({ value: t, label: t }))}
+                        options={categoryList.map((t) => ({ value: t, label: t }))}
                         className="w-full"
                         buttonClassName="w-full py-1.5 bg-white dark:bg-gray-900 font-bold"
                         size="sm"

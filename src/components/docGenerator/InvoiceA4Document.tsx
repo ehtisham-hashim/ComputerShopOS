@@ -21,7 +21,6 @@ import emailIcon from "../../assets/brands/tasnim_computers/email_icon.png";
 // Farhan Computers assets
 import farhanPcHeader from "../../assets/brands/farhan_computers/header.jpg";
 import farhanPcStamp from "../../assets/brands/farhan_computers/stamp.png";
-import farhanPcFooter from "../../assets/brands/farhan_computers/footer.jpg";
 import farhanPcWm from "../../assets/brands/farhan_computers/watermark.png";
 
 // Farhan Enterprises assets
@@ -30,24 +29,37 @@ import farhanEntStamp from "../../assets/brands/farhan_enterprises/stamp.png";
 import farhanEntFooter from "../../assets/brands/farhan_enterprises/footer.jpg";
 import farhanEntWm from "../../assets/brands/farhan_enterprises/watermark.png";
 
-export type PaperSize = "a4" | "a5";
+export type PaperSize = "a4" | "a5" | "letter" | "legal";
+export type PrintLayoutMode = "full" | "table_only";
 
 interface InvoiceDocumentProps {
   document: DocumentRecord;
   paperSize?: PaperSize;
+  printMode?: PrintLayoutMode;
+  includeRefAndDate?: boolean;
   className?: string;
 }
 
 export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
   document: doc,
   paperSize = "a4",
+  printMode = "full",
+  includeRefAndDate,
   className = "",
 }) => {
+  const isTableOnly = printMode === "table_only";
+  const showRefAndDate = includeRefAndDate !== undefined ? includeRefAndDate : !isTableOnly;
   const brandConfig = BRAND_CONFIGS[doc.brand] || BRAND_CONFIGS.tasnim_computers;
   const items: DocumentLineItem[] = parseDocumentItems(doc.itemsJson);
 
   const isA5 = paperSize === "a5";
-  const itemsPerPage = isA5 ? 5 : 7;
+  const isLetter = paperSize === "letter";
+  const isLegal = paperSize === "legal";
+  const isFullBleedBrand = doc.brand === "farhan_enterprises" || doc.brand === "farhan_computers";
+
+  const itemsPerPage = doc.brand === "farhan_enterprises"
+    ? (isA5 ? 4 : (isLetter ? 5 : (isLegal ? 7 : 6)))
+    : (isA5 ? 5 : (isLetter ? 6 : (isLegal ? 8 : 7)));
   const isMultiPage = items.length > itemsPerPage;
 
   // Split into chunks if multi-page
@@ -61,9 +73,19 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
   }
 
   // Dimensions
-  const pageWidth = isA5 ? "148mm" : "210mm";
-  const pageMinHeight = isA5 ? "210mm" : "297mm";
-  const pagePadding = isA5 ? "8mm 10mm 8mm 10mm" : "12mm 16mm 14mm 16mm";
+  const pageWidth = isA5 ? "148mm" : (isLetter || isLegal ? "215.9mm" : "210mm");
+  const pageMinHeight = isA5
+    ? "210mm"
+    : isLetter
+    ? "279.4mm"
+    : isLegal
+    ? "355.6mm"
+    : "297mm";
+  const pagePadding = isA5
+    ? "8mm 10mm 8mm 10mm"
+    : isLetter
+    ? "10mm 16mm 12mm 16mm"
+    : "12mm 16mm 14mm 16mm";
 
   // Watermark selection
   const watermarkSrc =
@@ -87,12 +109,6 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
         const isFirstPage = pageIndex === 0;
         const isLastPage = pageIndex === pages.length - 1;
 
-        // Ensure enough filler rows so the table spans comfortably down the page without leaving a huge void
-        const targetRowCount = isA5 ? 5 : 7;
-        const emptyRowsCount = isLastPage
-          ? Math.max(0, targetRowCount - pageItems.length)
-          : 0;
-
         return (
           <div
             key={pageIndex}
@@ -101,7 +117,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
             style={{
               width: pageWidth,
               minHeight: pageMinHeight,
-              padding: pagePadding,
+              padding: isTableOnly ? pagePadding : (isFullBleedBrand ? 0 : pagePadding),
               boxSizing: "border-box",
               backgroundColor: "#ffffff",
               color: "#000000",
@@ -113,7 +129,7 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
             }}
           >
             {/* 1. CENTERED WATERMARK (100% Opacity - using native transparent PNG alpha) */}
-            {watermarkSrc && (
+            {!isTableOnly && watermarkSrc && (
               <div
                 style={{
                   position: "absolute",
@@ -147,8 +163,36 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
             {/* TOP CONTENT SECTION */}
             <div style={{ position: "relative", zIndex: 10, width: "100%" }}>
               {/* HEADER BANNER */}
-              {isFirstPage ? (
-                <div style={{ width: "100%", marginBottom: isA5 ? "12px" : "18px" }}>
+              {isTableOnly ? (
+                isFirstPage ? (
+                  <div
+                    style={{
+                      width: "100%",
+                      height: showRefAndDate
+                        ? (isA5 ? "30mm" : "38mm")
+                        : (isA5 ? "40mm" : "50mm"),
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      borderBottom: "1.5px solid #000000",
+                      paddingBottom: "6px",
+                      marginBottom: "14px",
+                      fontSize: isA5 ? "11px" : "12px",
+                      fontWeight: 700,
+                      fontFamily: "Arial, Helvetica, sans-serif",
+                    }}
+                  >
+                    <span>Invoice #{doc.refNo} (Page {pageIndex + 1} of {pages.length})</span>
+                    <span>Date: {doc.date}</span>
+                  </div>
+                )
+              ) : isFirstPage ? (
+                <div style={{ width: "100%", marginBottom: isFullBleedBrand ? (isA5 ? "8px" : "12px") : (isA5 ? "12px" : "18px") }}>
                   {doc.brand === "tasnim_computers" ? (
                     // Tasnim Computers: Pure Flexbox Header with separate assets & CSS separator
                     <div>
@@ -237,14 +281,14 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                               }}
                             />
                           </div>
+                          {/* Sales & Service Badge */}
                           <div
                             style={{
                               border: "1.5px solid #1F2937",
                               borderRadius: "9999px",
-                              height: isA5 ? "20px" : "24px",
-                              padding: isA5 ? "0 10px" : "0 16px",
+                              padding: isA5 ? "2px 10px" : "3.5px 14px",
                               boxSizing: "border-box",
-                              display: "flex",
+                              display: "inline-flex",
                               alignItems: "center",
                               justifyContent: "center",
                             }}
@@ -254,10 +298,9 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                                 fontSize: isA5 ? "10.5px" : "12px",
                                 fontWeight: 700,
                                 color: "#1F2937",
-                                lineHeight: 1,
+                                lineHeight: 1.2,
                                 fontFamily: "Arial, Helvetica, sans-serif",
                                 display: "inline-block",
-                                transform: "translateY(-1px)",
                               }}
                             >
                               Sales &amp; Service
@@ -274,8 +317,8 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       </div>
                     </div>
                   ) : (
-                    // Farhan Computers / Farhan Enterprises Header Banner
-                    <div>
+                    // Farhan Computers / Farhan Enterprises Header Banner - Full Bleed
+                    <div style={{ width: "100%" }}>
                       <img
                         src={doc.brand === "farhan_enterprises" ? farhanEntHeader : farhanPcHeader}
                         alt={brandConfig.displayName}
@@ -298,7 +341,9 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                     justifyContent: "space-between",
                     alignItems: "center",
                     borderBottom: "2px solid #000000",
-                    paddingBottom: "8px",
+                    padding: isFullBleedBrand
+                      ? (isA5 ? "8mm 10mm 8px 10mm" : "12mm 16mm 8px 16mm")
+                      : "0 0 8px 0",
                     marginBottom: "16px",
                     fontSize: "13px",
                     fontWeight: 700,
@@ -312,40 +357,54 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                 </div>
               )}
 
-              {/* METADATA ROW & CUSTOMER BLOCK (Page 1) */}
-              {isFirstPage && (
-                <>
-                  {/* Ref.NO & Date - Same Font, Clean Size */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      fontSize: isA5 ? "13px" : "15px",
-                      fontWeight: 700,
-                      marginBottom: isA5 ? "10px" : "14px",
-                      fontFamily: "Arial, Helvetica, sans-serif",
-                    }}
-                  >
-                    <div>
-                      <span>Ref.NO&nbsp;</span>
-                      <span
+              {/* CONTENT SECTION (Padded to keep table & text perfectly aligned) */}
+              <div
+                style={{
+                  padding: isTableOnly
+                    ? "0"
+                    : isFullBleedBrand
+                    ? (isA5 ? "0 10mm" : "0 16mm")
+                    : "0",
+                  width: "100%",
+                  boxSizing: "border-box",
+                }}
+              >
+                {/* METADATA ROW & CUSTOMER BLOCK (Page 1) */}
+                {isFirstPage && (
+                  <>
+                    {/* Ref.NO & Date - Hidden in letterhead pad mode because Ref & Date are pre-printed */}
+                    {showRefAndDate && (
+                      <div
                         style={{
-                          textDecoration: "underline",
-                          fontWeight: 700,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                           fontSize: isA5 ? "13px" : "15px",
+                          fontWeight: 700,
+                          marginBottom: isA5 ? "10px" : "14px",
+                          fontFamily: "Arial, Helvetica, sans-serif",
                         }}
                       >
-                        {doc.refNo}
-                      </span>
-                    </div>
-                    <div>
-                      <span>Date:&nbsp;</span>
-                      <span style={{ fontWeight: 700, fontSize: isA5 ? "13px" : "15px" }}>
-                        {doc.date}
-                      </span>
-                    </div>
-                  </div>
+                        <div>
+                          <span>Ref.NO&nbsp;</span>
+                          <span
+                            style={{
+                              textDecoration: "underline",
+                              fontWeight: 700,
+                              fontSize: isA5 ? "13px" : "15px",
+                            }}
+                          >
+                            {doc.refNo}
+                          </span>
+                        </div>
+                        <div>
+                          <span>Date:&nbsp;</span>
+                          <span style={{ fontWeight: 700, fontSize: isA5 ? "13px" : "15px" }}>
+                            {doc.date}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                   {/* Customer Info */}
                   <div
@@ -443,17 +502,6 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       );
                     })}
 
-                    {/* Empty filler rows for balance */}
-                    {Array.from({ length: emptyRowsCount }).map((_, i) => (
-                      <tr key={`empty-${i}`} style={{ height: isA5 ? "36px" : "48px", borderBottom: "1px solid #000000" }}>
-                        <td style={{ borderRight: "1px solid #000000" }}></td>
-                        <td style={{ borderRight: "1px solid #000000" }}></td>
-                        <td style={{ borderRight: "1px solid #000000" }}></td>
-                        <td style={{ borderRight: "1px solid #000000" }}></td>
-                        <td></td>
-                      </tr>
-                    ))}
-
                     {/* TOTAL AMOUNT ROW (Shown on last page) */}
                     {isLastPage && (
                       <tr style={{ borderTop: "1.5px solid #000000", backgroundColor: "#ffffff", fontWeight: 700 }}>
@@ -484,54 +532,206 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
 
-              {/* TERMS & CONDITIONS (Only on Last Page) */}
-              {isLastPage && (
-                <div style={{ fontSize: isA5 ? "11px" : "13px", color: "#000000", lineHeight: "1.6", fontFamily: "Arial, Helvetica, sans-serif" }}>
-                  <div style={{ fontWeight: 700, textDecoration: "underline" }}>
-                    {brandConfig.termsHeading || "TERMS & CONDITIONS: -"}
-                  </div>
-                  <div style={{ fontWeight: 700 }}>
-                    PAYMENT MODE:&nbsp;{(doc.paymentMode || "CASH").toUpperCase()}
-                  </div>
-                  <div style={{ fontWeight: 700 }}>
-                    {(doc.warrantyTerms || "ONE WEEK CHECK WARRENTY").toUpperCase()}
-                  </div>
-                  <div style={{ color: "#374151", marginTop: "3px" }}>
-                    Thank you and best regards,
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: isA5 ? "10px" : "11.5px", color: "#111111", marginTop: "2px" }}>
-                    {brandConfig.defaultDisclaimer}
+            {/* UNIFIED BOTTOM SECTION (Terms & Conditions, Stamp & Footer - Only on Last Page) */}
+            {isLastPage && !isTableOnly && (
+              <div
+                style={{
+                  position: "relative",
+                  zIndex: 10,
+                  width: "100%",
+                  marginTop: "auto",
+                }}
+              >
+                {/* 1. TERMS & CONDITIONS + STAMP ROW (For all brands) */}
+                <div
+                  style={{
+                    padding: isFullBleedBrand
+                      ? (isA5 ? "0 10mm" : "0 16mm")
+                      : "0",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    marginBottom: doc.brand === "farhan_enterprises"
+                      ? (isA5 ? "6px" : "8px")
+                      : (isA5 ? "12px" : "18px"),
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
+                      width: "100%",
+                    }}
+                  >
+                    {/* Left: Terms & Conditions */}
+                    <div style={{ fontSize: isA5 ? "11px" : "13px", color: "#000000", lineHeight: "1.6", fontFamily: "Arial, Helvetica, sans-serif" }}>
+                      <div style={{ fontWeight: 700, textDecoration: "underline" }}>
+                        {brandConfig.termsHeading || "TERMS & CONDITIONS: -"}
+                      </div>
+                      <div style={{ fontWeight: 700 }}>
+                        PAYMENT MODE:&nbsp;{(doc.paymentMode || "CASH").toUpperCase()}
+                      </div>
+                      <div style={{ fontWeight: 700 }}>
+                        {(doc.warrantyTerms || (doc.brand === "farhan_enterprises" ? "1 YEAR OFFICIAL / CHECK WARRANTY" : "ONE WEEK CHECK WARRENTY")).toUpperCase()}
+                      </div>
+                      <div style={{ color: "#374151", marginTop: "3px" }}>
+                        Thank you and best regards,
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: isA5 ? "10px" : "11.5px", color: "#111111", marginTop: "2px" }}>
+                        {brandConfig.defaultDisclaimer}
+                      </div>
+                    </div>
+
+                    {/* Right: Stamp for All Brands */}
+                    {stampSrc && (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "flex-end",
+                          alignItems: "flex-end",
+                          paddingRight: doc.brand === "farhan_enterprises"
+                            ? (isA5 ? "25px" : "40px")
+                            : (isA5 ? "10px" : "20px"),
+                          flexShrink: 0,
+                        }}
+                      >
+                        <img
+                          src={stampSrc}
+                          alt="Stamp"
+                          style={{
+                            width: doc.brand === "farhan_enterprises"
+                              ? (isA5 ? "75px" : "95px")
+                              : (isA5 ? "92px" : "118px"),
+                            height: doc.brand === "farhan_enterprises"
+                              ? (isA5 ? "75px" : "95px")
+                              : (isA5 ? "92px" : "118px"),
+                            objectFit: "contain",
+                            border: "none",
+                            display: "block",
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* BOTTOM FOOTER SECTION (Only on Last Page) */}
-            {isLastPage && (
-              <div style={{ position: "relative", zIndex: 10, width: "100%", marginTop: isA5 ? "16px" : "24px" }}>
+                {/* 2. FOOTER SECTION */}
                 {doc.brand === "farhan_enterprises" ? (
-                  // Farhan Enterprises Footer
-                  <div>
-                    {stampSrc && (
-                      <div style={{ display: "flex", justifyContent: "flex-end", paddingRight: "40px", marginBottom: "-15px" }}>
-                        <img src={stampSrc} alt="Stamp" style={{ width: isA5 ? "75px" : "95px", height: "auto", objectFit: "contain", border: "none" }} />
-                      </div>
-                    )}
-                    <img src={farhanEntFooter} alt="Footer" style={{ width: "100%", height: "auto", display: "block", border: "none" }} />
+                  // Farhan Enterprises Footer Banner
+                  <div style={{ width: "100%" }}>
+                    <img
+                      src={farhanEntFooter}
+                      alt="Footer"
+                      style={{
+                        width: "100%",
+                        height: "auto",
+                        display: "block",
+                        border: "none",
+                        outline: "none",
+                      }}
+                    />
                   </div>
                 ) : doc.brand === "farhan_computers" ? (
-                  // Farhan Computers Footer
-                  <div>
-                    {stampSrc && (
-                      <div style={{ display: "flex", justifyContent: "flex-end", paddingRight: "60px", marginBottom: "-15px" }}>
-                        <img src={stampSrc} alt="Stamp" style={{ width: isA5 ? "75px" : "95px", height: "auto", objectFit: "contain", border: "none" }} />
+                  // Farhan Computers: Clean Vector Contact Grid + Un-squished PC Graphic + Uplifted Stamp
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-end",
+                      width: "100%",
+                      padding: isA5 ? "0 10mm 8mm 10mm" : "0 16mm 14mm 16mm",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    {/* Left: 4-Row Contact Layout */}
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: isA5 ? "6px" : "8px",
+                        fontSize: isA5 ? "11px" : "13px",
+                        color: "#111111",
+                        fontFamily: "Arial, Helvetica, sans-serif",
+                      }}
+                    >
+                      {/* Row 1: Address */}
+                      <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "7px" : "9px" }}>
+                        <div style={{ width: isA5 ? "14px" : "16px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                          <img
+                            src={pinIcon}
+                            alt=""
+                            style={{ width: isA5 ? "13px" : "15px", height: isA5 ? "14px" : "16px", objectFit: "contain" }}
+                          />
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>Anwar Chowk, Wah Cantt.</span>
+                        </div>
                       </div>
-                    )}
-                    <img src={farhanPcFooter} alt="Footer" style={{ width: "100%", height: "auto", display: "block", border: "none" }} />
+
+                      {/* Row 2: Email */}
+                      <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "7px" : "9px" }}>
+                        <div style={{ width: isA5 ? "14px" : "16px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                          <img
+                            src={emailIcon}
+                            alt=""
+                            style={{ width: isA5 ? "14px" : "16px", height: isA5 ? "11px" : "13px", objectFit: "contain" }}
+                          />
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>farhangill26@gmail.com</span>
+                        </div>
+                      </div>
+
+                      {/* Row 3: Mobile */}
+                      <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "7px" : "9px" }}>
+                        <div style={{ width: isA5 ? "14px" : "16px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                          <img
+                            src={mobileIcon}
+                            alt=""
+                            style={{ width: isA5 ? "13px" : "15px", height: isA5 ? "14px" : "16px", objectFit: "contain" }}
+                          />
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "14px" : "20px", fontWeight: 600 }}>
+                          <span>0345-5982628</span>
+                          <span>0345-5551559</span>
+                        </div>
+                      </div>
+
+                      {/* Row 4: Landline */}
+                      <div style={{ display: "flex", alignItems: "center", gap: isA5 ? "7px" : "9px" }}>
+                        <div style={{ width: isA5 ? "14px" : "16px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+                          <img
+                            src={landlineIcon}
+                            alt=""
+                            style={{ width: isA5 ? "13px" : "15px", height: isA5 ? "13px" : "15px", objectFit: "contain" }}
+                          />
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 600 }}>051-4265300</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Clean Desktop PC graphic (stamp uplifted next to terms) */}
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isA5 ? "110px" : "150px", flexShrink: 0 }}>
+                      <img
+                        src={tasnimPc}
+                        alt="PC Graphic"
+                        style={{
+                          width: isA5 ? "110px" : "150px",
+                          height: "auto",
+                          objectFit: "contain",
+                          border: "none",
+                          display: "block",
+                        }}
+                      />
+                    </div>
                   </div>
                 ) : (
-                  // Tasnim Computers: Clean Left Grid Layout + Right Stamp/PC
+                  // Tasnim Computers: Clean Left Grid Layout + Right PC Graphic
                   <div
                     style={{
                       display: "flex",
@@ -626,23 +826,8 @@ export const InvoiceA4Document: React.FC<InvoiceDocumentProps> = ({
                       </div>
                     </div>
 
-                    {/* Right: Round TC Stamp stacked above Desktop PC graphic */}
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: isA5 ? "110px" : "150px", flexShrink: 0 }}>
-                      {stampSrc && (
-                        <img
-                          src={stampSrc}
-                          alt="Stamp"
-                          style={{
-                            width: isA5 ? "78px" : "96px",
-                            height: isA5 ? "78px" : "96px",
-                            objectFit: "contain",
-                            border: "none",
-                            marginBottom: "-6px",
-                            position: "relative",
-                            zIndex: 10,
-                          }}
-                        />
-                      )}
+                    {/* Right: Desktop PC graphic */}
+                    <div style={{ display: "flex", justifyContent: "flex-end", width: isA5 ? "110px" : "150px", flexShrink: 0 }}>
                       <img
                         src={tasnimPc}
                         alt="PC Graphic"

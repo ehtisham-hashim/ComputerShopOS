@@ -184,10 +184,10 @@ const memorySales: schema.SaleRecord[] = [
 ];
 
 const memorySaleItems: schema.SaleLineItem[] = [
-  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 285000, totalPrice: 285000 },
-  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 32000, totalPrice: 32000 },
-  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 150000, totalPrice: 150000 },
-  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 120000, totalPrice: 120000 },
+  { id: 1, saleId: 1, inventoryId: 2, itemName: "NVIDIA GeForce RTX 4080 Super 16GB", serialNumber: "SN-RTX4080-884910", quantity: 1, unitPrice: 285000, costPrice: 250000, totalPrice: 285000 },
+  { id: 2, saleId: 1, inventoryId: 4, itemName: "Corsair Vengeance 32GB (2x16GB) DDR5 6000MHz", serialNumber: null, quantity: 1, unitPrice: 32000, costPrice: 26000, totalPrice: 32000 },
+  { id: 3, saleId: 2, inventoryId: 1, itemName: "ThinkPad X1 Carbon Gen 11 (Core i7, 32GB RAM, 1TB SSD)", serialNumber: null, quantity: 1, unitPrice: 150000, costPrice: 125000, totalPrice: 150000 },
+  { id: 4, saleId: 3, inventoryId: 3, itemName: "AMD Ryzen 7 7800X3D 8-Core Processor", serialNumber: "SN-R7-7800-449101", quantity: 1, unitPrice: 120000, costPrice: 105000, totalPrice: 120000 },
 ];
 
 const memoryRepairs: schema.RepairTicketRecord[] = [
@@ -280,6 +280,12 @@ const memoryPurchases: schema.PurchaseRecord[] = [];
 const memoryPurchaseItems: schema.PurchaseItemRecord[] = [];
 const memoryExpenses: schema.Expense[] = [];
 const memoryMonthlyReports: schema.MonthlyReportRecord[] = [];
+const memoryCategories: schema.CategoryRecord[] = schema.DefaultCategories.map((c, idx) => ({
+  id: idx + 1,
+  name: c.name,
+  description: c.description,
+  createdAt: Math.floor(Date.now() / 1000),
+}));
 
 export async function initDb(): Promise<void> {
   if (isInitialized) return;
@@ -292,6 +298,9 @@ export async function initDb(): Promise<void> {
       try { await sqlDb.execute("PRAGMA synchronous = NORMAL;"); } catch {}
       try { await sqlDb.execute("PRAGMA foreign_keys = ON;"); } catch {}
       try { await sqlDb.execute("PRAGMA busy_timeout = 5000;"); } catch {}
+      try { await sqlDb.execute("PRAGMA temp_store = MEMORY;"); } catch {}
+      try { await sqlDb.execute("PRAGMA cache_size = -8000;"); } catch {}
+      try { await sqlDb.execute("PRAGMA wal_checkpoint(TRUNCATE);"); } catch {}
 
       const tableQueries = [
         `CREATE TABLE IF NOT EXISTS customers (
@@ -346,6 +355,7 @@ export async function initDb(): Promise<void> {
           serial_number TEXT,
           quantity INTEGER NOT NULL DEFAULT 1,
           unit_price INTEGER NOT NULL DEFAULT 0,
+          cost_price INTEGER NOT NULL DEFAULT 0,
           total_price INTEGER NOT NULL DEFAULT 0
         )`,
         `CREATE TABLE IF NOT EXISTS repairs (
@@ -490,6 +500,12 @@ export async function initDb(): Promise<void> {
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
           updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
         )`,
+        `CREATE TABLE IF NOT EXISTS categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL UNIQUE,
+          description TEXT DEFAULT '',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        )`,
       ];
 
       for (const q of tableQueries) {
@@ -499,8 +515,16 @@ export async function initDb(): Promise<void> {
       try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN is_bad_debt INTEGER NOT NULL DEFAULT 0;"); } catch {}
       try { await sqlDb.execute("ALTER TABLE sales ADD COLUMN due_date INTEGER;"); } catch {}
       try { await sqlDb.execute("ALTER TABLE adjustments ADD COLUMN item_taken_inventory_id INTEGER;"); } catch {}
+      try { await sqlDb.execute("ALTER TABLE sale_items ADD COLUMN cost_price INTEGER NOT NULL DEFAULT 0;"); } catch {}
 
       const indexQueries = [
+        "CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id)",
+        "CREATE INDEX IF NOT EXISTS idx_sale_items_inventory_id ON sale_items(inventory_id)",
+        "CREATE INDEX IF NOT EXISTS idx_sales_created_at ON sales(created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_sales_customer_id ON sales(customer_id)",
+        "CREATE INDEX IF NOT EXISTS idx_inventory_serials_inv_status ON inventory_serials(inventory_id, status)",
+        "CREATE INDEX IF NOT EXISTS idx_repairs_created_at ON repairs(created_at DESC)",
+        "CREATE INDEX IF NOT EXISTS idx_repairs_status ON repairs(status)",
         "CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone)",
         "CREATE INDEX IF NOT EXISTS idx_customers_name ON customers(name)",
         "CREATE INDEX IF NOT EXISTS idx_inventory_sku ON inventory(sku)",
@@ -527,11 +551,27 @@ export async function initDb(): Promise<void> {
         "CREATE INDEX IF NOT EXISTS idx_expenses_year_month ON expenses(year, month)",
         "CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date)",
         "CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category)",
+        "CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name)",
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_monthly_reports_year_month ON monthly_reports(year, month)",
       ];
 
       for (const idx of indexQueries) {
         try { await sqlDb.execute(idx); } catch {}
+      }
+
+      try {
+        const existingCats = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM categories");
+        const catCnt = existingCats?.[0]?.cnt ?? existingCats?.[0]?.["COUNT(*)"] ?? 0;
+        if (catCnt === 0) {
+          for (const defCat of schema.DefaultCategories) {
+            await sqlDb.execute(
+              "INSERT OR IGNORE INTO categories (name, description, created_at) VALUES (?, ?, ?)",
+              [defCat.name, defCat.description, Math.floor(Date.now() / 1000)]
+            );
+          }
+        }
+      } catch (err) {
+        console.warn("Categories seed check:", err);
       }
 
       try {
@@ -561,6 +601,10 @@ export async function initDb(): Promise<void> {
       } catch (seedErr) {
         console.warn("Seeding payables/receivables error:", seedErr);
       }
+
+      try {
+        await sqlDb.execute("UPDATE sales SET is_bad_debt = 0 WHERE balance_due <= 0 AND is_bad_debt = 1;");
+      } catch {}
 
       try {
         const existingReports = await sqlDb.select<any[]>("SELECT COUNT(*) as cnt FROM monthly_reports");
@@ -893,5 +937,6 @@ export const memoryStore = {
   purchaseItems: memoryPurchaseItems,
   expenses: memoryExpenses,
   monthlyReports: memoryMonthlyReports,
+  categories: memoryCategories,
 };
 

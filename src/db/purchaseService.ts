@@ -26,18 +26,12 @@ export async function getNextPurchaseNo(): Promise<string> {
 
   if (isTauri && sqlDb) {
     try {
-      const rows = await sqlDb.select<{ purchase_no: string }[]>(
-        `SELECT purchase_no FROM purchases WHERE purchase_no LIKE $1`,
+      const rows = await sqlDb.select<{ max_seq: number | null }[]>(
+        `SELECT MAX(CAST(SUBSTR(purchase_no, 10) AS INTEGER)) as max_seq FROM purchases WHERE purchase_no LIKE $1`,
         [`${prefixYear}%`]
       );
-      for (const row of rows) {
-        const parts = (row.purchase_no || "").split("-");
-        if (parts.length >= 3) {
-          const num = parseInt(parts[2], 10);
-          if (!isNaN(num) && num > maxSeq) {
-            maxSeq = num;
-          }
-        }
+      if (rows && rows[0] && rows[0].max_seq != null) {
+        maxSeq = Number(rows[0].max_seq) || 0;
       }
     } catch (e) {
       console.error("Failed to query purchase sequence in SQLite:", e);
@@ -56,29 +50,8 @@ export async function getNextPurchaseNo(): Promise<string> {
     }
   }
 
-  let candidate = maxSeq + 1;
-  let finalPurchaseNo = `${prefixYear}${String(candidate).padStart(3, "0")}`;
-
-  if (isTauri && sqlDb) {
-    while (true) {
-      try {
-        const check = await sqlDb.select<{ count: number }[]>(
-          `SELECT COUNT(*) as count FROM purchases WHERE purchase_no = $1`,
-          [finalPurchaseNo]
-        );
-        if (check && check[0] && check[0].count > 0) {
-          candidate++;
-          finalPurchaseNo = `${prefixYear}${String(candidate).padStart(3, "0")}`;
-        } else {
-          break;
-        }
-      } catch {
-        break;
-      }
-    }
-  }
-
-  return finalPurchaseNo;
+  const candidate = maxSeq + 1;
+  return `${prefixYear}${String(candidate).padStart(3, "0")}`;
 }
 
 /**
@@ -166,14 +139,25 @@ export async function createPurchase(input: CreatePurchaseInput): Promise<Purcha
 
       if (status === "RECEIVED") {
         if (linkedInventoryId) {
-          // Increment existing inventory item
+          // Fetch current inventory item to calculate moving weighted average cost
+          const curInv = await sqlDb.select<{ quantity: number; cost_price: number }[]>(
+            "SELECT quantity, cost_price FROM inventory WHERE id = $1",
+            [linkedInventoryId]
+          );
+          const curQty = Math.max(0, curInv?.[0]?.quantity ?? 0);
+          const curCost = Math.max(0, curInv?.[0]?.cost_price ?? 0);
+          const totalQty = curQty + item.quantity;
+          const weightedCost = totalQty > 0
+            ? Math.round((curQty * curCost + item.quantity * item.costPrice) / totalQty)
+            : item.costPrice;
+
           await sqlDb.execute(
             `UPDATE inventory 
              SET quantity = quantity + $1, 
                  cost_price = $2, 
                  price = CASE WHEN $3 > 0 THEN $3 ELSE price END 
              WHERE id = $4`,
-            [item.quantity, item.costPrice, item.sellPrice, linkedInventoryId]
+            [item.quantity, weightedCost, item.sellPrice, linkedInventoryId]
           );
         } else {
           // Check if item with same SKU or same title & name exists
@@ -185,13 +169,24 @@ export async function createPurchase(input: CreatePurchaseInput): Promise<Purcha
 
           if (existing) {
             linkedInventoryId = existing.id;
+            const curInv = await sqlDb.select<{ quantity: number; cost_price: number }[]>(
+              "SELECT quantity, cost_price FROM inventory WHERE id = $1",
+              [existing.id]
+            );
+            const curQty = Math.max(0, curInv?.[0]?.quantity ?? 0);
+            const curCost = Math.max(0, curInv?.[0]?.cost_price ?? 0);
+            const totalQty = curQty + item.quantity;
+            const weightedCost = totalQty > 0
+              ? Math.round((curQty * curCost + item.quantity * item.costPrice) / totalQty)
+              : item.costPrice;
+
             await sqlDb.execute(
               `UPDATE inventory 
                SET quantity = quantity + $1, 
                    cost_price = $2, 
                    price = CASE WHEN $3 > 0 THEN $3 ELSE price END 
                WHERE id = $4`,
-              [item.quantity, item.costPrice, item.sellPrice, existing.id]
+              [item.quantity, weightedCost, item.sellPrice, existing.id]
             );
           } else {
             // Add new inventory item
@@ -273,8 +268,13 @@ export async function createPurchase(input: CreatePurchaseInput): Promise<Purcha
         if (linkedInventoryId) {
           const inv = memoryStore.inventory.find((i) => i.id === linkedInventoryId);
           if (inv) {
+            const curQty = Math.max(0, inv.quantity || 0);
+            const curCost = Math.max(0, inv.costPrice || 0);
+            const totalQty = curQty + item.quantity;
+            inv.costPrice = totalQty > 0
+              ? Math.round((curQty * curCost + item.quantity * item.costPrice) / totalQty)
+              : item.costPrice;
             inv.quantity += item.quantity;
-            inv.costPrice = item.costPrice;
             if (item.sellPrice > 0) inv.price = item.sellPrice;
           }
         } else {
@@ -285,8 +285,13 @@ export async function createPurchase(input: CreatePurchaseInput): Promise<Purcha
           );
           if (existing) {
             linkedInventoryId = existing.id;
+            const curQty = Math.max(0, existing.quantity || 0);
+            const curCost = Math.max(0, existing.costPrice || 0);
+            const totalQty = curQty + item.quantity;
+            existing.costPrice = totalQty > 0
+              ? Math.round((curQty * curCost + item.quantity * item.costPrice) / totalQty)
+              : item.costPrice;
             existing.quantity += item.quantity;
-            existing.costPrice = item.costPrice;
             if (item.sellPrice > 0) existing.price = item.sellPrice;
           } else {
             linkedInventoryId = await addInventoryItem({
@@ -414,8 +419,9 @@ export async function getPurchases(partyId?: number): Promise<PurchaseWithItems[
       if (!pRows || pRows.length === 0) return [];
 
       const pIds = pRows.map((r) => Number(r.id));
+      const placeholders = pIds.map((_, idx) => `$${idx + 1}`).join(",");
       const iRows = await sqlDb.select<any[]>(
-        `SELECT * FROM purchase_items WHERE purchase_id IN (${pIds.map(() => "?").join(",")})`,
+        `SELECT * FROM purchase_items WHERE purchase_id IN (${placeholders})`,
         pIds
       );
 
@@ -555,17 +561,17 @@ export async function deletePurchase(purchaseId: number): Promise<void> {
       }
     }
 
-    // 2. Remove ledger entries referencing this purchase
+    // 2. Remove ledger entries referencing this purchase strictly by ref_no or exact payment description
     await sqlDb.execute(
       `DELETE FROM payable_ledger 
        WHERE party_id = $1 
-         AND (ref_no = $2 OR ref_no = $3 OR ref_no = $4 OR description LIKE $5)`,
+         AND (ref_no = $2 OR ref_no = $3 OR ref_no = $4 OR description = $5)`,
       [
         partyId,
         refNo,
         purchaseNo,
         `PAY-${purchaseNo}`,
-        `%${purchaseNo}%`,
+        `Payment for ${purchaseNo}`,
       ]
     );
 
@@ -595,10 +601,9 @@ export async function deletePurchase(purchaseId: number): Promise<void> {
           (l.refNo === refNo ||
             l.refNo === purchaseNo ||
             l.refNo === `PAY-${purchaseNo}` ||
-            l.description.includes(purchaseNo))
+            l.description === `Payment for ${purchaseNo}`)
         )
     );
-
     memoryStore.purchaseItems = memoryStore.purchaseItems.filter((it) => it.purchaseId !== purchaseId);
     memoryStore.purchases = memoryStore.purchases.filter((p) => p.id !== purchaseId);
 

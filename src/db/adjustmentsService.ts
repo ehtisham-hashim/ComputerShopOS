@@ -17,16 +17,12 @@ export async function getNextTradeInSku(_title?: ItemTitle): Promise<string> {
 
   if (isTauri && sqlDb) {
     try {
-      const rows = await sqlDb.select<{ sku: string }[]>(
-        "SELECT sku FROM inventory WHERE sku LIKE $1",
+      const rows = await sqlDb.select<{ max_seq: number | null }[]>(
+        "SELECT MAX(CAST(SUBSTR(sku, 10) AS INTEGER)) as max_seq FROM inventory WHERE sku LIKE $1",
         [`${prefix}%`]
       );
-      for (const r of rows) {
-        const parts = (r.sku || "").split("-");
-        if (parts.length >= 3) {
-          const num = parseInt(parts[2], 10);
-          if (!isNaN(num) && num > maxSeq) maxSeq = num;
-        }
+      if (rows && rows[0] && rows[0].max_seq != null) {
+        maxSeq = Number(rows[0].max_seq) || 0;
       }
     } catch (e) {
       console.error("Failed to query trade-in SKU sequence:", e);
@@ -43,29 +39,8 @@ export async function getNextTradeInSku(_title?: ItemTitle): Promise<string> {
     }
   }
 
-  let candidate = maxSeq + 1;
-  let finalSku = `${prefix}${String(candidate).padStart(3, "0")}`;
-
-  if (isTauri && sqlDb) {
-    while (true) {
-      try {
-        const check = await sqlDb.select<{ count: number }[]>(
-          "SELECT COUNT(*) as count FROM inventory WHERE sku = $1",
-          [finalSku]
-        );
-        if (check && check[0] && check[0].count > 0) {
-          candidate++;
-          finalSku = `${prefix}${String(candidate).padStart(3, "0")}`;
-        } else {
-          break;
-        }
-      } catch {
-        break;
-      }
-    }
-  }
-
-  return finalSku;
+  const candidate = maxSeq + 1;
+  return `${prefix}${String(candidate).padStart(3, "0")}`;
 }
 
 export async function getAdjustments(): Promise<AdjustmentRecord[]> {
@@ -163,59 +138,64 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<st
   }
 
   if (isTauri && sqlDb) {
-    await sqlDb.execute(
-      `INSERT INTO adjustments (
-        adjustment_no, customer_id, customer_name, customer_phone,
-        item_taken_inventory_id, item_taken_name, item_taken_value, item_given_inventory_id,
-        item_given_name, item_given_price, net_difference, paid_amount,
-        balance_due, payment_status, notes, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-      [
-        adjustmentNo,
-        custId || null,
-        input.customerName,
-        input.customerPhone,
-        itemTakenInventoryId,
-        input.itemTakenName,
-        itemTakenValInt,
-        input.itemGivenInventoryId || null,
-        input.itemGivenName,
-        itemGivenPriceInt,
-        netDiffInt,
-        paidInt,
-        balanceInt,
-        status,
-        input.notes || "",
-        now,
-      ]
-    );
+    let availableSerialId: number | null = null;
+      if (!input.serialNumber && input.itemGivenInventoryId) {
+        const availableSerials = await sqlDb.select<{ id: number }[]>(
+          "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'AVAILABLE' LIMIT 1",
+          [input.itemGivenInventoryId]
+        );
+        if (availableSerials.length > 0) {
+          availableSerialId = availableSerials[0].id;
+        }
+      }
 
-    if (input.itemGivenInventoryId) {
       await sqlDb.execute(
-        "UPDATE inventory SET quantity = MAX(0, quantity - 1) WHERE id = $1",
-        [input.itemGivenInventoryId]
+        `INSERT INTO adjustments (
+          adjustment_no, customer_id, customer_name, customer_phone,
+          item_taken_inventory_id, item_taken_name, item_taken_value, item_given_inventory_id,
+          item_given_name, item_given_price, net_difference, paid_amount,
+          balance_due, payment_status, notes, created_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+        [
+          adjustmentNo,
+          custId || null,
+          input.customerName,
+          input.customerPhone,
+          itemTakenInventoryId,
+          input.itemTakenName,
+          itemTakenValInt,
+          input.itemGivenInventoryId || null,
+          input.itemGivenName,
+          itemGivenPriceInt,
+          netDiffInt,
+          paidInt,
+          balanceInt,
+          status,
+          input.notes || "",
+          now,
+        ]
       );
-    }
 
-    if (input.serialNumber) {
-      await sqlDb.execute(
-        "UPDATE inventory_serials SET status = 'SOLD' WHERE serial_number = $1",
-        [input.serialNumber]
-      );
-    } else if (input.itemGivenInventoryId) {
-      const availableSerials = await sqlDb.select<{ id: number }[]>(
-        "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'AVAILABLE' LIMIT 1",
-        [input.itemGivenInventoryId]
-      );
-      if (availableSerials.length > 0) {
+      if (input.itemGivenInventoryId) {
         await sqlDb.execute(
-          "UPDATE inventory_serials SET status = 'SOLD' WHERE id = $1",
-          [availableSerials[0].id]
+          "UPDATE inventory SET quantity = MAX(0, quantity - 1) WHERE id = $1",
+          [input.itemGivenInventoryId]
         );
       }
-    }
 
-    return adjustmentNo;
+      if (input.serialNumber) {
+        await sqlDb.execute(
+          "UPDATE inventory_serials SET status = 'SOLD' WHERE serial_number = $1",
+          [input.serialNumber]
+        );
+      } else if (availableSerialId != null) {
+        await sqlDb.execute(
+          "UPDATE inventory_serials SET status = 'SOLD' WHERE id = $1",
+          [availableSerialId]
+        );
+      }
+
+      return adjustmentNo;
   }
 
   // Fallback memory store
@@ -272,7 +252,20 @@ export async function deleteAdjustment(id: number): Promise<void> {
       "SELECT item_given_inventory_id, item_taken_inventory_id FROM adjustments WHERE id = $1",
       [id]
     );
-    await sqlDb.execute("DELETE FROM adjustments WHERE id = $1", [id]);
+
+    let soldSerialId: number | null = null;
+    if (rows.length > 0) {
+      const givenInvId = rows[0].item_given_inventory_id ?? rows[0].itemGivenInventoryId;
+      if (givenInvId) {
+        const soldSerials = await sqlDb.select<{ id: number }[]>(
+          "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'SOLD' ORDER BY id DESC LIMIT 1",
+          [givenInvId]
+        );
+        if (soldSerials.length > 0) {
+          soldSerialId = soldSerials[0].id;
+        }
+      }
+    }
 
     if (rows.length > 0) {
       const givenInvId = rows[0].item_given_inventory_id ?? rows[0].itemGivenInventoryId;
@@ -283,14 +276,10 @@ export async function deleteAdjustment(id: number): Promise<void> {
           "UPDATE inventory SET quantity = quantity + 1 WHERE id = $1",
           [givenInvId]
         );
-        const soldSerials = await sqlDb.select<{ id: number }[]>(
-          "SELECT id FROM inventory_serials WHERE inventory_id = $1 AND status = 'SOLD' ORDER BY id DESC LIMIT 1",
-          [givenInvId]
-        );
-        if (soldSerials.length > 0) {
+        if (soldSerialId != null) {
           await sqlDb.execute(
             "UPDATE inventory_serials SET status = 'AVAILABLE' WHERE id = $1",
-            [soldSerials[0].id]
+            [soldSerialId]
           );
         }
       }
@@ -306,6 +295,8 @@ export async function deleteAdjustment(id: number): Promise<void> {
         );
       }
     }
+
+    await sqlDb.execute("DELETE FROM adjustments WHERE id = $1", [id]);
     return;
   }
 

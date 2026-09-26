@@ -1,7 +1,15 @@
 import { isTauriEnvironment, memoryStore, getSqlDb } from "./client";
-import { ExpenseRecord, CreateExpenseInput } from "./schema";
+import { ExpenseRecord, CreateExpenseInput, ExpenseCategory } from "./schema";
 
-export const RECURRING_EXPENSE_TEMPLATES: Array<Omit<CreateExpenseInput, "year" | "month" | "expenseDate">> = [
+export interface RecurringTemplate {
+  title: string;
+  category: ExpenseCategory;
+  amount: number;
+  paymentMethod: string;
+  notes?: string;
+}
+
+export const DEFAULT_RECURRING_TEMPLATES: RecurringTemplate[] = [
   { title: "SHOP RENT", category: "RENT", amount: 25000, paymentMethod: "CASH", notes: "Monthly store premises rent" },
   { title: "SHOP ELECTRICITY BILL", category: "UTILITIES", amount: 5000, paymentMethod: "CASH", notes: "WAPDA / Electricity bill" },
   { title: "TELEPHONE BILL", category: "UTILITIES", amount: 3700, paymentMethod: "CASH", notes: "PTCL Landline" },
@@ -12,6 +20,63 @@ export const RECURRING_EXPENSE_TEMPLATES: Array<Omit<CreateExpenseInput, "year" 
   { title: "NET FLEX", category: "INTERNET", amount: 800, paymentMethod: "CASH", notes: "Shop internet connection" },
   { title: "TELENOR POST PAID BILL", category: "UTILITIES", amount: 1200, paymentMethod: "CASH", notes: "Shop mobile post-paid" },
 ];
+
+export const RECURRING_EXPENSE_TEMPLATES = DEFAULT_RECURRING_TEMPLATES;
+
+export async function getRecurringTemplates(): Promise<RecurringTemplate[]> {
+  const isTauri = isTauriEnvironment();
+  const sqlDb = await getSqlDb();
+
+  if (isTauri && sqlDb) {
+    try {
+      const rows = await sqlDb.select<{ key: string; value: string }[]>(
+        "SELECT value FROM settings WHERE key = 'recurring_expense_templates'"
+      );
+      if (rows.length > 0 && rows[0].value) {
+        const parsed = JSON.parse(rows[0].value);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load recurring templates from SQLite:", e);
+    }
+  }
+
+  // Fallback to in-memory store in non-Tauri browser preview
+  const memVal = memoryStore.settings["recurring_expense_templates"];
+  if (memVal) {
+    try {
+      const parsed = JSON.parse(memVal);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return DEFAULT_RECURRING_TEMPLATES;
+}
+
+export async function saveRecurringTemplates(templates: RecurringTemplate[]): Promise<void> {
+  const jsonStr = JSON.stringify(templates);
+
+  const isTauri = isTauriEnvironment();
+  const sqlDb = await getSqlDb();
+
+  if (isTauri && sqlDb) {
+    try {
+      await sqlDb.execute(
+        "INSERT INTO settings (key, value) VALUES ('recurring_expense_templates', $1) ON CONFLICT(key) DO UPDATE SET value = $1",
+        [jsonStr]
+      );
+    } catch (e) {
+      console.warn("Failed to persist recurring templates to SQLite:", e);
+    }
+  }
+
+  // Update in-memory store
+  memoryStore.settings["recurring_expense_templates"] = jsonStr;
+}
 
 export async function getExpensesByMonth(year: number, month: number): Promise<ExpenseRecord[]> {
   const isTauri = isTauriEnvironment();
@@ -106,6 +171,8 @@ export async function updateExpense(id: number, input: Partial<CreateExpenseInpu
     const params: any[] = [];
     let idx = 1;
 
+    if (input.year !== undefined) { sets.push(`year = $${idx++}`); params.push(input.year); }
+    if (input.month !== undefined) { sets.push(`month = $${idx++}`); params.push(input.month); }
     if (input.title !== undefined) { sets.push(`title = $${idx++}`); params.push(input.title); }
     if (input.category !== undefined) { sets.push(`category = $${idx++}`); params.push(input.category); }
     if (input.amount !== undefined) { sets.push(`amount = $${idx++}`); params.push(input.amount); }
@@ -159,16 +226,20 @@ export async function getMonthlyExpenseSummary(
 
 export async function applyRecurringExpenses(
   year: number,
-  month: number
+  month: number,
+  templatesToApply?: RecurringTemplate[]
 ): Promise<{ applied: number; skipped: number }> {
+  const templates = templatesToApply || (await getRecurringTemplates());
   const existing = await getExpensesByMonth(year, month);
   const existingTitles = new Set(existing.map((e) => e.title.trim().toUpperCase()));
 
   let applied = 0;
   let skipped = 0;
-  const monthStartUnix = Math.floor(new Date(year, month - 1, 1).getTime() / 1000);
+  const now = new Date();
+  const targetDay = (now.getFullYear() === year && now.getMonth() + 1 === month) ? now.getDate() : 1;
+  const expenseDateUnix = Math.floor(new Date(year, month - 1, targetDay, 12, 0, 0).getTime() / 1000);
 
-  for (const tmpl of RECURRING_EXPENSE_TEMPLATES) {
+  for (const tmpl of templates) {
     if (existingTitles.has(tmpl.title.trim().toUpperCase())) {
       skipped++;
       continue;
@@ -177,11 +248,11 @@ export async function applyRecurringExpenses(
       year,
       month,
       category: tmpl.category,
-      title: tmpl.title,
+      title: tmpl.title.trim(),
       amount: tmpl.amount,
-      expenseDate: monthStartUnix,
-      paymentMethod: tmpl.paymentMethod,
-      notes: tmpl.notes,
+      expenseDate: expenseDateUnix,
+      paymentMethod: tmpl.paymentMethod || "CASH",
+      notes: tmpl.notes || "Monthly recurring overhead",
     });
     applied++;
   }

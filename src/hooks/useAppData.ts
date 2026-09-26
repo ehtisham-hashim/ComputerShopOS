@@ -1,13 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
-import { InventoryItem } from "../db/schema";
+import { InventoryItem, CategoryRecord } from "../db/schema";
 import { getInventoryItems } from "../db/inventoryService";
-import { getCustomers } from "../db/customerService";
-import { getRepairTickets } from "../db/repairsService";
+import { getCustomersCount } from "../db/customerService";
+import { getActiveRepairsCount } from "../db/repairsService";
 import { getPayablesSummary } from "../db/payablesService";
+import { getCategories } from "../db/categoryService";
 import { initDb } from "../db/client";
 
 export function useAppData(isAuthenticated: boolean) {
   const [items, setItems] = useState<InventoryItem[]>([]);
+  const [categories, setCategories] = useState<CategoryRecord[]>([]);
   const [customersCount, setCustomersCount] = useState<number>(0);
   const [activeRepairsCount, setActiveRepairsCount] = useState<number>(0);
   const [payablesCount, setPayablesCount] = useState<number>(0);
@@ -24,22 +26,28 @@ export function useAppData(isAuthenticated: boolean) {
         console.error("Failed to load inventory:", e);
       }
       try {
-        const custs = await getCustomers();
-        setCustomersCount(custs.length);
+        const count = await getCustomersCount();
+        setCustomersCount(count);
       } catch (e) {
-        console.error("Failed to load customers:", e);
+        console.error("Failed to load customers count:", e);
       }
       try {
-        const repairTickets = await getRepairTickets();
-        setActiveRepairsCount(repairTickets.filter((t) => t.status !== "DELIVERED").length);
+        const count = await getActiveRepairsCount();
+        setActiveRepairsCount(count);
       } catch (e) {
-        console.error("Failed to load repair tickets:", e);
+        console.error("Failed to load repair tickets count:", e);
       }
       try {
         const pSummary = await getPayablesSummary();
         setPayablesCount(pSummary.activeSuppliersCount);
       } catch (e) {
         console.error("Failed to load payables summary:", e);
+      }
+      try {
+        const cats = await getCategories();
+        setCategories(cats);
+      } catch (e) {
+        console.error("Failed to load categories:", e);
       }
     } catch (err) {
       console.error("Database error:", err);
@@ -56,5 +64,15 @@ export function useAppData(isAuthenticated: boolean) {
 
   const lowStockCount = items.filter((i) => i.quantity <= 5).length;
 
-  return { items, customersCount, activeRepairsCount, payablesCount, lowStockCount, isLoading, fetchItems };
+  return {
+    items,
+    categories,
+    categoriesCount: categories.length,
+    customersCount,
+    activeRepairsCount,
+    payablesCount,
+    lowStockCount,
+    isLoading,
+    fetchItems,
+  };
 }

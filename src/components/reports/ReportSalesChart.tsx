@@ -30,8 +30,8 @@ export const ReportSalesChart: React.FC<ReportSalesChartProps> = ({ report }) =>
           <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="reportRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#465fff" stopOpacity={0.4} />
-                <stop offset="95%" stopColor="#465fff" stopOpacity={0.0} />
+                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
               </linearGradient>
               <linearGradient id="reportProfitGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
@@ -45,7 +45,7 @@ export const ReportSalesChart: React.FC<ReportSalesChartProps> = ({ report }) =>
               contentStyle={{ backgroundColor: "#111827", borderColor: "#374151", borderRadius: "0.75rem", fontSize: "12px", color: "#fff" }}
               formatter={(value: any) => [`PKR ${Number(value).toLocaleString()}`, ""]}
             />
-            <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#465fff" strokeWidth={2.5} fillOpacity={1} fill="url(#reportRevenueGrad)" />
+            <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#3b82f6" strokeWidth={2.5} fillOpacity={1} fill="url(#reportRevenueGrad)" />
             <Area type="monotone" dataKey="profit" name="Profit" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#reportProfitGrad)" />
           </AreaChart>
         </ResponsiveContainer>

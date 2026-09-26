@@ -40,7 +40,7 @@ export const RepairInspectModal: React.FC<RepairInspectModalProps> = ({ ticket, 
               {parts.map((p, idx) => (
                 <div key={idx} className="flex justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800/40">
                   <span>{p.name}</span>
-                  <span className="font-mono font-bold">PKR {Number(p.cost || 0).toLocaleString()}</span>
+                  <span className="tabular-nums font-bold">PKR {Number(p.cost || 0).toLocaleString()}</span>
                 </div>
               ))}
             </div>
@@ -48,17 +48,17 @@ export const RepairInspectModal: React.FC<RepairInspectModalProps> = ({ ticket, 
         </div>
 
         <div className="p-3 rounded-xl bg-brand-50/60 dark:bg-brand-500/10 border border-brand-100 dark:border-brand-500/20 space-y-1 font-medium">
-          <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Parts Subtotal:</span><span>PKR {partsTotal.toLocaleString()}</span></div>
-          <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Labor Fee:</span><span>PKR {Number(ticket.laborCost || 0).toLocaleString()}</span></div>
+          <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Parts Subtotal:</span><span className="tabular-nums font-semibold">PKR {partsTotal.toLocaleString()}</span></div>
+          <div className="flex justify-between text-gray-600 dark:text-gray-300"><span>Labor Fee:</span><span className="tabular-nums font-semibold">PKR {Number(ticket.laborCost || 0).toLocaleString()}</span></div>
           <div className="flex justify-between font-bold text-sm text-brand-700 dark:text-brand-300 pt-1 border-t border-brand-200 dark:border-brand-500/30">
             <span>Total Job Cost:</span>
-            <span>PKR {Number(ticket.finalCost || ticket.estimatedCost || 0).toLocaleString()}</span>
+            <span className="tabular-nums">PKR {Number(ticket.finalCost || ticket.estimatedCost || 0).toLocaleString()}</span>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2.5 pt-2">
-          <button onClick={onClose} className="tail-btn-secondary">Close</button>
-          <button onClick={() => window.print()} className="tail-btn-primary"><Printer className="size-4" /><span>Print RMA Sheet</span></button>
+        <div className="flex justify-end items-center gap-2.5 pt-2">
+          <button onClick={onClose} className="tail-btn-secondary-sm">Close</button>
+          <button onClick={() => window.print()} className="tail-btn-primary-sm flex items-center gap-1.5"><Printer className="size-4" /><span>Print RMA Sheet</span></button>
         </div>
       </div>
     </Modal>

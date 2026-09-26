@@ -34,7 +34,7 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                 {sales.map((s) => (
                   <div key={s.id} className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-gray-50/50 text-xs dark:border-gray-800 dark:bg-gray-800/40">
                     <div><span className="font-mono font-bold text-gray-900 dark:text-white">{s.invoiceNo}</span><span className="text-gray-400 ml-2">{new Date((s.createdAt || 0) * 1000).toLocaleDateString()}</span></div>
-                    <div className="flex items-center gap-2"><span className="font-bold text-gray-900 dark:text-white">PKR {Number(s.totalAmount || 0).toLocaleString()}</span><span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-gray-800">{s.paymentMethod}</span></div>
+                    <div className="flex items-center gap-2"><span className="tabular-nums font-bold text-gray-900 dark:text-white">PKR {Number(s.totalAmount || 0).toLocaleString()}</span><span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 dark:bg-gray-800">{s.paymentMethod}</span></div>
                   </div>
                 ))}
               </div>
@@ -47,7 +47,7 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
                 {repairs.map((r) => (
                   <div key={r.id} className="flex items-center justify-between p-2.5 rounded-lg border border-gray-100 bg-gray-50/50 text-xs dark:border-gray-800 dark:bg-gray-800/40">
                     <div><span className="font-mono font-bold text-gray-900 dark:text-white">{r.ticketNo}</span><span className="text-gray-700 dark:text-gray-300 ml-2">{r.device}</span></div>
-                    <div className="flex items-center gap-2"><span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-brand-500/15">{r.status}</span><span className="font-bold text-gray-900 dark:text-white">PKR {Number(r.finalCost || r.estimatedCost || 0).toLocaleString()}</span></div>
+                    <div className="flex items-center gap-2"><span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-bold text-brand-600 dark:bg-brand-500/15">{r.status}</span><span className="tabular-nums font-bold text-gray-900 dark:text-white">PKR {Number(r.finalCost || r.estimatedCost || 0).toLocaleString()}</span></div>
                   </div>
                 ))}
               </div>
@@ -56,7 +56,7 @@ export const CustomerHistoryModal: React.FC<CustomerHistoryModalProps> = ({
         </div>
       )}
       <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-end">
-        <button onClick={onClose} className="tail-btn-secondary text-xs">Close</button>
+        <button onClick={onClose} className="tail-btn-secondary-sm">Close</button>
       </div>
     </Modal>
   );

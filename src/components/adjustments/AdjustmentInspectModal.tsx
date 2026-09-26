@@ -102,7 +102,7 @@ export const AdjustmentInspectModal: React.FC<AdjustmentInspectModalProps> = ({ 
 
           <div className="flex justify-between text-xs text-gray-300 pt-2 border-t border-gray-800">
             <span>Amount Paid Upfront:</span>
-            <span className="font-mono font-bold">
+            <span className="tabular-nums font-bold">
               PKR {Number(adjustment.paidAmount || 0).toLocaleString()}
             </span>
           </div>
@@ -110,7 +110,7 @@ export const AdjustmentInspectModal: React.FC<AdjustmentInspectModalProps> = ({ 
           {adjustment.balanceDue > 0 && (
             <div className="flex justify-between text-xs text-amber-400 font-bold">
               <span>Balance Due:</span>
-              <span className="font-mono">PKR {adjustment.balanceDue.toLocaleString()}</span>
+              <span className="tabular-nums">PKR {adjustment.balanceDue.toLocaleString()}</span>
             </div>
           )}
 
@@ -122,11 +122,11 @@ export const AdjustmentInspectModal: React.FC<AdjustmentInspectModalProps> = ({ 
         </div>
 
         {/* Modal Footer */}
-        <div className="flex justify-end gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
-          <button onClick={onClose} className="tail-btn-secondary">
+        <div className="flex justify-end items-center gap-2.5 pt-2 border-t border-gray-100 dark:border-gray-800">
+          <button onClick={onClose} className="tail-btn-secondary-sm">
             Close
           </button>
-          <button onClick={() => window.print()} className="tail-btn-primary">
+          <button onClick={() => window.print()} className="tail-btn-primary-sm flex items-center gap-1.5">
             <Printer className="size-4" />
             <span>Print Swap Receipt</span>
           </button>

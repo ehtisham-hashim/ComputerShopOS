@@ -18,7 +18,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
       {onOpenQuickSale && (
         <button
           onClick={onOpenQuickSale}
-          className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-theme-xs transition-all hover:bg-brand-700 active:scale-[0.98]"
+          className="hidden sm:inline-flex tail-btn-primary-sm px-3.5"
         >
           <Sparkles className="size-3.5" />
           <span>Quick Sale (F2)</span>
@@ -27,23 +27,23 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
 
       <button
         onClick={toggleTheme}
-        className="flex size-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+        className="flex size-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-900 active:scale-95 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
         title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
       >
         {theme === "dark" ? (
-          <Sun className="size-5 text-warning-400 transition-transform rotate-0 hover:rotate-45" />
+          <Sun className="size-4 text-warning-400 transition-transform rotate-0 hover:rotate-45" />
         ) : (
-          <Moon className="size-5 text-gray-700 transition-transform rotate-0 hover:-rotate-12" />
+          <Moon className="size-4 text-gray-700 transition-transform rotate-0 hover:-rotate-12" />
         )}
       </button>
 
       {onLockSession && (
         <button
           onClick={onLockSession}
-          className="flex size-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+          className="flex size-9 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 transition-all hover:bg-gray-100 hover:text-gray-900 active:scale-95 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
           title="Lock Terminal Screen"
         >
-          <Lock className="size-4" />
+          <Lock className="size-3.5" />
         </button>
       )}
 

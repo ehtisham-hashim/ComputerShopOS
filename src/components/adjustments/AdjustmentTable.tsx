@@ -1,5 +1,5 @@
-import React from "react";
-import { User, Eye, Trash2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { User, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { AdjustmentRecord } from "../../db/schema";
 import { SearchInput } from "../ui/SearchInput";
 import { StatusBadge } from "../ui/StatusBadge";
@@ -21,6 +21,13 @@ export const AdjustmentTable: React.FC<AdjustmentTableProps> = ({
   onInspectAdjustment,
   onDeleteAdjustment,
 }) => {
+  const [page, setPage] = useState(1);
+  const pageSize = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery]);
+
   const filtered = adjustments.filter(
     (a) =>
       a.adjustmentNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -28,6 +35,9 @@ export const AdjustmentTable: React.FC<AdjustmentTableProps> = ({
       a.itemTakenName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.itemGivenName.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   return (
     <div className="tail-card space-y-4">
@@ -61,7 +71,7 @@ export const AdjustmentTable: React.FC<AdjustmentTableProps> = ({
             ) : filtered.length === 0 ? (
               <tr><td colSpan={8} className="py-12 text-center text-gray-400 text-xs">No adjustments found.</td></tr>
             ) : (
-              filtered.map((adj) => (
+              paginated.map((adj) => (
                 <tr key={adj.id} className="hover:bg-gray-50/60 dark:hover:bg-white/[0.02] transition-colors">
                   <td className="py-3.5 px-4 font-mono text-xs font-bold text-brand-500">{adj.adjustmentNo}</td>
                   <td className="py-3.5 px-4 font-semibold text-gray-900 dark:text-white truncate max-w-[130px]"><span className="flex items-center gap-1.5"><User className="size-3.5 text-gray-400 shrink-0" /><span className="truncate">{adj.customerName}</span></span></td>
@@ -91,6 +101,33 @@ export const AdjustmentTable: React.FC<AdjustmentTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 px-4 py-3 text-xs text-gray-500">
+          <span>
+            Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, filtered.length)} of {filtered.length} adjustments
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              <ChevronLeft className="size-3.5 inline mr-1" /> Prev
+            </button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-2.5 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Next <ChevronRight className="size-3.5 inline ml-1" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -158,6 +158,7 @@ export async function deleteRepairTicket(id: number): Promise<void> {
       "SELECT parts_used FROM repairs WHERE id = $1",
       [id]
     );
+
     await sqlDb.execute("DELETE FROM repairs WHERE id = $1", [id]);
     const rawParts = rows.length > 0 ? (rows[0].parts_used ?? rows[0].partsUsed) : null;
     if (rawParts) {
@@ -176,6 +177,7 @@ export async function deleteRepairTicket(id: number): Promise<void> {
         console.error("Failed to parse parts_used on delete:", err);
       }
     }
+
     return;
   }
 
@@ -197,4 +199,22 @@ export async function deleteRepairTicket(id: number): Promise<void> {
     }
     memoryStore.repairs.splice(idx, 1);
   }
+}
+
+export async function getActiveRepairsCount(): Promise<number> {
+  const isTauri = isTauriEnvironment();
+  const sqlDb = await getSqlDb();
+
+  if (isTauri && sqlDb) {
+    try {
+      const rows = await sqlDb.select<{ count: number }[]>(
+        "SELECT COUNT(*) as count FROM repairs WHERE status != 'DELIVERED'"
+      );
+      return Number(rows[0]?.count ?? 0);
+    } catch (e) {
+      console.error("Failed to query active repairs count:", e);
+    }
+  }
+
+  return memoryStore.repairs.filter((t) => t.status !== "DELIVERED").length;
 }

@@ -10,6 +10,7 @@ import { DocGeneratorTabs } from "../components/docGenerator/DocGeneratorTabs";
 import { DocHistoryTable } from "../components/docGenerator/DocHistoryTable";
 import { CreateDocModal } from "../components/docGenerator/CreateDocModal";
 import { DocInspectModal } from "../components/docGenerator/DocInspectModal";
+import { PaperSize } from "../components/docGenerator/InvoiceA4Document";
 
 interface DocGeneratorPageProps {
   items: InventoryItem[];
@@ -24,6 +25,7 @@ export const DocGeneratorPage: React.FC<DocGeneratorPageProps> = ({ items }) => 
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [inspectDoc, setInspectDoc] = useState<DocumentRecord | null>(null);
+  const [inspectPaperSize, setInspectPaperSize] = useState<PaperSize>("a4");
   const [duplicateDoc, setDuplicateDoc] = useState<DocumentRecord | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -84,9 +86,9 @@ export const DocGeneratorPage: React.FC<DocGeneratorPageProps> = ({ items }) => 
             setDuplicateDoc(null);
             setIsCreateModalOpen(true);
           }}
-          className="tail-btn-primary text-xs"
+          className="tail-btn-primary-sm"
         >
-          <Plus className="size-4" />
+          <Plus className="size-3.5" />
           <span>New Document</span>
         </button>
       </PageHeader>
@@ -111,7 +113,10 @@ export const DocGeneratorPage: React.FC<DocGeneratorPageProps> = ({ items }) => 
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         isLoading={isLoading}
-        onInspectDocument={setInspectDoc}
+        onInspectDocument={(doc, size) => {
+          setInspectDoc(doc);
+          if (size) setInspectPaperSize(size);
+        }}
         onDuplicateDocument={handleOpenDuplicate}
         onDeleteDocument={(id) => setDeleteTargetId(id)}
         onCreateNew={() => {
@@ -135,6 +140,7 @@ export const DocGeneratorPage: React.FC<DocGeneratorPageProps> = ({ items }) => 
 
       <DocInspectModal
         document={inspectDoc}
+        initialPaperSize={inspectPaperSize}
         onClose={() => setInspectDoc(null)}
       />
 

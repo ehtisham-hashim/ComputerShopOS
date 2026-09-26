@@ -4,7 +4,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { saveAs } from "file-saver";
 import { DocumentRecord } from "../../db/schema";
-import { InvoiceA4Document, PaperSize } from "../../components/docGenerator/InvoiceA4Document";
+import { InvoiceA4Document, PaperSize, PrintLayoutMode } from "../../components/docGenerator/InvoiceA4Document";
 
 /**
  * Wait for all images inside an element to fully load
@@ -29,19 +29,25 @@ function waitForImages(element: HTMLElement): Promise<void> {
  */
 export async function generateAndDownloadPdf(
   doc: DocumentRecord,
-  paperSize: PaperSize = "a4"
+  paperSize: PaperSize = "a4",
+  printMode: PrintLayoutMode = "full",
+  includeRefAndDate?: boolean
 ): Promise<void> {
   const isA5 = paperSize === "a5";
-  const pdfFormat = isA5 ? "a5" : "a4";
-  const targetWidth = isA5 ? 148 : 210;
-  const targetHeight = isA5 ? 210 : 297;
+  const isLetter = paperSize === "letter";
+  const isLegal = paperSize === "legal";
+
+  const pdfFormat = isA5 ? "a5" : isLetter ? "letter" : isLegal ? "legal" : "a4";
+  const targetWidth = isA5 ? 148 : (isLetter || isLegal ? 215.9 : 210);
+  const targetHeight = isA5 ? 210 : isLetter ? 279.4 : isLegal ? 355.6 : 297;
+  const containerWidth = isA5 ? "148mm" : (isLetter || isLegal ? "215.9mm" : "210mm");
 
   // Create off-screen rendering container
   const container = document.createElement("div");
   container.style.position = "fixed";
   container.style.left = "-9999px";
   container.style.top = "0";
-  container.style.width = isA5 ? "148mm" : "210mm";
+  container.style.width = containerWidth;
   container.style.backgroundColor = "#ffffff";
   container.style.zIndex = "-9999";
   document.body.appendChild(container);
@@ -55,6 +61,8 @@ export async function generateAndDownloadPdf(
         React.createElement(InvoiceA4Document, {
           document: doc,
           paperSize: paperSize,
+          printMode: printMode,
+          includeRefAndDate: includeRefAndDate,
         })
       );
       setTimeout(resolve, 80);
@@ -102,7 +110,8 @@ export async function generateAndDownloadPdf(
 
     const cleanRef = doc.refNo.replace(/[^a-zA-Z0-9_-]/g, "_");
     const cleanCust = doc.customerName.replace(/[^a-zA-Z0-9_-]/g, "_");
-    const filename = `${doc.brand}_${cleanRef}_${cleanCust}_${paperSize.toUpperCase()}.pdf`;
+    const modeTag = printMode === "table_only" ? "_TABLE_ONLY" : "";
+    const filename = `${doc.brand}_${cleanRef}_${cleanCust}_${paperSize.toUpperCase()}${modeTag}.pdf`;
 
     const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -128,7 +137,33 @@ export async function generateAndDownloadPdf(
       }
     }
 
-    // Fallback: browser saveAs
+    // Modern browser File System Access API: Prompt user for destination file & folder
+    if (typeof window !== "undefined" && "showSaveFilePicker" in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [
+            {
+              description: "PDF Document (*.pdf)",
+              accept: { "application/pdf": [".pdf"] },
+            },
+          ],
+        });
+        const writable = await handle.createWritable();
+        const pdfBlob = pdf.output("blob");
+        await writable.write(pdfBlob);
+        await writable.close();
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") {
+          // User cancelled the save dialog
+          return;
+        }
+        console.warn("showSaveFilePicker failed, falling back to saveAs:", err);
+      }
+    }
+
+    // Fallback: standard browser download via saveAs
     const pdfBlob = pdf.output("blob");
     saveAs(pdfBlob, filename);
   } finally {
@@ -144,14 +179,20 @@ export async function generateAndDownloadPdf(
  */
 export async function printDocument(
   doc: DocumentRecord,
-  paperSize: PaperSize = "a4"
+  paperSize: PaperSize = "a4",
+  printMode: PrintLayoutMode = "full",
+  includeRefAndDate?: boolean
 ): Promise<void> {
   const isA5 = paperSize === "a5";
+  const isLetter = paperSize === "letter";
+  const isLegal = paperSize === "legal";
+  const containerWidth = isA5 ? "148mm" : (isLetter || isLegal ? "215.9mm" : "210mm");
+
   const container = document.createElement("div");
   container.style.position = "fixed";
   container.style.left = "-9999px";
   container.style.top = "0";
-  container.style.width = isA5 ? "148mm" : "210mm";
+  container.style.width = containerWidth;
   container.style.backgroundColor = "#ffffff";
   container.style.zIndex = "-9999";
   document.body.appendChild(container);
@@ -164,6 +205,8 @@ export async function printDocument(
         React.createElement(InvoiceA4Document, {
           document: doc,
           paperSize: paperSize,
+          printMode: printMode,
+          includeRefAndDate: includeRefAndDate,
         })
       );
       setTimeout(resolve, 80);

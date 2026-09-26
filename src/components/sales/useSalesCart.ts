@@ -19,6 +19,7 @@ export function useSalesCart(items: InventoryItem[], initialCartItems?: Inventor
   }, [initialCartItems, items]);
 
   const addToCart = (item: InventoryItem) => {
+    if (item.quantity <= 0) return;
     setCart((prev) => {
       const exists = prev.find((c) => c.item.id === item.id);
       if (exists) {
@@ -28,12 +29,61 @@ export function useSalesCart(items: InventoryItem[], initialCartItems?: Inventor
     });
   };
 
+  const setCartItemQty = (id: number, qty: number) => {
+    if (qty <= 0) {
+      removeFromCart(id);
+      return;
+    }
+    setCart((prev) =>
+      prev.map((c) => {
+        if (c.item.id === id) {
+          const clamped = Math.min(c.item.quantity, Math.max(1, Math.round(qty)));
+          return { ...c, quantity: clamped };
+        }
+        return c;
+      })
+    );
+  };
+
+  const addToCartBySku = (query: string): boolean => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return false;
+    const match = items.find(
+      (it) =>
+        it.quantity > 0 &&
+        (it.sku.toLowerCase() === trimmed || it.name.toLowerCase() === trimmed)
+    ) || items.find(
+      (it) =>
+        it.quantity > 0 &&
+        (it.sku.toLowerCase().includes(trimmed) || it.name.toLowerCase().includes(trimmed))
+    );
+    if (match) {
+      addToCart(match);
+      return true;
+    }
+    return false;
+  };
+
   const updateCartQty = (id: number, delta: number) => {
-    setCart((prev) => prev.map((c) => (c.item.id === id ? { ...c, quantity: c.quantity + delta } : c)).filter((c) => c.quantity > 0));
+    setCart((prev) =>
+      prev
+        .map((c) => (c.item.id === id ? { ...c, quantity: Math.min(c.item.quantity, c.quantity + delta) } : c))
+        .filter((c) => c.quantity > 0)
+    );
   };
 
   const removeFromCart = (id: number) => setCart((prev) => prev.filter((c) => c.item.id !== id));
   const clearCart = () => setCart([]);
 
-  return { cart, isSaleModalOpen, setIsSaleModalOpen, addToCart, updateCartQty, removeFromCart, clearCart };
+  return {
+    cart,
+    isSaleModalOpen,
+    setIsSaleModalOpen,
+    addToCart,
+    setCartItemQty,
+    addToCartBySku,
+    updateCartQty,
+    removeFromCart,
+    clearCart,
+  };
 }
